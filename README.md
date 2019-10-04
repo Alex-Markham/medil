@@ -1,5 +1,5 @@
 ## MeDIL
-This package for causal inference using the Measurement Dependence Inducing Latent (MeDIL) Causal Model framework.
+This package for is causal inference using the Measurement-Dependence Inducing Latent (MeDIL) Causal Model framework.
 
 ---
 - [1. Installation](#1-installation)
@@ -21,4 +21,4 @@ If you have any questions, suggestions, feedback, bugs to report, please open an
 Refer to [GNU General Public License v3 (GPLv3)](https://choosealicense.com/licenses/gpl-3.0/).
 
 ### 5. Changelog
-Refer to [CHANGELOG](https://gitlab.cs.univie.ac.at/markhama94cs/medil/master/CHANGELOG.md).
+Refer to [CHANGELOG](https://gitlab.cs.univie.ac.at/markhama94cs/medil/blob/master/CHANGELOG.md).
