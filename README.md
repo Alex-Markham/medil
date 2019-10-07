@@ -20,10 +20,10 @@ If you have any questions, suggestions, feedback, or bugs to report, please open
 If you would like to contribute, you can [contact me](https://causal.dev/#contact) and see [this documentation](https://docs.gitlab.com/ee/workflow/forking_workflow.html) for information on forking to another GitLab instance or [this discussion](https://gist.github.com/DavideMontersino/810ebaa170a2aa2d2cad) for GitHub.
 
 ### 4. License
-Refer to [LICENSE](https://gitlab.cs.univie.ac.at/markhama94cs/medil/blob/master/LICENSE) which is the [GNU General Public License v3 (GPLv3)](https://choosealicense.com/licenses/gpl-3.0/).
+Refer to [LICENSE](https://gitlab.com/alex-markham/medil/blob/master/LICENSE) which is the [GNU General Public License v3 (GPLv3)](https://choosealicense.com/licenses/gpl-3.0/).
 
 ### 5. Changelog
-Refer to [CHANGELOG](https://gitlab.cs.univie.ac.at/markhama94cs/medil/blob/master/CHANGELOG.md).
+Refer to [CHANGELOG](https://gitlab.com/alex-markham/medil/blob/master/CHANGELOG.md).
 
 ### 6. References
 [^fn1]: title and link to arXiv coming soon
