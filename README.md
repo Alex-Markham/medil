@@ -15,6 +15,26 @@ This package for is causal inference using the Measurement-Dependence Inducing L
 ### 1. Installation
 
 ### 2. Basic usage
+Example of how I used it on Big 5 data:
+
+```python
+import numpy as np
+from independence_test import independence_test
+
+
+# load BIG5 data
+b5_data = np.loadtxt('../../BIG5/data.csv', delimiter='\t',
+                     skiprows=1, usecols=np.arange(7, 57)).T
+with open('../BIG5/data.csv') as file:
+    b5_fields = np.asarray(file.readline().split('\t')[7:57])
+b5_fields[-1] = b5_fields[-1][:-1]
+
+# run tests
+dependencies, p_values, null_hyp = independence_test(b5_data, 10, alpha=.05)
+np.savez('perm_test_10.npz', null_hyp=null_hyp, dependencies=dependencies)
+```
+
+That was just for the independence permutation test using dist_corr.
 
 ### 3. Support
 If you have any questions, suggestions, feedback, or bugs to report, please [contact me](https://causal.dev/#contact) or [open an issue](https://gitlab.com/alex-markham/medil/issues).
