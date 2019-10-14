@@ -5,6 +5,7 @@ from matplotlib.pyplot import show
 # from graphviz import Digraph, render
 
 
+# make these into static methods in the indep_test method?
 def permute_within_columns(x):
     # get random new index for row of each element
     row_idx = np.random.sample(x.shape).argsort(axis=0)
@@ -27,6 +28,7 @@ def permute_within_rows(x):
     return x[row_idx, col_idx]
 
 
+# these go into test_medil.py
 def gen_test_data(num_vars=5, num_samples=100):
     x = np.empty((num_vars, num_samples))#,dtype=')
     x[0, :] = np.arange(num_samples)#, dtype='float64')
@@ -48,6 +50,10 @@ test_graph_triangle = np.asarray([
 test_graph_cm_am = []
 
 
+# probably gets its own method? no, maybe its rather a property of the
+# graph object returned by ECC finding? or is ECC finding just a sub
+# func in the class/method (ahh, don't know termin) of the UDG, which
+# could be a property of the data?
 def display_graph(adjacency_matrix):
     graph = from_numpy_matrix(adjacency_matrix, create_using=Graph())
     draw(graph)
