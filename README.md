@@ -36,6 +36,34 @@ np.savez('perm_test_10.npz', null_hyp=null_hyp, dependencies=dependencies)
 
 That was just for the independence permutation test using dist_corr.
 
+-------------------------------------------------------------------------------
+
+Example creating an undirected dependency graph:
+
+```python
+>>> from medil import graph
+
+
+>>> num_vertices = 5
+>>> example_UDG = medil.graph.UndirectedDependenceGraph(num_vertices)
+>>> example_UDG.adj_matrix
+array([[0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0],
+       [0, 0, 0, 0, 0]])
+>>> edges = np.array([[0, 1], [1, 2], [2, 3], [3, 4], [4, 1]])
+>>> example_UDG.add_edges(edges)
+>>> example_UDG.adj_matrix
+array([[0, 1, 0, 0, 0],
+       [1, 0, 1, 0, 1],
+       [0, 1, 0, 1, 0],
+       [0, 0, 1, 0, 1],
+       [0, 1, 0, 1, 0]])
+>>> example_UDG.num_edges
+5
+```
+
 ### 3. Support
 If you have any questions, suggestions, feedback, or bugs to report, please [contact me](https://causal.dev/#contact) or [open an issue](https://gitlab.com/alex-markham/medil/issues).
 
