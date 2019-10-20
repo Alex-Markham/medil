@@ -261,3 +261,12 @@ def n_choose_2(n):
 # optimize for causality/MLMs, maybe making it score-based instead of
 # constraint, so that it adds/removes (un)likely edges (i.e., assume
 # high clustering co-efficient)
+
+########################################################################################
+# test
+
+start = time.time()
+for _ in range(10000):
+    ecc = cm_cover(test_graph)
+end = time.time()
+print((end - start) / 10000)
