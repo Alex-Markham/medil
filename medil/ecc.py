@@ -51,7 +51,7 @@ def make_aux(graph):
     
     common_neighbors[extant_nbrs_idx] = extant_nbrs
 
-    # number of cliques for each node? if we set diag=0
+    # number of cliques for each node? assignments? if we set diag=0
     # num_cliques = common_neighbors.sum(0)
 
     # sum() of submatrix of graph containing exactly the rows/columns
