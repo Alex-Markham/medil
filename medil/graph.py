@@ -33,11 +33,13 @@ class UndirectedDependenceGraph(object):
     def make_aux(self):
         # find neighbourhood for each vertex
         # each row corresponds to a unique edge
-        common_neighbors= np.zeros((num_edges, num_vertices), int) # init
-        
+        max_num_edges = self.n_choose_2(self.num_vertices)
+        self.common_neighbors= np.zeros((max_num_edges, self.num_vertices), int) # init
+
         # mapping of edges to unique row idx
-        nghbrhd_idx = np.zeros((num_vertices, num_vertices), int)
-        nghbrhd_idx[triu_idx] = np.arange(num_edges)
+        triu_idx = np.triu_indices(self.num_vertices, 1)
+        nghbrhd_idx = np.zeros((self.num_vertices, self.num_vertices), int)
+        nghbrhd_idx[triu_idx] = np.arange(max_num_edges)
         # nghbrhd_idx += nghbrhd_idx.T
         get_idx = lambda edge: nghbrhd_idx[edge[0], edge[1]]
         
@@ -45,11 +47,11 @@ class UndirectedDependenceGraph(object):
         # edges_idx = np.transpose(triu_idx)
         
         # compute actual neighborhood for each edge = (v_1, v_2)
-        nbrs = lambda edge: np.logical_and(graph[edge[0]], graph[edge[1]])    
+        nbrs = lambda edge: np.logical_and(self.adj_matrix[edge[0]], self.adj_matrix[edge[1]])    
         
-        extant_edges = np.transpose(np.triu(graph, 1).nonzero())
+        extant_edges = np.transpose(np.triu(self.adj_matrix, 1).nonzero())
         extant_nbrs = np.array([nbrs(edge) for edge in extant_edges])
-        extant_nbrs_idx = [get_idx(edge) for edge in extant_edges]
+        extant_nbrs_idx = np.array([get_idx(edge) for edge in extant_edges])
         
         self.common_neighbors[extant_nbrs_idx] = extant_nbrs
         
@@ -62,23 +64,25 @@ class UndirectedDependenceGraph(object):
         
         # make mask to identify subgraph (closed common neighborhood of
         # nodes u, v in edge u,v)
-        mask = lambda edge_idx: np.array(common_neighbors[edge_idx], dtype=bool)
+        mask = lambda edge_idx: np.array(self.common_neighbors[edge_idx], dtype=bool)
         
         # make subgraph-adjacency matrix, and then subtract diag and
         # divide by two to get num edges in subgraph---same as sum() of
         # triu(subgraph-adjacency matrix) but probably a bit faster
-        self.nbrhood = lambda edge_idx: graph[mask(edge_idx)][:, mask(edge_idx)]
-        num_edges_in_nbrhood = lambda edge_idx: (self.nbrhood(edge_idx).sum() - mask(edge_idx).sum()) // 2
+        self.nbrhood = lambda edge_idx: self.adj_matrix[mask(edge_idx)][:, mask(edge_idx)]
+        max_num_edges_in_nbrhood = lambda edge_idx: (self.nbrhood(edge_idx).sum() - mask(edge_idx).sum()) // 2
         
-        nbrhood_edge_counts = np.array([num_edges_in_nbrhood(edge_idx) for edge_idx in np.arange(num_edges)])
+        nbrhood_edge_counts = np.array([max_num_edges_in_nbrhood(edge_idx) for edge_idx in np.arange(max_num_edges)])
 
         # important structs are:
         # self.common_neighbors 
         # self.nbrhood_edge_counts
         # # and fun is
         # self.nbrhood
-        
-    
+
+    @staticmethod
+    def n_choose_2(n):
+        return n * (n - 1) // 2
 
 
 class ReducedUndDepGraph(UndirectedDependenceGraph):

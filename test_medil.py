@@ -10,4 +10,16 @@ test_graph_triangle = np.asarray([
     [0, 1, 1, 1, 1, 1],
     [0, 0, 1, 0, 1, 1]])
 
-cover = find_cm(graph)
+cover = find_cm(test_graph_triangle)
+
+print(cover)
+
+
+
+
+
+
+
+
+
+

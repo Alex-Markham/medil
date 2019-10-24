@@ -21,31 +21,28 @@ def branch(graph, counter, the_cover):
     if (uncovered_graph == 0).all():
         return the_cover
 
-    reduction = reducee(graph, graph_aux, k, uncovered_graph, the_cover)
+    reduction = reducee(graph, k, uncovered_graph, the_cover)
     # now graph_aux is the uncovored_graph, not the original
-    graph, graph_aux, k, uncovered_graph, the_cover = reduction
+    graph, k, uncovered_graph, the_cover = reduction
 
     if k < 0:
         return None
 
     chosen_edge = choose_edge(graph_aux)
-    nbrhood = graph_aux[2]
-    chosen_nbrhood = nbrhood(chosen_edge)
+    chosen_nbrhood = graph.nbrhood(chosen_edge)
     for clique_nodes in max_cliques(chosen_nbrhood):
         clique = np.zeros(len(graph), dtype=int)
         clique[clique_nodes] = 1
 
         union = clique if the_cover is None else np.vstack((the_cover, clique))
-        the_cover_prime = branch(graph, graph_aux, k-1, union)
+        the_cover_prime = branch(graph, k-1, union)
         if the_cover_prime is not None:
             return the_cover_prime
     return the_cover
 
 
-def reducee(graph, graph_aux, k, uncovered_graph, the_cover):
+def reducee(graph, k, uncovered_graph, the_cover):
     # repeatedly apply three reduction rules
-
-    common_neighbors, nbrhood_edge_counts, nbrhood, get_idx = graph_aux
 
     reducing = True
 
@@ -70,19 +67,17 @@ def reducee(graph, graph_aux, k, uncovered_graph, the_cover):
         # only check uncovered edges---may cause bugs?
         covered_edges_idx = np.array([get_idx(x) for x in np.transpose(np.where(np.logical_and(uncovered_graph==0, np.tri(test_graph.shape[0], k=-1).T)))]) # grooosssssssssssssss
 
-        common_neighbors[covered_edges_idx] = 0
-        nbrhood_edge_counts[covered_edges_idx] = 0
+        graph.common_neighbors[covered_edges_idx] = 0
+        graph.nbrhood_edge_counts[covered_edges_idx] = 0
 
-        graph_aux = common_neighbors, nbrhood_edge_counts, graph_aux[2], graph_aux[3]
-        
         # edges in at least 1 maximal clique
-        at_least = nbrhood_edge_counts > 0
+        at_least = graph.nbrhood_edge_counts > 0
 
         # edges in at most 1 maximal clique
-        at_most = (n_choose_2(common_neighbors.sum(1)) - nbrhood_edge_counts) == 0
+        at_most = (n_choose_2(graph.common_neighbors.sum(1)) - graph.nbrhood_edge_counts) == 0
 
         # cliques containing edges in exactly 1 maximal clique
-        cliques = common_neighbors[at_least & at_most]
+        cliques = graph.common_neighbors[at_least & at_most]
 
         if cliques.any():       # then apply Rule 2
             cliques = np.unique(cliques, axis=0) # need to fix
@@ -128,7 +123,7 @@ def reducee(graph, graph_aux, k, uncovered_graph, the_cover):
         if applied_3:
             continue
             
-    return graph, graph_aux, k, uncovered_graph, the_cover
+    return graph, k, uncovered_graph, the_cover
 
 
 def cover_edges(graph, the_cover):
