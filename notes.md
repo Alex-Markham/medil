@@ -7,3 +7,7 @@ Structuring the Project (in descending order of importance/usefulness/detail):
 Readthedocs website for medil.causal.dev:
   * [adding custom domain](https://docs.readthedocs.io/en/stable/custom_domains.html)
   * [specifying canonical URL](https://docs.readthedocs.io/en/stable/guides/canonical.html)
+
+Code:
+  * could make a load module containing funcs such as from\_dict and from\_edges and from\_adj\_matrix etc, but not a big priority---network does it all well already, and medil really just needs to work with the output from the perm test methods
+  * maybe change UndirectedDependenceGraph object init argument to be a adj matrix instead?

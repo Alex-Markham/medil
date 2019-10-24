@@ -77,4 +77,4 @@ Refer to [LICENSE](https://gitlab.com/alex-markham/medil/blob/master/LICENSE) wh
 Refer to [CHANGELOG](https://gitlab.com/alex-markham/medil/blob/master/CHANGELOG.md).
 
 ### 7. References
-[^fn1]: title and link to arXiv coming soon
+[^fn1]: Alex Markham and Moritz Grosse-Wentrup. *Measurement Dependence Inducing Latent Causal Models*. arXiv:1910.08778 [stat.ML]. URL: [arxiv.org/abs/1910.08778](https://arxiv.org/abs/1910.08778)
