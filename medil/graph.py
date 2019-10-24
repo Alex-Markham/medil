@@ -67,8 +67,8 @@ class UndirectedDependenceGraph(object):
         # make subgraph-adjacency matrix, and then subtract diag and
         # divide by two to get num edges in subgraph---same as sum() of
         # triu(subgraph-adjacency matrix) but probably a bit faster
-        nbrhood = lambda edge_idx: graph[mask(edge_idx)][:, mask(edge_idx)]
-        num_edges_in_nbrhood = lambda edge_idx: (nbrhood(edge_idx).sum() - mask(edge_idx).sum()) // 2
+        self.nbrhood = lambda edge_idx: graph[mask(edge_idx)][:, mask(edge_idx)]
+        num_edges_in_nbrhood = lambda edge_idx: (self.nbrhood(edge_idx).sum() - mask(edge_idx).sum()) // 2
         
         nbrhood_edge_counts = np.array([num_edges_in_nbrhood(edge_idx) for edge_idx in np.arange(num_edges)])
 
@@ -76,12 +76,7 @@ class UndirectedDependenceGraph(object):
         # self.common_neighbors 
         # self.nbrhood_edge_counts
         # # and fun is
-        # self.nbrhood = None              # TODO make func
-
-    def find_cmn_nbrs(self):
-        # each row corresponds to a unique edge
-        common_neighbors = np.zeros((num_edges, num_vertices), int) # init
-  
+        # self.nbrhood
         
     
 
