@@ -125,7 +125,7 @@ def reducee(graph, graph_aux, k, uncovered_graph, the_cover):
         # covered, and decrease k by one
 
         # only check uncovered edges---may cause bugs?
-        covered_edges_idx = np.array([get_idx(x) for x in np.transpose(np.where(np.logical_and(uncovered_graph==0, np.tri(test_graph.shape[0], k=-1).T)))]) # grooosssssssssssssss
+        covered_edges_idx = np.array([get_idx(x) for x in np.transpose(np.where(np.logical_and(uncovered_graph==0, np.tri(6, k=-1).T)))]) # grooosssssssssssssss
 
         common_neighbors[covered_edges_idx] = 0
         nbrhood_edge_counts[covered_edges_idx] = 0
@@ -264,9 +264,11 @@ def n_choose_2(n):
 
 ########################################################################################
 # test
+# import time
+#  ../tes
 
-start = time.time()
-for _ in range(10000):
-    ecc = cm_cover(test_graph)
-end = time.time()
-print((end - start) / 10000)
+# start = time.time()
+# for _ in range(10000):
+#     ecc = cm_cover(test_graph)
+# end = time.time()
+# print((end - start) / 10000)
