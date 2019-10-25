@@ -168,11 +168,11 @@ def max_cliques(nbrhood):
     if len(nbrhood) == 0:
         return
 
-    adj = {u: {v for v in np.nonzero(nbrhood[u])[0] if v != u} for u in np.arange(len(nbrhood))}
+    adj = {u: {v for v in np.nonzero(nbrhood[u])[0] if v != u} for u in range(len(nbrhood))}
     Q = [None]
 
-    subg = set(np.arange(len(nbrhood)))
-    cand = set(np.arange(len(nbrhood)))
+    subg = set(range(len(nbrhood)))
+    cand = set(range(len(nbrhood)))
     u = max(subg, key=lambda u: len(cand & adj[u]))
     ext_u = cand - adj[u]
     stack = []
