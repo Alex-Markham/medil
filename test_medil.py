@@ -13,13 +13,3 @@ test_graph_triangle = np.asarray([
 cover = find_cm(test_graph_triangle)
 
 print(cover)
-
-
-
-
-
-
-
-
-
-

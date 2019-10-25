@@ -41,7 +41,7 @@ class UndirectedDependenceGraph(object):
         nghbrhd_idx = np.zeros((self.num_vertices, self.num_vertices), int)
         nghbrhd_idx[triu_idx] = np.arange(max_num_edges)
         # nghbrhd_idx += nghbrhd_idx.T
-        get_idx = lambda edge: nghbrhd_idx[edge[0], edge[1]]
+        self.get_idx = lambda edge: nghbrhd_idx[edge[0], edge[1]]
         
         # reverse mapping
         # edges_idx = np.transpose(triu_idx)
@@ -51,7 +51,7 @@ class UndirectedDependenceGraph(object):
         
         extant_edges = np.transpose(np.triu(self.adj_matrix, 1).nonzero())
         extant_nbrs = np.array([nbrs(edge) for edge in extant_edges])
-        extant_nbrs_idx = np.array([get_idx(edge) for edge in extant_edges])
+        extant_nbrs_idx = np.array([self.get_idx(edge) for edge in extant_edges])
         
         self.common_neighbors[extant_nbrs_idx] = extant_nbrs
         
@@ -72,7 +72,7 @@ class UndirectedDependenceGraph(object):
         self.nbrhood = lambda edge_idx: self.adj_matrix[mask(edge_idx)][:, mask(edge_idx)]
         max_num_edges_in_nbrhood = lambda edge_idx: (self.nbrhood(edge_idx).sum() - mask(edge_idx).sum()) // 2
         
-        nbrhood_edge_counts = np.array([max_num_edges_in_nbrhood(edge_idx) for edge_idx in np.arange(max_num_edges)])
+        self.nbrhood_edge_counts = np.array([max_num_edges_in_nbrhood(edge_idx) for edge_idx in np.arange(max_num_edges)])
 
         # important structs are:
         # self.common_neighbors 
