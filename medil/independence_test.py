@@ -1,7 +1,7 @@
 import numpy as np
 from dcor import pairwise, distance_covariance as distcov
-from multiprocessing import Pool as pool
-from misc.utils import permute_within_rows
+from multiprocessing import Pool
+from .utils import permute_within_rows
 
 
 def hypothesis_test(data, num_resamples, null_cov=None):
@@ -15,7 +15,7 @@ def hypothesis_test(data, num_resamples, null_cov=None):
         # fixed it---just a problem with the type of my test data
 
     # initialize aux vars used in loop
-    p_values = np.zeros(null_hyp.shape)
+    p_values = np.zeros(null_cov.shape)
     num_loops = int(np.ceil(num_resamples / 2))
     for _ in range(num_loops):
         x_1 = permute_within_rows(data)
