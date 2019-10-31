@@ -1,6 +1,6 @@
 import numpy as np
-from networkx import from_numpy_matrix, Graph, draw
-from matplotlib.pyplot import show
+# from networkx import from_numpy_matrix, Graph, draw
+# from matplotlib.pyplot import show
 # from networkx.drawing.nx_pydot import write_dot
 # from graphviz import Digraph, render
 

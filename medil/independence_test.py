@@ -1,5 +1,5 @@
 import numpy as np
-from dcor import pairwise, distance_covariance as distcov
+from dcor import pairwise, distance_correlation as distcov
 from multiprocessing import Pool
 from .utils import permute_within_rows
 
