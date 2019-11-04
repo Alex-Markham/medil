@@ -229,3 +229,260 @@ def distcorr(Xval, Yval, pval=True, num_runs=500):
     else:
         return dcor
 ```
+
+dag and print:
+```python
+import numpy as np
+# import networkx as nx
+# import matplotlib.pyplot as plt
+# from string import ascii_uppercase as Alpha
+
+
+def plot_bar_chart(ax, fields, purity_scores, total_cons):
+    # sort?
+    ax.bar(fields, purity_scores)
+    for tick in ax.get_xticklabels():
+        tick.set_rotation(45)
+    ax.text(0.1, 0.9, 'test', ha='center', va='center',
+            transform=ax.transAxes)
+
+
+def plot_graph(adjacency_matrix, fields, name):
+    plt.figure(num=1, figsize=(20, 20))
+    graph = nx.from_numpy_matrix(adjacency_matrix, create_using=nx.DiGraph())
+    labels = {idx: "C " + str(idx) if idx < num_concepts else
+              fields[idx - num_concepts] for idx in
+              range(num_total)}
+    colors = ['r' if idx < num_concepts else 'b' for idx in
+              range(num_total)]
+    nx.draw(graph, labels=labels, with_labels=True,
+            node_color=colors, node_size=700)
+    plt.savefig(name + '.png')
+#    plt.show()
+    plt.close()
+    return graph, num_concepts  # , adjacency_matrix
+
+
+def make_adj_matrix(all_concepts):
+        # make adjacency matrix from c_graph
+    num_concepts, num_observed = all_concepts.shape
+    num_total = sum(all_concepts.shape)
+
+    adjacency_matrix = np.zeros((num_total, num_total))
+    adjacency_matrix[:num_concepts, -num_observed:] = all_concepts
+    return adjacency_matrix
+
+
+def make_concept_graphs(depends):
+    # :param depends: dependence matrix D: with d_ij == (0)1 means x_i
+    # and x_j are (in)depependent
+
+    num_vars = depends.shape[0]
+
+    c_graphs = dict()  # init dict containg concept graph for each var
+    # loop through vars to make each concept graph
+    for root_var in range(num_vars):
+        # initialize concept graph
+        concept_graph = np.zeros((1, num_vars), dtype='bool')
+        concept_graph[0, root_var] = True
+
+        # get array of dependent vars (excluding self-dependence)
+        dep_vars = np.array(depends[root_var])
+        dep_vars[root_var] = False
+        dep_vars = np.flatnonzero(dep_vars)
+
+        # loop through dep_vars, adding each to concept graph
+        for dep_var in dep_vars:
+            for concept in concept_graph:
+                # add to concept iff it's dep with all other vars
+                if not depends[dep_var, np.flatnonzero(concept)].all():
+                    continue
+                concept[dep_var] = True
+                # if dep_var indep of all concepts, add new concept
+            if not concept_graph[:, dep_var].any():
+                concept_graph = add_new_concept(root_var,
+                                                concept_graph,
+                                                dep_var, dep_vars,
+                                                depends)
+        c_graphs[root_var] = np.asarray(concept_graph, dtype='int')
+
+    all_concepts = [row for idx in c_graphs for row in
+                    c_graphs[idx]]
+    all_concepts = np.unique(all_concepts, axis=0)
+
+    return c_graphs, all_concepts
+
+
+def get_depends(x=None, name=None, alpha=.05, file=None):
+    if file is not None:
+        p = np.load(file)['p']
+    else:
+        rho, p = rhoperm(x, name, 1000)
+
+    # generate dependence matrix D: with d_ij == (0)1 means x_i and
+    # x_j are (in)depependent
+    return p <= alpha  # , rho, p
+
+
+def rhoperm(x, name=None, num_perms=1000):
+    '''Computes Pearson's correlation coefficient with p-values.
+
+    rho, p = rhoperm(x, num_perms=1000)
+
+    Input variable x has to be of dimension [observations X
+    variables]. The p-values are computed by a permutation test.
+
+    '''
+
+    num_samps, num_vars = x.shape
+
+    # Correlation matrix
+    rho = np.corrcoef(x, rowvar=False)
+
+    # permutation test for p-values
+    p = np.zeros([num_vars, num_vars])
+    alt_rho_idx = np.triu_indices(2 * num_vars, num_vars + 1)
+    rho_idx = np.triu_indices(num_vars, 1)
+    for perm in range(num_perms):
+        x_perm = permute_within_columns(x)
+        alt_rho = np.corrcoef(x, x_perm, rowvar=False)
+        p[rho_idx] += abs(alt_rho[alt_rho_idx]) > abs(rho[rho_idx])
+    p = (p + p.T) / num_perms
+
+    if name is not None:
+        np.savez(name + '_perm', rho=rho, p=p)
+    return rho, p
+
+
+def permute_within_columns(x):
+    # get random new index for row of each element
+    row_idx = np.random.sample(x.shape).argsort(axis=0)
+
+    # keep the column index the same
+    col_idx = np.tile(np.arange(x.shape[1]), (x.shape[0], 1))
+
+    # apply the permutaton matrix to permute x
+    return x[row_idx, col_idx]
+
+
+def add_new_concept(var_eff, c_graph, var_caus, dep_vars, dependent):
+    num_vars = c_graph.shape[1]
+
+    new_concept = np.zeros((1, num_vars), dtype='bool')
+    # make concept dep with var_eff and var_caus
+    new_concept[0, [var_eff, var_caus]] = [True, True]
+
+    # loop through previous var_causes to add to new concept; only add
+    # if prev_var_caus is dep with all other vars in concept
+    for prev_var_caus in dep_vars[dep_vars < var_caus]:
+        if dependent[prev_var_caus, np.flatnonzero(new_concept)].all():
+            new_concept[0, prev_var_caus] = True
+    return np.append(c_graph, new_concept, axis=0)
+
+######################################################################
+# personality tests data
+
+# PF16
+# pf_data = np.loadtxt('16PF/data.csv', delimiter='\t',
+#                      skiprows=1, usecols=np.arange(1, 163))
+# with open('16PF/data.csv') as file:
+#     pf_fields = np.asarray(file.readline().split('"\t"')[:163])
+
+# BIG5
+b5_data = np.loadtxt('BIG5/data.csv', delimiter='\t',
+                     skiprows=1, usecols=np.arange(7, 57))
+with open('BIG5/data.csv') as file:
+    b5_fields = np.asarray(file.readline().split('\t')[7:57])
+b5_fields[-1] = b5_fields[-1][:-1]
+
+######################################################################
+
+
+def dag_n_print(data, fields, name):
+    # plot_graph
+    depends = get_depends(data, file=name + '_perm.npz')
+    c_graph = find_concept_graphs(depends)
+    graph, num_total_concepts = plot_graph(c_graph, fields, name)
+
+    # # for plotting
+    # total_cons_dict[key] = num_total_concepts
+    # purity_dict[key] = np.array([c_graph[g].shape[0] for g in
+    #                                  c_graph])
+
+    # printout
+    print(f"number total concepts for {name} graph: " +
+          str(num_total_concepts))
+    with open(name + '.csv', 'w') as file:
+        # file.write(f"number total concepts for {name} graph: " +
+        #            str(num_total_concepts))
+        for i in range(len(fields)):
+            file.write(f"\n{fields[i]}, {c_graph[i].shape[0]}, " +
+                       f"{sum(depends)[i] - 1}")
+
+    return c_graph
+
+
+# c_graph = dag_n_print(b5_data, b5_fields, 'BIG5')
+# dag_n_print(pf_data, pf_fields, '16PF')
+
+######################################################################
+# diff traits
+
+b5_dict = {'E5': np.arange(10),
+           'N5': np.arange(10, 20),
+           'A5': np.arange(20, 30),
+           'C5': np.arange(30, 40),
+           'O5': np.arange(40, 50)}
+
+# pf_dict = {Alpha[i]: np.arange(i * 10 + 3, (i + 1) * 10 + 3)
+#            for i in np.arange(2, 16)}
+# pf_dict['A'] = np.arange(10)
+# pf_dict['B'] = np.arange(10, 23)
+
+
+def dag_n_print(idx_dict, all_data, all_fields):
+    field_dict = dict()
+    purity_dict = dict()
+    total_cons_dict = dict()
+    for key in idx_dict:
+        idx = idx_dict[key]
+        data = all_data[:, idx]
+        fields = all_fields[idx]
+        field_dict[key] = fields
+
+        # plot_graph
+        depends = get_depends(data)
+        all_concepts = make_concepts(depends)
+        graph, num_total_concepts = plot_graph(all_concepts, fields,
+                                               key)
+
+        # for plotting
+        total_cons_dict[key] = num_total_concepts
+        purity_dict[key] = np.array([c_graph[g].shape[0] for g in
+                                     c_graph])
+
+        # printout
+        print(f"number total concepts for {key} graph: " +
+              str(num_total_concepts))
+        with open(key + '.csv', 'w') as file:
+            for i in range(len(fields)):
+                file.write(f"\n{fields[i]}, {c_graph[i].shape[0]}, " +
+                           f"{sum(depends)[i]}")
+    return field_dict, purity_dict, total_cons_dict
+
+
+# fd, pd, tcd = dag_n_print(b5_dict, b5_data, b5_fields)
+
+######################################################################
+
+# example_depends = np.ones((5, 5))
+# example_depends[[0, 1, 2, 2, 3, 3, 4, 4], [1, 0, 3, 4, 2, 4, 2, 3]] = 0
+# c_graph = find_concept_graphs(example_depends)
+# plot_graph(c_graph, np.asarray(['1', '2', '3', '4', '5']), 'example')
+
+# example2_depends = np.ones((6, 6))
+# example2_depends[[0, 1, 2, 2, 3, 3, 4, 4, 5], [1, 0, 3, 4, 2, 4, 2, 3,
+#                                                4]] = 0
+# c_graph2 = find_concept_graphs(example2_depends)
+# plot_graph(c_graph2, np.asarray(['1', '2', '3', '4', '5', '6']), 'example2')
+```
