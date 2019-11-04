@@ -21,4 +21,4 @@ Undirected dependency graph is complement of Markov Random Field with global Mar
 Code:
   * could make a load module containing funcs such as from\_dict and from\_edges and from\_adj\_matrix etc, but not a big priority---network does it all well already, and medil really just needs to work with the output from the perm test methods
   * maybe change UndirectedDependenceGraph object init argument to be a adj matrix instead?
->>>>>>> 5ceda7d09247b1dda81403085c71a4e219b52210
+

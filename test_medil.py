@@ -29,8 +29,8 @@ m_samps[3] = 4 * l_noise[1] + .5 * m_noise[3]
 m_samps[4] = l_noise[2] * 3 + l_noise[1] * 3 + m_noise[4]
 m_samps[5] = -7 * l_noise[2] + m_noise[5] * 2
 
-p_vals, null_cov = hypothesis_test(m_samps, 100)
-dep_graph = dependencies(null_cov, .05, p_vals, .05)
+p_vals, null_corr = hypothesis_test(m_samps, 100)
+dep_graph = dependencies(null_corr, .1, p_vals, .05)
 
 
 ##################################################################
@@ -46,8 +46,8 @@ test_graph_triangle = np.asarray([
     [0, 1, 1, 1, 1, 1],
     [0, 0, 1, 0, 1, 1]])
 
-# cover = find_cm(test_graph_triangle)
-# print(cover)
+cover = find_cm(test_graph_triangle)
+print(cover)
 
 # import time
 
