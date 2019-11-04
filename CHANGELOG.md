@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - implement AM clique cover
 - learn actual functions corresponding to minMCM edges
 
-## [0.0.2] - 2018-11-04 ##
+## [0.2.0] - 2018-11-04 ##
 ### Added ###
 - references and better example to README
 - graph and find_ecc modules---makes package more maintainable and extensible
@@ -25,6 +25,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - need for importing networkx to find minMCM
 - junk code in misc dir
 
-## [0.0.1] - 2018-10-07 ##
+## [0.1.0] - 2018-10-07 ##
 ### Added ###
 - code in its raw, disorganized, poorly documented, inefficient state
