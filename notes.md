@@ -25,6 +25,8 @@ Undirected dependency graph is complement of Markov Random Field with global Mar
 [testing in python](https://realpython.com/python-testing/)
 [more testing](https://docs.python-guide.org/writing/tests/)
 
+What I'm doing is called [Monte Carlo Testin](https://en.wikipedia.org/wiki/Resampling_(statistics)#Monte_Carlo_testing)
+
 
 Code:
   * could make a load module containing funcs such as from\_dict and from\_edges and from\_adj\_matrix etc, but not a big priority---network does it all well already, and medil really just needs to work with the output from the perm test methods
