@@ -1,3 +1,11 @@
+Pushing new release:
+```bash
+git push origin develop
+git tag -a v0.X.0 -m "Releasing version 0.X.0"
+git push origin v0.X.0
+git push origin develop:master
+```
+
 Structuring the Project (in descending order of importance/usefulness/detail):
 
   * [seems to say everything, but is a lot of reading](https://docs.python-guide.org/writing/structure/)
