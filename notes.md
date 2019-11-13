@@ -29,6 +29,8 @@ Undirected dependency graph is complement of Markov Random Field with global Mar
 
 What I'm doing is called [Monte Carlo Testin](https://en.wikipedia.org/wiki/Resampling_(statistics)#Monte_Carlo_testing)
 
+Can probably make inverse ECC generator that takes a given (randmoly generated) covering and outputs a (random?) graph for which it is the min ECC to do large-scale testing? But there can be multiple min ECCs :/
+*Definitely* can add am/cm diff test graph
 
 Code:
   * could make a load module containing funcs such as from\_dict and from\_edges and from\_adj\_matrix etc, but not a big priority---network does it all well already, and medil really just needs to work with the output from the perm test methods

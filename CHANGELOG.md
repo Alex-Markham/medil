@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - implement AM clique cover
 - learn actual functions corresponding to minMCM edges
 
+## [0.3] - 2018-11-13 ##
+### Added ###
+- installation via pip and git
+- rudimentary progress bar
+
+### Fixed ###
+- bug in reduction rule 3 (lines 117--119) of the find_cm ecc alg
+
 ## [0.2.0] - 2018-11-04 ##
 ### Added ###
 - references and better example to README

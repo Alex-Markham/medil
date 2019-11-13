@@ -11,9 +11,12 @@ def find_clique_min_cover(graph):
 
     counter = 0
     the_cover = None
+    max_intersect_num = graph.num_vertices ** 2 / 4
+    print("\tsolution has at most {} cliques.\t".format(max_intersect_num))
     while the_cover is None:
         the_cover = branch(graph, counter, the_cover)
         counter += 1
+        print("testing for solutions with {}/{} cliques".format(counter, max_intersect_num))
     return the_cover
 
 
@@ -114,10 +117,12 @@ def reducee(graph, counter, uncovered_graph, the_cover):
 
         applied_3 = False
         for pair in np.transpose(np.where(guests)):
-            guest_rooms_idx = np.tranpose(np.where(the_cover[:, pair[1]]))
+            if the_cover is None:
+                break
+            guest_rooms_idx = np.transpose(np.where(the_cover[:, pair[1]]))
             
             if np.logical_not(the_cover[guest_rooms_idx, pair[1]]).any(): # then apply rule
-                applied_2 = True
+                applied_3 = True
                 # add host to all cliques containing guest
                 the_cover[guest_rooms_idx, pair[1]] = 1
                 uncovered_graph = cover_edges(uncovered_graph, the_cover)
