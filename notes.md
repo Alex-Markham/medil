@@ -1,5 +1,7 @@
 # use np.ravel_index #
 
+[for conda package](https://stackoverflow.com/questions/49474575/how-to-install-my-own-python-module-package-via-conda-and-watch-its-changes)
+
 Pushing new release:
 ```bash
 git push origin develop

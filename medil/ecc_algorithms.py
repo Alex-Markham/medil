@@ -11,7 +11,7 @@ def find_clique_min_cover(graph):
 
     counter = 0
     the_cover = None
-    max_intersect_num = graph.num_vertices ** 2 / 4
+    max_intersect_num = graph.num_vertices ** 2 // 4
     print("\tsolution has at most {} cliques.\t".format(max_intersect_num))
     while the_cover is None:
         the_cover = branch(graph, counter, the_cover)
