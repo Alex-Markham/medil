@@ -10,6 +10,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - implement AM clique cover
 - learn actual functions corresponding to minMCM edges
 
+## [0.4] - 2018-11-XX ##
+### Added ###
+- limited (linear) data simulation
+- causal clustering
+
+
 ## [0.3] - 2018-11-13 ##
 ### Added ###
 - installation via pip and git

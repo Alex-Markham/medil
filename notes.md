@@ -24,8 +24,6 @@ Check out [this](http://signal.ee.psu.edu/mrf.pdf) slidedeck for a nice summary 
 
 See [this](https://en.wikipedia.org/wiki/Markov_random_field) as well as factor graphs and clique factorization
 
-Undirected dependency graph is complement of Markov Random Field with global Markov property? And so cliques of UDG would be independent sets---ecc of UDG corresponds to sufficient factorization of MRF into independent sets
-
 [testing in python](https://realpython.com/python-testing/)
 [more testing](https://docs.python-guide.org/writing/tests/)
 
@@ -34,9 +32,6 @@ What I'm doing is called [Monte Carlo Testin](https://en.wikipedia.org/wiki/Resa
 Can probably make inverse ECC generator that takes a given (randmoly generated) covering and outputs a (random?) graph for which it is the min ECC to do large-scale testing? But there can be multiple min ECCs :/
 *Definitely* can add am/cm diff test graph
 
-Code:
-  * could make a load module containing funcs such as from\_dict and from\_edges and from\_adj\_matrix etc, but not a big priority---network does it all well already, and medil really just needs to work with the output from the perm test methods
-  * maybe change UndirectedDependenceGraph object init argument to be a adj matrix instead?
 
 test results showing speed differences:
 ```python
