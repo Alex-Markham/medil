@@ -1,4 +1,3 @@
-
 image: alpine
 
 pages:
@@ -13,7 +12,3 @@ pages:
   artifacts:
     paths:
     - public
-  only:
-    changes:
-    - docs/*
-  - master
