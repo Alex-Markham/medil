@@ -1,4 +1,5 @@
-  only:
+got docs pipline working for docs website, but still need to restrict it to master branch somehow
+only:
     changes:
     - docs/*
   - master
