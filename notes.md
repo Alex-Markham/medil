@@ -11,11 +11,11 @@ git push origin develop:master
 ```
 
 Structuring the Project (in descending order of importance/usefulness/detail):
-
   * [seems to say everything, but is a lot of reading](https://docs.python-guide.org/writing/structure/)
   * [extensive---probably useful for a while](https://python-packaging.readthedocs.io/en/latest/minimal.html)
   * [short---covered in other refs---think i've already done it all]( https://able.bio/SamDev14/how-to-structure-a-python-project--685o1o6)
-
+  * [pipelines for maintaining code integrity](https://www.patricksoftwareblog.com/setting-up-gitlab-ci-for-a-python-application/)
+  
 Readthedocs website for medil.causal.dev:
   * [adding custom domain](https://docs.readthedocs.io/en/stable/custom_domains.html)
   * [specifying canonical URL](https://docs.readthedocs.io/en/stable/guides/canonical.html)
@@ -32,6 +32,8 @@ What I'm doing is called [Monte Carlo Testin](https://en.wikipedia.org/wiki/Resa
 
 Can probably make inverse ECC generator that takes a given (randmoly generated) covering and outputs a (random?) graph for which it is the min ECC to do large-scale testing? But there can be multiple min ECCs :/
 *Definitely* can add am/cm diff test graph
+
+
 
 
 test results showing speed differences:
