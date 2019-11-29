@@ -9,3 +9,8 @@
 
 # notes to myself
 notes.md
+
+# docs rendered files
+docs/_build
+docs/_static
+docs/_templates

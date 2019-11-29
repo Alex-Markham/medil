@@ -19,6 +19,7 @@ Structuring the Project (in descending order of importance/usefulness/detail):
 Readthedocs website for medil.causal.dev:
   * [adding custom domain](https://docs.readthedocs.io/en/stable/custom_domains.html)
   * [specifying canonical URL](https://docs.readthedocs.io/en/stable/guides/canonical.html)
+  * [self hosting docs with subtree](https://stackoverflow.com/questions/45565464/git-push-subfolder-to-different-repository)
 
 Check out [this](http://signal.ee.psu.edu/mrf.pdf) slidedeck for a nice summary of MRF and related graph theory concepts
 
