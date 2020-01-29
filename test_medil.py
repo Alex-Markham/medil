@@ -34,7 +34,7 @@ dep_graph = dependencies(null_corr, .1, p_vals, .05)
 
 
 ##################################################################
-# test find_am
+# test find_cm
 from medil.ecc_algorithms import find_clique_min_cover as find_cm
 
 

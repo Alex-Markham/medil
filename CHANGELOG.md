@@ -8,23 +8,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - make proper python package and add figure out unit testing
 - add HSIC perm test
 - implement AM clique cover
-- learn actual functions corresponding to minMCM edges
-
-## [0.4] - 2018-11-XX ##
-### Added ###
+- learn actual functions corresponding to minMCM edges (causal FA)
+### In progress###
 - limited (linear) data simulation
 - causal clustering
 
-
-## [0.3] - 2018-11-13 ##
+## [0.3.0] - 2020-0X-XX ##
 ### Added ###
 - installation via pip and git
 - rudimentary progress bar
+- doc generating script and initial (incomplete) documentation website
 
 ### Fixed ###
 - bug in reduction rule 3 (lines 117--119) of the find_cm ecc alg
+- incorrect dates (2018 instead of 2019) in changelog
 
-## [0.2.0] - 2018-11-04 ##
+## [0.2.0] - 2019-11-04 ##
 ### Added ###
 - references and better example to README
 - graph and find_ecc modules---makes package more maintainable and extensible
@@ -39,6 +38,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - need for importing networkx to find minMCM
 - junk code in misc dir
 
-## [0.1.0] - 2018-10-07 ##
+## [0.1.0] - 2019-10-07 ##
 ### Added ###
 - code in its raw, disorganized, poorly documented, inefficient state

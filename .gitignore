@@ -9,6 +9,8 @@
 
 # notes to myself
 notes.md
+medil/cluster.py
+medil/simulate_data.py
 
 # docs rendered files
 docs/_build
