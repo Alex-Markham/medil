@@ -1,7 +1,6 @@
 import numpy as np
 from dcor import pairwise, distance_correlation as distcorr
 from multiprocessing import Pool
-from .utils import permute_within_rows
 
 
 def hypothesis_test(data, num_resamples, null_corr=None):
@@ -39,3 +38,14 @@ def dependencies(null_hyp, iota, p_values, alpha):
     accept_null = p_values >= alpha
     independencies = null_indep & accept_null
     return ~independencies     # dependencies
+
+
+def permute_within_rows(x):
+    # get random new index for col of each element
+    col_idx = np.random.sample(x.shape).argsort(axis=1)
+
+    # keep the row index the same
+    row_idx = np.tile(np.arange(x.shape[0]), (x.shape[1], 1)).T
+
+    # apply the permutaton matrix to permute x
+    return x[row_idx, col_idx]

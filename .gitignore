@@ -11,6 +11,7 @@
 notes.md
 medil/cluster.py
 medil/simulate_data.py
+medil/display.py
 
 # docs rendered files
 docs/_build

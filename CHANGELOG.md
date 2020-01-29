@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - implement AM clique cover
 - learn actual functions corresponding to minMCM edges (causal FA)
 ### In progress###
+- module for displaying graphs
 - limited (linear) data simulation
 - causal clustering
 
@@ -22,6 +23,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Fixed ###
 - bug in reduction rule 3 (lines 117--119) of the find_cm ecc alg
 - incorrect dates (2018 instead of 2019) in changelog
+
+### Removed ###
+- utils.py---permutation func moved to indep_test.py and display funcs moved to seperate module
 
 ## [0.2.0] - 2019-11-04 ##
 ### Added ###
