@@ -19,18 +19,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - installation via pip and git
 - rudimentary progress bar
 - doc generating script and initial (incomplete) documentation website
+- `tests/` directory and various files for more detailed integration and unit testing
 
 ### Fixed ###
 - bug in reduction rule 3 (lines 117--119) of the find_cm ecc alg
 - incorrect dates (2018 instead of 2019) in changelog
 
 ### Removed ###
-- utils.py---permutation func moved to indep_test.py and display funcs moved to seperate module
+- `utils.py`---distributed functions to relevant modules
+
+### Changed ###
+- `indpendence_test.py` --> `independence_testing.py`
 
 ## [0.2.0] - 2019-11-04 ##
 ### Added ###
 - references and better example to README
-- graph and find_ecc modules---makes package more maintainable and extensible
+- `graph.py` and `ecc_algorithms.py` modules---makes package more maintainable and extensible
 - test script
 
 ### Changed ###
