@@ -8,7 +8,7 @@ only:
 
 [for conda package](https://stackoverflow.com/questions/49474575/how-to-install-my-own-python-module-package-via-conda-and-watch-its-changes)
 
-Pushing new release:
+Pushing new release: don't forget to update version number in setup.py 
 ```bash
 git push origin develop
 git tag -a v0.X.0 -m "Releasing version 0.X.0"
