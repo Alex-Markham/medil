@@ -22,8 +22,8 @@ You can install the package via pip by running `pip install git+https://gitlab.c
 
 ```python
 >>> import numpy as np
->>> from medil.independence_test import hypothesis_test
->>> from medil.independence_test import dependencies
+>>> from medil.independence_testing import hypothesis_test
+>>> from medil.independence_testing import dependencies
 >>> from medil.ecc_algorithms import find_clique_min_cover as find_cm
 ```
 

@@ -1,8 +1,8 @@
 import numpy as np
 
 # test independence estimation
-from medil.independence_test import hypothesis_test
-from medil.independence_test import dependencies
+from medil.independence_testing import hypothesis_test
+from medil.independence_testing import dependencies
 
 
 num_samps = 1000
