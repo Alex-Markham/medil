@@ -5,27 +5,31 @@ from .graph import UndirectedDependenceGraph
 import numpy as np
 
 
-def find_clique_min_cover(graph):
+def find_clique_min_cover(graph, verbose=False):
     graph = UndirectedDependenceGraph(graph)
     graph.make_aux()
 
     counter = 0
     the_cover = None
-    max_intersect_num = graph.num_vertices ** 2 // 4
-    print("\tsolution has at most {} cliques.\t".format(max_intersect_num))
+    if verbose:
+        max_intersect_num = graph.num_vertices ** 2 // 4
+        print("solution has less than {} cliques.".format(max_intersect_num))
     while the_cover is None:
-        the_cover = branch(graph, counter, the_cover)
+        the_cover = branch(graph, counter, the_cover, verbose)
         counter += 1
-        print("testing for solutions with {}/{} cliques".format(counter, max_intersect_num))
+        if verbose:
+            print("\ntesting for solutions with {}/{} cliques".format(counter, max_intersect_num))
     return the_cover
 
 
-def branch(graph, counter, the_cover):
-    uncovered_graph = cover_edges(graph.adj_matrix, the_cover)
+def branch(graph, counter, the_cover, verbose):
+    uncovered_graph = cover_edges(graph.adj_matrix, the_cover, verbose)
     if not np.any(uncovered_graph): # == 0).all():
         return the_cover
 
-    reduction = reducee(graph, counter, uncovered_graph, the_cover)
+    if verbose:
+        print("\tbranching...")
+    reduction = reducee(graph, counter, uncovered_graph, the_cover, verbose)
     # now graph_aux is the uncovored_graph, not the original
     graph, counter, uncovered_graph, the_cover = reduction
 
@@ -39,23 +43,26 @@ def branch(graph, counter, the_cover):
         clique[clique_nodes] = 1
 
         union = clique if the_cover is None else np.vstack((the_cover, clique))
-        the_cover_prime = branch(graph, counter-1, union)
+        the_cover_prime = branch(graph, counter-1, union, verbose)
         if the_cover_prime is not None:
             return the_cover_prime
     return the_cover
 
 
-def reducee(graph, counter, uncovered_graph, the_cover):
+def reducee(graph, counter, uncovered_graph, the_cover, verbose):
     # repeatedly apply three reduction rules
 
     reducing = True
-
+    if verbose:
+        print('\t\treducing:')
     while reducing:
         reducing = False
             
         # rule_1: Remove isolated vertices and vertices that are only
         # adjacent to covered edges
-
+        if verbose:
+            print("\t\t\tapplying Rule 1...")
+        
         # 'remove' (set (i,i) to 0) isolated nodes i (and isolated
         # nodes in uncovered_graph are those adjactent to only covered
         # edges)
@@ -63,7 +70,7 @@ def reducee(graph, counter, uncovered_graph, the_cover):
         if len(isolated_verts) > 0: # then Rule 1 was applied
             uncovered_graph[isolated_verts, isolated_verts] = 0
 
-
+        
         # rule_2: If an uncovered edge {u,v} is contained in exactly one
         # maximal clique C, then add C to the solution, mark its edges as
         # covered, and decrease k by one
@@ -84,9 +91,11 @@ def reducee(graph, counter, uncovered_graph, the_cover):
         cliques = graph.common_neighbors[at_least & at_most]
 
         if cliques.any():       # then apply Rule 2
+            if verbose:
+                print("\t\t\tapplying Rule 2...")
             cliques = np.unique(cliques, axis=0) # need to fix
             the_cover = cliques if the_cover is None else np.vstack((the_cover, cliques))
-            uncovered_graph = cover_edges(uncovered_graph, cliques)
+            uncovered_graph = cover_edges(uncovered_graph, cliques, verbose)
             counter -= 1
             continue            # start the reducee loop over so Rule
                                 # 1 can 'clean up'
@@ -123,16 +132,18 @@ def reducee(graph, counter, uncovered_graph, the_cover):
             
             if np.logical_not(the_cover[guest_rooms_idx, pair[1]]).any(): # then apply rule
                 applied_3 = True
+            if verbose:
+                print("\t\t\tapplying Rule 3...")
                 # add host to all cliques containing guest
                 the_cover[guest_rooms_idx, pair[1]] = 1
-                uncovered_graph = cover_edges(uncovered_graph, the_cover)
+                uncovered_graph = cover_edges(uncovered_graph, the_cover, verbose)
         if applied_3:
             continue
             
     return graph, counter, uncovered_graph, the_cover
 
 
-def cover_edges(graph_adj_mat, the_cover):
+def cover_edges(graph_adj_mat, the_cover, verbose):
     if the_cover is None:
         return graph_adj_mat
     
@@ -153,6 +164,8 @@ def cover_edges(graph_adj_mat, the_cover):
         # cover edges
         uncovered_graph[covered_row, covered_col] = 0
 
+    if verbose:
+        print("\t\t\t{} uncovered edges remaining".format(uncovered_graph.sum()))
     return np.triu(uncovered_graph, 1) + uncovered_graph.T
     
 
