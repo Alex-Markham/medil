@@ -38,6 +38,9 @@ def branch(graph, counter, the_cover, verbose):
 
     chosen_edge = choose_edge(graph)
     chosen_nbrhood = graph.nbrhood(chosen_edge)
+    ###################
+    print([x for x in max_cliques(chosen_nbrhood)])
+    ###############################
     for clique_nodes in max_cliques(chosen_nbrhood):
         clique = np.zeros(graph.num_vertices, dtype=int)
         clique[clique_nodes] = 1
