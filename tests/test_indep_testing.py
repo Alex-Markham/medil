@@ -32,27 +32,6 @@ m_samps[5] = -7 * l_noise[2] + m_noise[5] * 2
 p_vals, null_corr = hypothesis_test(m_samps, 100)
 dep_graph = dependencies(null_corr, .1, p_vals, .05)
 
-
-##################################################################
-# test find_cm
-from medil.ecc_algorithms import find_clique_min_cover as find_cm
-
-
-test_graph_triangle = np.asarray([
-    [1, 1, 1, 0, 0, 0],
-    [1, 1, 1, 1, 1, 0],
-    [1, 1, 1, 0, 1, 1],
-    [0, 1, 0, 1, 1, 0],
-    [0, 1, 1, 1, 1, 1],
-    [0, 0, 1, 0, 1, 1]])
-
-cover = find_cm(test_graph_triangle)
-print(cover)
-
-# import time
-
-# start = time.time()
-# for _ in range(1000):
-#     cm = find_cm(test_graph_triangle)
-# end = time.time()
-# print((end - start) / 1000)
+# assert something in relation to pearson corr?
+# definitely test if individual pairs in the joint matrix have same values as if done only on pair of variables
+# maybe also test halfing num tests because of assymetry 
