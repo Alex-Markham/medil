@@ -15,7 +15,7 @@ More information can be found in the [documentation](https://medil.causal.dev) o
 
 
 ### 1. Installation
-You can install the package via pip by running `pip install -e git+https://gitlab.com/alex-markham/medil.git#egg=medil` in a terminal.
+You can install the package via pip by running `pip install git+https://gitlab.com/alex-markham/medil.git#egg=medil` in a terminal.
 
 ### 2. Basic usage
 
