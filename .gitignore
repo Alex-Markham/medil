@@ -12,6 +12,7 @@ notes.md
 medil/cluster.py
 medil/simulate_data.py
 medil/display.py
+test/ecc_test/
 
 # docs rendered files
 docs/_build
