@@ -11,7 +11,7 @@ def test_find_cm_on_triangle():
         [0, 1, 1, 1, 1, 1],
         [0, 0, 1, 0, 1, 1]])
 
-    cover = find_cm(test_graph_triangle, verbose=True)
+    cover = find_cm(graph_triangle, verbose=True)
     assert cover.shape==(3, 6)
     assert [0, 0, 1, 0, 1, 1] in cover
     assert [0, 1, 0, 1, 1, 0] in cover

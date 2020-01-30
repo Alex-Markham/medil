@@ -30,8 +30,8 @@ def test_indep_testing():
     m_samps[4] = l_noise[2] * 3 + l_noise[1] * 3 + m_noise[4]
     m_samps[5] = -7 * l_noise[2] + m_noise[5] * 2
     
-    p_vals, null_corr = hypothesis_test(m_samps, 100)
-    dep_graph = dependencies(null_corr, .1, p_vals, .05)
+    # p_vals, null_corr = hypothesis_test(m_samps, 100)
+    # dep_graph = dependencies(null_corr, .1, p_vals, .05)
     
     # assert something in relation to pearson corr?
     # definitely test if individual pairs in the joint matrix have same values as if done only on pair of variables
