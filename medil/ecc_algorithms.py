@@ -15,10 +15,10 @@ def find_clique_min_cover(graph, verbose=False):
         max_intersect_num = graph.num_vertices ** 2 // 4
         print("solution has less than {} cliques.".format(max_intersect_num))
     while the_cover is None:
-        the_cover = branch(graph, counter, the_cover, verbose)
-        counter += 1
         if verbose:
             print("\ntesting for solutions with {}/{} cliques".format(counter, max_intersect_num))
+        the_cover = branch(graph, counter, the_cover, verbose)
+        counter += 1
     return the_cover
 
 
