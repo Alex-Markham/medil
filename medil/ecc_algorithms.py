@@ -79,8 +79,8 @@ def reducee(graph, counter, uncovered_graph, the_cover, verbose):
         # only check uncovered edges---may cause bugs?
         covered_edges_idx = get_covered_edges_idx(graph, uncovered_graph)
 
-        graph.common_neighbors[covered_edges_idx] = 0
-        graph.nbrhood_edge_counts[covered_edges_idx] = 0
+        graph.common_neighbors[covered_edges_idx] = 0  # zeros out a row
+        graph.nbrhood_edge_counts[covered_edges_idx] = 0  # zeros out a row
 
         # edges in at least 1 maximal clique
         at_least = graph.nbrhood_edge_counts > 0
