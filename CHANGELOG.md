@@ -22,7 +22,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `tests/` directory and various files for more detailed integration and unit testing
 
 ### Fixed ###
-- bug in reduction rule 3 (lines 117--119) of the find_cm ecc alg
+- bug in reduction rule 2 of find_cm ecc alg that shows up on fully connected graphs
+- bug in reduction rule 3 of the find_cm ecc alg
 - incorrect dates (2018 instead of 2019) in changelog
 
 ### Removed ###
