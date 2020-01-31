@@ -13,7 +13,7 @@ def find_clique_min_cover(graph, verbose=False):
     the_cover = None
     if verbose:
         max_intersect_num = graph.num_vertices ** 2 // 4
-        print("solution has less than {} cliques.".format(max_intersect_num))
+        print("solution has at most {} cliques.".format(max_intersect_num))
     while the_cover is None:
         if verbose:
             print("\ntesting for solutions with {}/{} cliques".format(counter, max_intersect_num))
@@ -24,13 +24,13 @@ def find_clique_min_cover(graph, verbose=False):
 
 def branch(graph, counter, the_cover, verbose):
     uncovered_graph = cover_edges(graph.adj_matrix, the_cover, verbose)
-    if not np.any(uncovered_graph): # == 0).all():
+    if not np.any(uncovered_graph):
         return the_cover
 
     if verbose:
         print("\tbranching...")
     reduction = reducee(graph, counter, uncovered_graph, the_cover, verbose)
-    # now graph_aux is the uncovored_graph, not the original
+    # now graph_aux is the uncovered_graph, not the original
     graph, counter, uncovered_graph, the_cover = reduction
 
     if counter < 0:
@@ -63,14 +63,15 @@ def reducee(graph, counter, uncovered_graph, the_cover, verbose):
             
         # rule_1: Remove isolated vertices and vertices that are only
         # adjacent to covered edges
-        if verbose:
-            print("\t\t\tapplying Rule 1...")
         
         # 'remove' (set (i,i) to 0) isolated nodes i (and isolated
         # nodes in uncovered_graph are those adjactent to only covered
         # edges)
         isolated_verts = np.where(uncovered_graph.sum(0)+uncovered_graph.sum(1)==2)[0]
-        if len(isolated_verts) > 0: # then Rule 1 was applied
+        if len(isolated_verts) > 0: # then Rule 1 is applied
+            if verbose:
+                print("\t\t\tapplying Rule 1...")
+
             uncovered_graph[isolated_verts, isolated_verts] = 0
 
         
@@ -79,8 +80,8 @@ def reducee(graph, counter, uncovered_graph, the_cover, verbose):
         # covered, and decrease k by one
 
         # only check uncovered edges---may cause bugs?
-        covered_edges_idx = np.array([graph.get_idx(x) for x in np.transpose(np.where(np.logical_and(uncovered_graph==0, np.tri(graph.num_vertices, k=-1).T)))]) # grooosssssssssssssss
-        
+        covered_edges_idx = np.array([graph.get_idx(x) for x in np.transpose(np.where(np.logical_and(uncovered_graph==0, np.tri(graph.num_vertices, k=-1).T)))], dtype=int) # grooosssssssssssssss
+        print(covered_edges_idx)
         graph.common_neighbors[covered_edges_idx] = 0
         graph.nbrhood_edge_counts[covered_edges_idx] = 0
 

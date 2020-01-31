@@ -3,8 +3,9 @@ from medil.ecc_algorithms import find_clique_min_cover as find_cm
 
 
 def test_find_cm_on_3_cycle():
-    cycle_3 = np.ones((3, 3))
+    cycle_3 = np.ones((3, 3), dtype=int)
     cover = find_cm(cycle_3, verbose=True)
+    assert cover.shape==(1, 3)
     assert (cover==[[1, 1, 1]]).all()
 
 
