@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed ###
 - `indpendence_test.py` --> `independence_testing.py`
+- split up `ecc_algs.reducee()` internals for better testing/readability
 
 ## [0.2.0] - 2019-11-04 ##
 ### Added ###

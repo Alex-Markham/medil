@@ -38,9 +38,6 @@ def branch(graph, counter, the_cover, verbose):
 
     chosen_edge = choose_edge(graph)
     chosen_nbrhood = graph.nbrhood(chosen_edge)
-    ###################
-    print([x for x in max_cliques(chosen_nbrhood)])
-    ###############################
     for clique_nodes in max_cliques(chosen_nbrhood):
         clique = np.zeros(graph.num_vertices, dtype=int)
         clique[clique_nodes] = 1
@@ -80,8 +77,8 @@ def reducee(graph, counter, uncovered_graph, the_cover, verbose):
         # covered, and decrease k by one
 
         # only check uncovered edges---may cause bugs?
-        covered_edges_idx = np.array([graph.get_idx(x) for x in np.transpose(np.where(np.logical_and(uncovered_graph==0, np.tri(graph.num_vertices, k=-1).T)))], dtype=int) # grooosssssssssssssss
-        print(covered_edges_idx)
+        covered_edges_idx = get_covered_edges_idx(graph, uncovered_graph)
+
         graph.common_neighbors[covered_edges_idx] = 0
         graph.nbrhood_edge_counts[covered_edges_idx] = 0
 
@@ -171,7 +168,12 @@ def cover_edges(graph_adj_mat, the_cover, verbose):
     if verbose:
         print("\t\t\t{} uncovered edges remaining".format(uncovered_graph.sum()))
     return np.triu(uncovered_graph, 1) + uncovered_graph.T
-    
+
+
+def get_covered_edges_idx(graph, uncovered_graph):
+    return np.array([graph.get_idx(x) for x in np.transpose(np.where(np.logical_and(uncovered_graph==0, np.tri(graph.num_vertices, k=-1).T)))], dtype=int) # grooosssssssssssssss
+
+
 
 def choose_edge(graph):    
     score = graph.n_choose_2(graph.common_neighbors.sum(1)) - graph.nbrhood_edge_counts
