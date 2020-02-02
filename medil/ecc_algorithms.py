@@ -25,12 +25,14 @@ def find_clique_min_cover(graph, verbose=False):
         # need to reset graph aux back to original now---could also use deepcopy
         graph.common_neighbors = np.array(orig_common_neighbors)
         graph.nbrhood_edge_counts = np.array(orig_nbrhood_edge_counts)
+        print('line 28')
     return the_cover
 
 
 def branch(graph, counter, the_cover, verbose):
     uncovered_graph = cover_edges(graph.adj_matrix, the_cover, verbose)
     if not np.any(uncovered_graph):
+        print('line 35')
         return the_cover
 
     if verbose:
@@ -51,7 +53,9 @@ def branch(graph, counter, the_cover, verbose):
         union = clique.reshape(1, -1) if the_cover is None else np.vstack((the_cover, clique))
         the_cover_prime = branch(graph, counter-1, union, verbose)
         if the_cover_prime is not None:
-            return the_cover_prime
+            print('line 56')
+        return the_cover_prime
+    print('line 58')
     return the_cover
 
 
@@ -147,7 +151,7 @@ def reducee(graph, counter, uncovered_graph, the_cover, verbose):
                 uncovered_graph = cover_edges(uncovered_graph, the_cover, verbose)
         if applied_3:
             continue
-            
+    print('line 154')
     return graph, counter, uncovered_graph, the_cover
 
 
