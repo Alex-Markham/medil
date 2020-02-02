@@ -63,30 +63,30 @@ def test_get_covered_edges_idx():
     assert True
 
 
-def test_reducee_on_real_data():
-    results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
-    all_deps = results['deps']
-    deps = all_deps[2:63, 2:63].astype(int)
+# def test_reducee_on_real_data():
+#     results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
+#     all_deps = results['deps']
+#     deps = all_deps[2:63, 2:63].astype(int)
 
-    graph = UndirectedDependenceGraph(deps)
-    graph.make_aux()
+#     graph = UndirectedDependenceGraph(deps)
+#     graph.make_aux()
 
-    hmm = branch(graph, 1, None, True)
+#     hmm = branch(graph, 1, None, True)
 
-    chosen_edge = choose_edge(graph)
-    graph.nbrhood(chosen_edge)  # this is empty!! shouldn't be
-    cover = find_cm(deps.astype(int), verbose=True)
+#     chosen_edge = choose_edge(graph)
+#     graph.nbrhood(chosen_edge)  # this is empty!! shouldn't be
+#     # cover = find_cm(deps.astype(int), verbose=True)
 
 
-def test_choose_edge_on_real_data():
-    results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
-    all_deps = results['deps']
-    deps = all_deps[2:63, 2:63].astype(int)
+# def test_choose_edge_on_real_data():
+#     results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
+#     all_deps = results['deps']
+#     deps = all_deps[2:63, 2:63].astype(int)
 
-    graph = UndirectedDependenceGraph(deps)
-    graph.make_aux()
+#     graph = UndirectedDependenceGraph(deps)
+#     graph.make_aux()
 
-    chosen_edge = choose_edge(graph)
-    chosen_nbrhood = graph.nbrhood(chosen_edge)
-    graph.common_neighbors.sum(1)
-    # bug in common_neighbors?
+#     chosen_edge = choose_edge(graph)
+#     chosen_nbrhood = graph.nbrhood(chosen_edge)
+#     graph.common_neighbors.sum(1)
+#     # bug in common_neighbors?

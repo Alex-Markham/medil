@@ -30,7 +30,7 @@ def branch(graph, counter, the_cover, verbose):
     if verbose:
         print("\tbranching...")
     reduction = reducee(graph, counter, uncovered_graph, the_cover, verbose)
-    # now graph_aux is the uncovered_graph, not the original
+    # now graph_aux is the uncovered_graph, not the orignal---graph.common_neighbors and graph.nbrhood_edge_counts ??
     graph, counter, uncovered_graph, the_cover = reduction
 
     if counter < 0:
@@ -177,7 +177,8 @@ def get_covered_edges_idx(graph, uncovered_graph):
 
 def choose_edge(graph):    
     score = graph.n_choose_2(graph.common_neighbors.sum(1)) - graph.nbrhood_edge_counts
-    chosen_edge_idx = score.argmin()# np.where(score==score.min())[0][0]
+    # score includes scores for non-existent edges, so have exclude those, otherwise could use .argmin()
+    chosen_edge_idx = np.where(score==score[graph.extant_edges_idx].min())[0][0]
     return chosen_edge_idx
 
 

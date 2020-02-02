@@ -50,6 +50,7 @@ class UndirectedDependenceGraph(object):
         nbrs = lambda edge: np.logical_and(self.adj_matrix[edge[0]], self.adj_matrix[edge[1]])    
         
         extant_edges = np.transpose(np.triu(self.adj_matrix, 1).nonzero())
+        self.extant_edges_idx = np.fromiter({self.get_idx(edge) for edge in extant_edges}, dtype=int)
         extant_nbrs = np.array([nbrs(edge) for edge in extant_edges])
         extant_nbrs_idx = np.array([self.get_idx(edge) for edge in extant_edges])
         
