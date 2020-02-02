@@ -143,7 +143,6 @@ def reducee(graph, counter, uncovered_graph, the_cover, verbose):
                     print("\t\t\tapplying Rule 3...")
             # add host to all cliques containing guest
             the_cover[guest_rooms_idx, pair[1]] = 1
-            print("\tthe new cover: {}".format(the_cover))
             uncovered_graph = cover_edges(uncovered_graph, the_cover, verbose)
         if applied_3:
             continue

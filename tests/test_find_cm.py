@@ -54,7 +54,7 @@ def test_real_data():
 
     deps = all_deps[2:63, 2:63]
 
-    cover = find_cm(deps.astype(int))# , verbose=True)
+    cover = find_cm(deps.astype(int), verbose=True)
 
 
 # Here are unit tests.
