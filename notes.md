@@ -3,9 +3,14 @@ no errors thrown, but solution isn't right---maybe problem in checking for solut
 i think rather there's a problem in rule 3---is it getting applied???????? not printing so, but then why's it doing anything?????
 MAYBE IT IS supposed to be indented
 
-also, why isn't rule 2 or 1 ever applied???
+also, why isn't rule 2 or 1 ever applied???---no isolated verts in 'real data'---so rule 3 is messed up?
 
 make rules separate funcs, and then unit test is prob safest (also even fastest, if i hadn't wassted so much time already :/)
+
+**need to mention somewhere that ECC doesn't account for isolated verts, whereas minMCM would**
+
+
+
 
 got docs pipline working for docs website, but still need to restrict it to master branch somehow
 only:
