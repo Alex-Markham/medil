@@ -11,6 +11,7 @@ def find_clique_min_cover(graph, verbose=False):
     # make copies for resetting during loop---could also use deepcopy
     orig_common_neighbors = np.array(graph.common_neighbors)
     orig_nbrhood_edge_counts = np.array(graph.nbrhood_edge_counts)
+    print(orig_common_neighbors, orig_nbrhood_edge_counts)
 
     counter = 0
     the_cover = None
@@ -23,8 +24,10 @@ def find_clique_min_cover(graph, verbose=False):
         the_cover = branch(graph, counter, the_cover, verbose)
         counter += 1
         # need to reset graph aux back to original now---could also use deepcopy
+        print(graph.common_neighbors, graph.nbrhood_edge_counts)
         graph.common_neighbors = np.array(orig_common_neighbors)
         graph.nbrhood_edge_counts = np.array(orig_nbrhood_edge_counts)
+        print(graph.common_neighbors, graph.nbrhood_edge_counts)
     return the_cover
 
 
