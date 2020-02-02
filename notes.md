@@ -1,5 +1,12 @@
 no errors thrown, but solution isn't right---maybe problem in checking for solution? and being triggered since all cliques have been looped through but not addet to the cover?
 
+i think rather there's a problem in rule 3---is it getting applied???????? not printing so, but then why's it doing anything?????
+MAYBE IT IS supposed to be indented
+
+also, why isn't rule 2 or 1 ever applied???
+
+make rules separate funcs, and then unit test is prob safest (also even fastest, if i hadn't wassted so much time already :/)
+
 got docs pipline working for docs website, but still need to restrict it to master branch somehow
 only:
     changes:
