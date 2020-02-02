@@ -35,7 +35,7 @@ def branch(graph, counter, the_cover, verbose):
 
     if verbose:
         print("\tbranching...")
-    reduction = reducee(graph, counter, uncovered_graph, the_cover, verbose)
+    reduction = reducee(graph, counter, uncovered_graph, the_cover, verbose)  # reduced = (reduciable)graph.reduce(...) and inpit is graph.reducable() and then can reset in main loop in finde_cover
     # now graph_aux is the uncovered_graph, not the original---graph.common_neighbors and graph.nbrhood_edge_counts ??
     graph, counter, uncovered_graph, the_cover = reduction
 

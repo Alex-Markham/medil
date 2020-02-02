@@ -85,9 +85,31 @@ class UndirectedDependenceGraph(object):
     def n_choose_2(n):
         return n * (n - 1) // 2
 
+    def reduceable(self, k, the_cover, verbose=False):           # remove 'uncovered graph', since now we can just delet edges when they're covered, which is prob th e poist acutally of rule 3
+        return ReduceableUndDepGraph(self, k, the_cover, verbose=False)
+    
 
-class ReducedUndDepGraph(UndirectedDependenceGraph):
-    pass
+class ReduceableUndDepGraph(UndirectedDependenceGraph):
+
+        def __init__(self, udg, k, the_cover, verbose=False):
+            self.unreduced = udg
+            self.adj_matrix = udg.adj_matrix.copy()
+            self.num_vertices = udg.num_vertices
+            self.num_edges = udg.num_edges
+
+            # from aux
+            self.common_neighbors = udg.common_neighbors.copy()
+            self.nbrhood_edge_counts = udg.nbrhood_edge_counts.copy()
+            # and fun is
+            self.nbrhood = udg.nbrhood  # need to fix this :/ gotta update if other stuff changes
+
+        def reset(self):
+            self.__init__(self.unreduced)
+
+        def reduce(self):
+            
+            pass
+
 
 
 
