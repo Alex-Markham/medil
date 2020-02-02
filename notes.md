@@ -1,3 +1,5 @@
+no errors thrown, but solution isn't right---maybe problem in checking for solution? and being triggered since all cliques have been looped through but not addet to the cover?
+
 got docs pipline working for docs website, but still need to restrict it to master branch somehow
 only:
     changes:

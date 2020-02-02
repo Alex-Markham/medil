@@ -8,6 +8,9 @@ import numpy as np
 def find_clique_min_cover(graph, verbose=False):
     graph = UndirectedDependenceGraph(graph)
     graph.make_aux()
+    # make copies for resetting during loop---could also use deepcopy
+    orig_common_neighbors = np.array(graph.common_neighbors)
+    orig_nbrhood_edge_counts = np.array(graph.nbrhood_edge_counts)
 
     counter = 0
     the_cover = None
@@ -19,6 +22,9 @@ def find_clique_min_cover(graph, verbose=False):
             print("\ntesting for solutions with {}/{} cliques".format(counter, max_intersect_num))
         the_cover = branch(graph, counter, the_cover, verbose)
         counter += 1
+        # need to reset graph aux back to original now---could also use deepcopy
+        graph.common_neighbors = np.array(orig_common_neighbors)
+        graph.nbrhood_edge_counts = np.array(orig_nbrhood_edge_counts)
     return the_cover
 
 
@@ -30,7 +36,7 @@ def branch(graph, counter, the_cover, verbose):
     if verbose:
         print("\tbranching...")
     reduction = reducee(graph, counter, uncovered_graph, the_cover, verbose)
-    # now graph_aux is the uncovered_graph, not the orignal---graph.common_neighbors and graph.nbrhood_edge_counts ??
+    # now graph_aux is the uncovered_graph, not the original---graph.common_neighbors and graph.nbrhood_edge_counts ??
     graph, counter, uncovered_graph, the_cover = reduction
 
     if counter < 0:
@@ -136,7 +142,6 @@ def reducee(graph, counter, uncovered_graph, the_cover, verbose):
                 if verbose:
                     print("\t\t\tapplying Rule 3...")
                 # add host to all cliques containing guest
-                print(the_cover)
                 the_cover[guest_rooms_idx, pair[1]] = 1
                 print("\tthe new cover: {}".format(the_cover))
                 uncovered_graph = cover_edges(uncovered_graph, the_cover, verbose)
@@ -155,7 +160,6 @@ def cover_edges(graph_adj_mat, the_cover, verbose):
     
     # change edges to 0 if they're covered
     for clique in the_cover:
-        print(clique)
         covered = clique.nonzero()[0]
         
         # trick for getting combinations from idx
