@@ -42,7 +42,7 @@ def branch(graph, counter, the_cover, verbose):
         clique = np.zeros(graph.num_vertices, dtype=int)
         clique[clique_nodes] = 1
 
-        union = clique.reshape(-1, 1) if the_cover is None else np.vstack((the_cover, clique))
+        union = clique.reshape(1, -1) if the_cover is None else np.vstack((the_cover, clique))
         the_cover_prime = branch(graph, counter-1, union, verbose)
         if the_cover_prime is not None:
             return the_cover_prime
