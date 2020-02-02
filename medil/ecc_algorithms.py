@@ -42,7 +42,7 @@ def branch(graph, counter, the_cover, verbose):
         clique = np.zeros(graph.num_vertices, dtype=int)
         clique[clique_nodes] = 1
 
-        union = clique if the_cover is None else np.vstack((the_cover, clique))
+        union = clique.reshape(-1, 1) if the_cover is None else np.vstack((the_cover, clique))
         the_cover_prime = branch(graph, counter-1, union, verbose)
         if the_cover_prime is not None:
             return the_cover_prime
@@ -136,7 +136,9 @@ def reducee(graph, counter, uncovered_graph, the_cover, verbose):
                 if verbose:
                     print("\t\t\tapplying Rule 3...")
                 # add host to all cliques containing guest
+                print(the_cover)
                 the_cover[guest_rooms_idx, pair[1]] = 1
+                print("\tthe new cover: {}".format(the_cover))
                 uncovered_graph = cover_edges(uncovered_graph, the_cover, verbose)
         if applied_3:
             continue
@@ -151,8 +153,9 @@ def cover_edges(graph_adj_mat, the_cover, verbose):
     # slightly more convenient representation and obviates need for deepcopy
     uncovered_graph = np.triu(graph_adj_mat)
     
-    # change edges to 0 if they're covered 
+    # change edges to 0 if they're covered
     for clique in the_cover:
+        print(clique)
         covered = clique.nonzero()[0]
         
         # trick for getting combinations from idx
