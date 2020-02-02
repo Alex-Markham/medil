@@ -48,13 +48,13 @@ def test_find_cm_on_clean_am_cm_diff():
     assert [0, 1, 1, 0, 0, 0, 1, 1] in cover
 
 
-def test_real_data():
-    results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
-    all_deps = results['deps']
+# def test_real_data():
+#     results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
+#     all_deps = results['deps']
 
-    deps = all_deps[2:63, 2:63]
+#     deps = all_deps[2:63, 2:63]
 
-    cover = find_cm(deps.astype(int), verbose=True)
+#     cover = find_cm(deps.astype(int), verbose=True)
 
 
 # Here are unit tests.
