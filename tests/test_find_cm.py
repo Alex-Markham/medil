@@ -1,6 +1,8 @@
 import numpy as np
 from medil.ecc_algorithms import find_clique_min_cover as find_cm
 from medil.graph import UndirectedDependenceGraph
+from medil.ecc_algorithms import branch, reducee, choose_edge
+
 
 # Here are some integration tests.
 def test_find_cm_on_3_cycle():
@@ -46,16 +48,45 @@ def test_find_cm_on_clean_am_cm_diff():
     assert [0, 1, 1, 0, 0, 0, 1, 1] in cover
 
 
-def test_real_data():
-    results = np.load("/home/alex/Data/exploratory/monte_carlo_test_results_1000.npz")
-    all_deps = results['deps']
+# def test_real_data():
+#     results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
+#     all_deps = results['deps']
 
-    deps = all_deps[2:63, 2:63]
+#     deps = all_deps[2:63, 2:63]
 
-    cover = find_cm(deps.astype(int), verbose=True)
+#     cover = find_cm(deps.astype(int), verbose=True)
 
 
 # Here are unit tests.
 def test_get_covered_edges_idx():
     # don't think the bug is here; might fill in later
     assert True
+
+
+def test_reducee_on_real_data():
+    results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
+    all_deps = results['deps']
+    deps = all_deps[2:63, 2:63].astype(int)
+
+    graph = UndirectedDependenceGraph(deps)
+    graph.make_aux()
+
+    hmm = branch(graph, 1, None, True)
+
+    chosen_edge = choose_edge(graph)
+    graph.nbrhood(chosen_edge)  # this is empty!! shouldn't be
+    # cover = find_cm(deps.astype(int), verbose=True)
+
+
+def test_choose_edge_on_real_data():
+    results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
+    all_deps = results['deps']
+    deps = all_deps[2:63, 2:63].astype(int)
+
+    graph = UndirectedDependenceGraph(deps)
+    graph.make_aux()
+
+    chosen_edge = choose_edge(graph)
+    chosen_nbrhood = graph.nbrhood(chosen_edge)
+    graph.common_neighbors.sum(1)
+    # bug in common_neighbors?

@@ -77,7 +77,7 @@ def reducee(graph, counter, uncovered_graph, the_cover, verbose):
         # covered, and decrease k by one
 
         # only check uncovered edges---may cause bugs?
-        covered_edges_idx = get_covered_edges_idx(graph, uncovered_graph)
+
 
         graph.common_neighbors[covered_edges_idx] = 0  # zeros out a row
         graph.nbrhood_edge_counts[covered_edges_idx] = 0  # zeros out a row
@@ -133,8 +133,8 @@ def reducee(graph, counter, uncovered_graph, the_cover, verbose):
             
             if np.logical_not(the_cover[guest_rooms_idx, pair[1]]).any(): # then apply rule
                 applied_3 = True
-            if verbose:
-                print("\t\t\tapplying Rule 3...")
+                if verbose:
+                    print("\t\t\tapplying Rule 3...")
                 # add host to all cliques containing guest
                 the_cover[guest_rooms_idx, pair[1]] = 1
                 uncovered_graph = cover_edges(uncovered_graph, the_cover, verbose)
