@@ -177,8 +177,7 @@ def get_covered_edges_idx(graph, uncovered_graph):
 
 def choose_edge(graph):    
     score = graph.n_choose_2(graph.common_neighbors.sum(1)) - graph.nbrhood_edge_counts
-
-    chosen_edge_idx = np.where(score==score.min())[0][0]
+    chosen_edge_idx = score.argmin()# np.where(score==score.min())[0][0]
     return chosen_edge_idx
 
 

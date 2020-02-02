@@ -75,7 +75,7 @@ def test_reducee_on_real_data():
 
     chosen_edge = choose_edge(graph)
     graph.nbrhood(chosen_edge)  # this is empty!! shouldn't be
-    # cover = find_cm(deps.astype(int), verbose=True)
+    cover = find_cm(deps.astype(int), verbose=True)
 
 
 def test_choose_edge_on_real_data():
