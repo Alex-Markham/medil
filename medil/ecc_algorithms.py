@@ -77,7 +77,7 @@ def reducee(graph, counter, uncovered_graph, the_cover, verbose):
         # covered, and decrease k by one
 
         # only check uncovered edges---may cause bugs?
-
+        covered_edges_idx = get_covered_edges_idx(graph, uncovered_graph)
 
         graph.common_neighbors[covered_edges_idx] = 0  # zeros out a row
         graph.nbrhood_edge_counts[covered_edges_idx] = 0  # zeros out a row
