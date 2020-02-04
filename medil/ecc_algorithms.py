@@ -8,23 +8,17 @@ import numpy as np
 def find_clique_min_cover(graph, verbose=False):
     graph = UndirectedDependenceGraph(graph)
     graph.make_aux()
-    # make copies for resetting during loop---could also use deepcopy
-    orig_common_neighbors = np.array(graph.common_neighbors)
-    orig_nbrhood_edge_counts = np.array(graph.nbrhood_edge_counts)
 
-    counter = 0
+    num_cliques = 0
     the_cover = None
     if verbose:
         max_intersect_num = graph.num_vertices ** 2 // 4
         print("solution has at most {} cliques.".format(max_intersect_num))
     while the_cover is None:
         if verbose:
-            print("\ntesting for solutions with {}/{} cliques".format(counter, max_intersect_num))
-        the_cover = branch(graph, counter, the_cover, verbose)
-        counter += 1
-        # need to reset graph aux back to original now---could also use deepcopy
-        graph.common_neighbors = np.array(orig_common_neighbors)
-        graph.nbrhood_edge_counts = np.array(orig_nbrhood_edge_counts)
+            print("\ntesting for solutions with {}/{} cliques".format(num_cliques, max_intersect_num))
+        the_cover = branch(graph, num_cliques, the_cover, verbose)
+        num_cliques += 1
     return the_cover
 
 

@@ -86,28 +86,42 @@ class UndirectedDependenceGraph(object):
         return n * (n - 1) // 2
 
     def reduceable_copy(self):           # remove 'uncovered graph', since now we can just delet edges when they're covered, which is prob th e poist acutally of rule 3
-        return ReduceableUndDepGraph(self, k, the_cover, verbose=False)
+        return ReduceableUndDepGraph(self)
     
 
 class ReduceableUndDepGraph(UndirectedDependenceGraph):
 
-        def __init__(self, udg)
+        def __init__(self, udg):
             self.unreduced = udg
             self.adj_matrix = udg.adj_matrix.copy()
             self.num_vertices = udg.num_vertices
             self.num_edges = udg.num_edges
 
-            # from aux
+            # from auxilliary structure
             self.common_neighbors = udg.common_neighbors.copy()
             self.nbrhood_edge_counts = udg.nbrhood_edge_counts.copy()
             # and fun is
             self.nbrhood = udg.nbrhood  # need to fix this :/ gotta update if other stuff changes
 
+            self.cover = None
+            
         def reset(self):
             self.__init__(self.unreduced)
 
         def reduce(self):
-            
+            pass
+
+        def rule_1(self):
+            # rule_1: Remove isolated vertices and vertices that are only
+            # adjacent to covered edges
+
+            isolated_verts = np.where(uncovered_graph.sum(0)+uncovered_graph.sum(1)==2)[0]
+            pass
+
+        def rule_2(self):
+            pass
+
+        def rule_3(self):
             pass
 
 

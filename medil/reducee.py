@@ -12,8 +12,6 @@ def reduction(graph, counter, uncovered_graph, the_cover, verbose):
 
 
 def apply_rule_1(uncovered_graph, verbose):
-    # rule_1: Remove isolated vertices and vertices that are only
-    # adjacent to covered edges
     
     # 'remove' (set (i,i) to 0) isolated nodes i (and isolated
     # nodes in uncovered_graph are those adjactent to only covered
