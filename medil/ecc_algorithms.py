@@ -23,26 +23,73 @@ def find_clique_min_cover(graph, verbose=False):
 
 
 def branch(graph, counter, the_cover, verbose):
-    uncovered_graph = cover_edges(graph.adj_matrix, the_cover, verbose)
-    if not np.any(uncovered_graph):
+    reduced_graph = graph.reducible_copy()
+    
+    if reduced_graph.remaining_uncovered(the_cover).sum() == reduced_copy.num_vertices:
         return the_cover
 
     if verbose:
         print("\tbranching...")
-    reduction = reducee(graph, counter, uncovered_graph, the_cover, verbose)  # reduced = (reduciable)graph.reduce(...) and inpit is graph.reducable() and then can reset in main loop in finde_cover
-    # now graph_aux is the uncovered_graph, not the original---graph.common_neighbors and graph.nbrhood_edge_counts ??
-    graph, counter, uncovered_graph, the_cover = reduction
+
+    reduced_graph.reduzieren(verbose)
 
     if counter < 0:
         return None
 
-    chosen_edge = choose_edge(graph)
-    chosen_nbrhood = graph.nbrhood(chosen_edge)
+    chosen_edge = reduced_graph.choose_edge()
+    chosen_nbrhood = reduced_graph.nbrhood(chosen_edge)
     for clique_nodes in max_cliques(chosen_nbrhood):
-        clique = np.zeros(graph.num_vertices, dtype=int)
+        clique = np.zeros(reduced_graph.num_vertices, dtype=int)
         clique[clique_nodes] = 1
         union = clique.reshape(1, -1) if the_cover is None else np.vstack((the_cover, clique))
         the_cover_prime = branch(graph, counter-1, union, verbose)
         if the_cover_prime is not None:
             return the_cover_prime
     return the_cover
+
+
+def max_cliques(nbrhood):
+    # pieced together from nx.from_numpy_array and nx.find_cliques,
+    # which is output sensitive :)
+    
+    if len(nbrhood) == 0:
+        return
+
+    # convert adjacency matrix to nx style graph
+    # adapted from nx.find_cliques to find max cliques
+
+    adj = {u: {v for v in np.nonzero(nbrhood[u])[0] if v != u} for u in range(len(nbrhood))}
+    Q = [None]
+
+    subg = set(range(len(nbrhood)))
+    cand = set(range(len(nbrhood)))
+    u = max(subg, key=lambda u: len(cand & adj[u]))
+    ext_u = cand - adj[u]
+    stack = []
+
+    try:
+        while True:
+            if ext_u:
+                q = ext_u.pop()
+                cand.remove(q)
+                Q[-1] = q
+                adj_q = adj[q]
+                subg_q = subg & adj_q
+                if not subg_q:
+                    yield Q[:]
+                else:
+                    cand_q = cand & adj_q
+                    if cand_q:
+                        stack.append((subg, cand, ext_u))
+                        Q.append(None)
+                        subg = subg_q
+                        cand = cand_q
+                        u = max(subg, key=lambda u: len(cand & adj[u]))
+                        ext_u = cand - adj[u]
+            else:
+                Q.pop()
+                subg, cand, ext_u = stack.pop()
+    except IndexError:
+        pass    
+    # note: max_cliques is a generator, so it's consumed after being
+    # looped through once

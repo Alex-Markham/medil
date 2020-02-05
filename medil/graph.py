@@ -85,11 +85,11 @@ class UndirectedDependenceGraph(object):
     def n_choose_2(n):
         return n * (n - 1) // 2
 
-    def reduceable_copy(self):           # remove 'uncovered graph', since now we can just delet edges when they're covered, which is prob th e poist acutally of rule 3
-        return ReduceableUndDepGraph(self)
+    def reducible_copy(self):           # remove 'uncovered graph', since now we can just delet edges when they're covered, which is prob th e poist acutally of rule 3
+        return ReducibleUndDepGraph(self)
     
 
-class ReduceableUndDepGraph(UndirectedDependenceGraph):
+class ReducibleUndDepGraph(UndirectedDependenceGraph):
 
     def __init__(self, udg):
         self.unreduced = udg
@@ -108,7 +108,7 @@ class ReduceableUndDepGraph(UndirectedDependenceGraph):
     def reset(self):
         self.__init__(self.unreduced)
         
-    def reduce(self, verbose=False):
+    def reduzieren(self, verbose=False):
         if verbose:
             print('\t\treducing:')
         self.reducing = True
@@ -135,7 +135,7 @@ class ReduceableUndDepGraph(UndirectedDependenceGraph):
         # edges as covered, and decrease k by one
     
         # only check uncovered edges---may cause bugs?
-        c_e_i = np.array([self.get_idx(x) for x in np.transpose(np.where(np.logical_and(self.adj_matrix==0, np.tri(self.num_vertices, k=-1).T)))], dtype=int)
+        covered_edges_idx = np.array([self.get_idx(x) for x in np.transpose(np.where(np.logical_and(self.adj_matrix==0, np.tri(self.num_vertices, k=-1).T)))], dtype=int)
 
         self.nbrhood_edge_counts[covered_edges_idx] = 0  # zeros out a row
         self.common_neighbors[covered_edges_idx] = 0  # zeros out a row
@@ -152,10 +152,10 @@ class ReduceableUndDepGraph(UndirectedDependenceGraph):
         if cliques.any():       # then apply Rule 2
             if verbose:
                 print("\t\t\tapplying Rule 2...")
-            cliques = np.unique(cliques, axis=0) # need to fix
+            cliques = np.unique(cliques, axis=0) # need to fix? just not as efficient as possible
             the_cover = cliques if the_cover is None else np.vstack((the_cover, cliques))
-            uncovered_graph = cover_edges(uncovered_graph, cliques, verbose)  # replace with zeroing edges?
-            counter -= 1
+            uncovered_graph = self.remaining_uncovered(the_cover) 
+            counter -= len(cliques)
             continue            # start the reducee loop over so Rule
                                 # 1 can 'clean up'
 
@@ -196,7 +196,7 @@ class ReduceableUndDepGraph(UndirectedDependenceGraph):
                     print("\t\t\tapplying Rule 3...")
             # add host to all cliques containing guest
             the_cover[guest_rooms_idx, pair[1]] = 1
-            uncovered_graph = cover_edges(uncovered_graph, the_cover, verbose)
+            uncovered_graph = self.remaining_uncovered(the_cover, verbose)
         if applied_3:
             continue
 
@@ -226,58 +226,10 @@ class ReduceableUndDepGraph(UndirectedDependenceGraph):
             
             # cover edges
             uncovered_graph[covered_row, covered_col] = 0
-        return uncovered_graph
 
-    if verbose:
-        print("\t\t\t{} uncovered edges remaining".format(uncovered_graph.sum()))
-    return np.triu(uncovered_graph, 1) + uncovered_graph.T
-        
-    @staticmethod
-    def max_cliques(nbrhood):
-        # pieced together from nx.from_numpy_array and nx.find_cliques
-        # nx.find_cliques is output sensitive :)
-
-        # convert adjacency matrix to nx style graph
-    
-        # adapted from nx.find_cliques to find max cliques
-        if len(nbrhood) == 0:
-            return
-
-        adj = {u: {v for v in np.nonzero(nbrhood[u])[0] if v != u} for u in range(len(nbrhood))}
-        Q = [None]
-
-        subg = set(range(len(nbrhood)))
-        cand = set(range(len(nbrhood)))
-        u = max(subg, key=lambda u: len(cand & adj[u]))
-        ext_u = cand - adj[u]
-        stack = []
-
-        try:
-            while True:
-                if ext_u:
-                    q = ext_u.pop()
-                    cand.remove(q)
-                    Q[-1] = q
-                    adj_q = adj[q]
-                    subg_q = subg & adj_q
-                    if not subg_q:
-                        yield Q[:]
-                    else:
-                        cand_q = cand & adj_q
-                        if cand_q:
-                            stack.append((subg, cand, ext_u))
-                            Q.append(None)
-                            subg = subg_q
-                            cand = cand_q
-                            u = max(subg, key=lambda u: len(cand & adj[u]))
-                            ext_u = cand - adj[u]
-                else:
-                    Q.pop()
-                    subg, cand, ext_u = stack.pop()
-        except IndexError:
-            pass    
-        # note: max_cliques is a generator, so it's consumed after being
-        # looped through once
+        if verbose:
+            print("\t\t\t{} uncovered edges remaining".format(uncovered_graph.sum()))
+        return np.triu(uncovered_graph, 1) + uncovered_graph.T
 
 
 
