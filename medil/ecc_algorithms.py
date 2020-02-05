@@ -6,7 +6,7 @@ import numpy as np
 
 
 def find_clique_min_cover(graph, verbose=False):
-    graph = UndirectedDependenceGraph(graph)
+    graph = UndirectedDependenceGraph(graph, verbose)
     graph.make_aux()
 
     num_cliques = 0
@@ -17,23 +17,26 @@ def find_clique_min_cover(graph, verbose=False):
     while the_cover is None:
         if verbose:
             print("\ntesting for solutions with {}/{} cliques".format(num_cliques, max_intersect_num))
-        the_cover = branch(graph, num_cliques, the_cover, verbose)
+        the_cover = branch(graph, num_cliques, the_cover)
         num_cliques += 1
     return the_cover
 
 
-def branch(graph, counter, the_cover, verbose):
+def branch(graph, k_num_cliques, the_cover):
     reduced_graph = graph.reducible_copy()
-    
-    if reduced_graph.remaining_uncovered(the_cover).sum() == reduced_copy.num_vertices:
+
+    reduced_graph.the_cover = the_cover
+    reduced_graph.cover_edges()
+    if reduced_graph.num_edges == 0:
         return the_cover
 
-    if verbose:
+    if graph.verbose:
         print("\tbranching...")
 
-    reduced_graph.reduzieren(verbose)
-
-    if counter < 0:
+    reduced_graph.reduzieren(k_num_cliques)
+    k_num_cliques = reduced_graph.k_num_cliques
+    
+    if k_num_cliques < 0:
         return None
 
     chosen_edge = reduced_graph.choose_edge()
@@ -42,7 +45,7 @@ def branch(graph, counter, the_cover, verbose):
         clique = np.zeros(reduced_graph.num_vertices, dtype=int)
         clique[clique_nodes] = 1
         union = clique.reshape(1, -1) if the_cover is None else np.vstack((the_cover, clique))
-        the_cover_prime = branch(graph, counter-1, union, verbose)
+        the_cover_prime = branch(graph, k_num_cliques-1, union)
         if the_cover_prime is not None:
             return the_cover_prime
     return the_cover

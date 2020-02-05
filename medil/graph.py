@@ -10,11 +10,12 @@ import numpy as np
 
 class UndirectedDependenceGraph(object):
 
-    def __init__(self, adj_matrix):
+    def __init__(self, adj_matrix, verbose=False):
         # doesn't behave well unless input is nparray;
         self.adj_matrix = adj_matrix
         self.num_vertices = len(adj_matrix)
         self.num_edges = adj_matrix.sum() // 2
+        self.verbose = verbose
 
     def add_edges(self, edges):
         v_1s = edges[:, 0]
@@ -85,51 +86,59 @@ class UndirectedDependenceGraph(object):
     def n_choose_2(n):
         return n * (n - 1) // 2
 
-    def reducible_copy(self):           # remove 'uncovered graph', since now we can just delet edges when they're covered, which is prob th e poist acutally of rule 3
+    def reducible_copy(self):
         return ReducibleUndDepGraph(self)
     
 
 class ReducibleUndDepGraph(UndirectedDependenceGraph):
 
-    def __init__(self, udg):
+    def __init__(self, udg, verbose=False):
         self.unreduced = udg
         self.adj_matrix = udg.adj_matrix.copy()
         self.num_vertices = udg.num_vertices
         self.num_edges = udg.num_edges
 
+        self.the_cover = None
+        self.verbose = verbose
+        
         # from auxilliary structure
+        self.get_idx = udg.get_idx
+
+        # need to update these all when self.cover_edges() is called?
         self.common_neighbors = udg.common_neighbors.copy()
         self.nbrhood_edge_counts = udg.nbrhood_edge_counts.copy()
         # and fun is
         self.nbrhood = udg.nbrhood  # need to fix this :/ gotta update if other stuff changes
         
-        self.cover = None
+        extant_edges = np.transpose(np.triu(self.adj_matrix, 1).nonzero())
+        self.extant_edges_idx = np.fromiter({self.get_idx(edge) for edge in extant_edges}, dtype=int)
         
     def reset(self):
         self.__init__(self.unreduced)
         
-    def reduzieren(self, verbose=False):
-        if verbose:
+    def reduzieren(self, k_num_cliques):
+        if self.verbose:
             print('\t\treducing:')
+        self.k_num_cliques = k_num_cliques
         self.reducing = True
         while self.reducing:
             self.reducing = False
-            self.rule_1(self, verbose)
-            self.rule_2(self, verbose)
-            self.rule_3(self, verbose)
+            self.rule_1()
+            self.rule_2()
+            self.rule_3()
 
-    def rule_1(self, verbose):
+    def rule_1(self):
         # rule_1: Remove isolated vertices and vertices that are only
         # adjacent to covered edges
 
         isolated_verts = np.where(self.adj_matrix.sum(0)+self.adj_matrix.sum(1)==2)[0]
         if len(isolated_verts) > 0: # then Rule 1 is applied
-            if verbose:
+            if self.verbose:
                 print("\t\t\tapplying Rule 1...")
             
             self.adj_matrix[isolated_verts, isolated_verts] = 0
 
-    def rule_2(self, verbose):
+    def rule_2(self):
         # rule_2: If an uncovered edge {u,v} is contained in exactly
         # one maximal clique C, then add C to the solution, mark its
         # edges as covered, and decrease k by one
@@ -150,17 +159,18 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         cliques = self.common_neighbors[at_least & at_most]
 
         if cliques.any():       # then apply Rule 2
-            if verbose:
+            if self.verbose:
                 print("\t\t\tapplying Rule 2...")
             cliques = np.unique(cliques, axis=0) # need to fix? just not as efficient as possible
-            the_cover = cliques if the_cover is None else np.vstack((the_cover, cliques))
-            uncovered_graph = self.remaining_uncovered(the_cover) 
-            counter -= len(cliques)
-            continue            # start the reducee loop over so Rule
+            self.the_cover = cliques if self.the_cover is None else np.vstack((self.the_cover, cliques))
+            self.cover_edges()
+            self.k_num_cliques -= len(cliques)
+            return             # or rather self.rule_1()?y
+        # start the reducee loop over so Rule
                                 # 1 can 'clean up'
 
 
-    def rule_3(self, verbose):
+    def rule_3(self):
         # rule_3: Consider a vertex v that has at least one
         # guest. If inhabitants (of the neighborhood) occupy the
         # gates, then delete v. To reconstruct a solution for the
@@ -170,35 +180,35 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         # relations needn't be reproduced in mathematical
         # abstractions)
 
-        exits = np.zeros((uncovered_graph.shape), dtype=bool)
+        exits = np.zeros((self.adj_matrix.shape), dtype=bool)
             
-        for vert, nbrhood in enumerate(uncovered_graph):
+        for vert, nbrhood in enumerate(self.adj_matrix):
             if nbrhood[vert]==0: # then nbrhood is empty
                 continue
             nbrs = np.flatnonzero(nbrhood)
             for nbr in nbrs:
-                if (nbrhood - uncovered_graph[nbr] == -1).any():
+                if (nbrhood - self.adj_matrix[nbr] == -1).any():
                     exits[vert, nbr] = True
         # exits[i, j] == True iff j is an exit for i
 
         # guests[i, j] == True iff j is a guest of i
-        guests = np.logical_and(~exits, uncovered_graph)
+        guests = np.logical_and(~exits, self.adj_matrix)
 
         applied_3 = False
         for pair in np.transpose(np.where(guests)):
-            if the_cover is None:
+            if self.the_cover is None:
                 break
-            guest_rooms_idx = np.transpose(np.where(the_cover[:, pair[1]]))
+            guest_rooms_idx = np.transpose(np.where(self.the_cover[:, pair[1]]))
             
-            if np.logical_not(the_cover[guest_rooms_idx, pair[1]]).any(): # then apply rule
+            if np.logical_not(self.the_cover[guest_rooms_idx, pair[1]]).any(): # then apply rule
                 applied_3 = True
-                if verbose:
+                if self.verbose:
                     print("\t\t\tapplying Rule 3...")
             # add host to all cliques containing guest
-            the_cover[guest_rooms_idx, pair[1]] = 1
-            uncovered_graph = self.remaining_uncovered(the_cover, verbose)
+            self.the_cover[guest_rooms_idx, pair[1]] = 1
+            self.cover_edges()
         if applied_3:
-            continue
+            return               #  need to start loop over?
 
     def choose_edge(self):    
         score = self.n_choose_2(self.common_neighbors.sum(1)) - self.nbrhood_edge_counts
@@ -206,32 +216,30 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         chosen_edge_idx = np.where(score==score[self.extant_edges_idx].min())[0][0]
         return chosen_edge_idx
 
-    def remaining_uncovered(self, the_cover):
-        if the_cover is None:
-            return self.adj_mat
-    
-        # slightly more convenient representation and obviates need for deepcopy
-        uncovered_graph = np.triu(graph_adj_mat)
+    def cover_edges(self):
+        # always call after updating the cover
+        if self.the_cover is None:
+            return self.adj_matrix
     
         # change edges to 0 if they're covered
-        for clique in the_cover:
+        for clique in self.the_cover:
             covered = clique.nonzero()[0]
         
             # trick for getting combinations from idx
             comb_idx = np.triu_indices(len(covered), 1)
         
-            # actual combinations
-            covered_row = covered[comb_idx[0]]
-            covered_col = covered[comb_idx[1]]
+            # actual pairwise combinations; ie all edges (v_i, v_j) covered by the clique
+            covered_edges = np.empty((len(comb_idx[0]), 2), int)
+            covered_edges[:, 0] = covered[comb_idx[0]]
+            covered_edges[:, 1] = covered[comb_idx[1]]
             
-            # cover edges
-            uncovered_graph[covered_row, covered_col] = 0
+            # cover (remove from reduced_graph) edges
+            self.rm_edges(covered_edges)
 
-        if verbose:
-            print("\t\t\t{} uncovered edges remaining".format(uncovered_graph.sum()))
-        return np.triu(uncovered_graph, 1) + uncovered_graph.T
+        if self.verbose:
+            print("\t\t\t{} uncovered edges remaining".format(self.num_edges))
 
-
+        # now here do all the updates to nbrs, extant edges, etc.
 
 
 

@@ -1,7 +1,7 @@
 import numpy as np
 from medil.ecc_algorithms import find_clique_min_cover as find_cm
 from medil.graph import UndirectedDependenceGraph
-from medil.ecc_algorithms import branch, reducee, choose_edge
+from medil.ecc_algorithms import branch
 
 
 # Here are some integration tests.
