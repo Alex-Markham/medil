@@ -123,3 +123,25 @@ def test_reduce_rule_1():
     assert (correct.num_vertices == being_tested.num_vertices).all()
     assert (correct.common_neighbors == being_tested.common_neighbors).all()
     assert (correct.nbrhood_edge_counts == being_tested.nbrhood_edge_counts).all()    
+
+
+def test_reduce_rule_2_3cycle():
+    init = np.ones((3, 3), dtype=int)
+    
+    graph = UndirectedDependenceGraph(init).reducible_copy()
+    graph.k_num_cliques = 1
+    graph.rule_2()
+
+    assert graph.k_num_cliques == 0
+    assert graph.the_cover.shape == (1, 3)
+    assert [1, 1, 1] in graph.the_cover
+
+# def test_reduce_rule_2_triangle():
+#     graph_triangle = np.asarray([
+#         [1, 1, 1, 0, 0, 0],
+#         [1, 1, 1, 1, 1, 0],
+#         [1, 1, 1, 0, 1, 1],
+#         [0, 1, 0, 1, 1, 0],
+#         [0, 1, 1, 1, 1, 1],
+#         [0, 0, 1, 0, 1, 1]])
+#     graph = UndirectedDependenceGraph(graph_triangle)

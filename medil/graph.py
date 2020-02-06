@@ -177,13 +177,13 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         at_most = (self.n_choose_2(self.common_neighbors.sum(1)) - self.nbrhood_edge_counts) == 0
 
         # pick a clique containing edges in exactly 1 maximal clique
-        clique_idx = np.nonzero(at_least & at_most)[0, 0]
+        clique_idx = np.where((at_least & at_most)==True)[0][0]
         clique = self.common_neighbors[clique_idx]
 
         if clique.any():       # then apply Rule 2
             if self.verbose:
                 print("\t\t\tapplying Rule 2...")
-            self.the_cover = clique if self.the_cover is None else np.vstack((self.the_cover, cliques))
+            self.the_cover = clique.reshape(1, -1) if self.the_cover is None else np.vstack((self.the_cover, cliques))
             self.cover_edges()
             self.k_num_cliques -= 1
             self.reducing = True
@@ -241,7 +241,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
     
         # change edges to 0 if they're covered
         for clique in self.the_cover:
-            covered = clique.nonzero()[0]
+            covered = np.where(clique)[0]
         
             # trick for getting combinations from idx
             comb_idx = np.triu_indices(len(covered), 1)
