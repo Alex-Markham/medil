@@ -14,7 +14,7 @@ class UndirectedDependenceGraph(object):
         # doesn't behave well unless input is nparray;
         self.adj_matrix = adj_matrix
         self.num_vertices = len(adj_matrix)
-        self.num_edges = (adj_matrix.sum() - self.num_vertices) - 2
+        self.num_edges = np.triu(adj_matrix, 1).sum()
         self.verbose = verbose
 
     def add_edges(self, edges):
@@ -22,16 +22,18 @@ class UndirectedDependenceGraph(object):
         v_2s = edges[:, 1]
         self.adj_matrix[v_1s, v_2s] = 1
         self.adj_matrix[v_2s, v_1s] = 1
-        self.num_edges = (adj_matrix.sum() - self.num_vertices) - 2
+        self.num_edges = self.np.triu(adj_matrix, 1).sum()
 
     def rm_edges(self, edges):
         v_1s = edges[:, 0]
         v_2s = edges[:, 1]
         self.adj_matrix[v_1s, v_2s] = 0
         self.adj_matrix[v_2s, v_1s] = 0
-        self.num_edges = (adj_matrix.sum() - self.num_vertices) - 2
+        self.num_edges = self.np.triu(adj_matrix, 1).sum()
 
     def make_aux(self):
+        # this makes the auxilliary structure described in INITIALIZATION in the paper
+        
         # find neighbourhood for each vertex
         # each row corresponds to a unique edge
         max_num_edges = self.n_choose_2(self.num_vertices)
@@ -54,7 +56,8 @@ class UndirectedDependenceGraph(object):
         self.extant_edges_idx = np.fromiter({self.get_idx(edge) for edge in extant_edges}, dtype=int)
         extant_nbrs = np.array([nbrs(edge) for edge in extant_edges])
         extant_nbrs_idx = np.array([self.get_idx(edge) for edge in extant_edges])
-        
+
+        # from paper: set of N_{u, v} for all edges (u, v)
         self.common_neighbors[extant_nbrs_idx] = extant_nbrs
         
         # number of cliques for each node? assignments? if we set diag=0
@@ -73,7 +76,8 @@ class UndirectedDependenceGraph(object):
         # triu(subgraph-adjacency matrix) but probably a bit faster
         self.nbrhood = lambda edge_idx: self.adj_matrix[mask(edge_idx)][:, mask(edge_idx)]
         max_num_edges_in_nbrhood = lambda edge_idx: (self.nbrhood(edge_idx).sum() - mask(edge_idx).sum()) // 2
-        
+
+        # from paper: set of c_{u, v} for all edges (u, v)
         self.nbrhood_edge_counts = np.array([max_num_edges_in_nbrhood(edge_idx) for edge_idx in np.arange(max_num_edges)])
 
         # important structs are:
@@ -135,21 +139,19 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         if len(isolated_verts) > 0: # then Rule 1 is applied
             if self.verbose:
                 print("\t\t\tapplying Rule 1...")
-            
+
+            # update auxilliary attributes; LEMMA 2
             self.adj_matrix[isolated_verts, isolated_verts] = 0
             self.num_vertices -= len(isolated_verts)
+            
+            self.common_neighbors = 0
+            
 
     def rule_2(self):
         # rule_2: If an uncovered edge {u,v} is contained in exactly
         # one maximal clique C, then add C to the solution, mark its
         # edges as covered, and decrease k by one
     
-        # only check uncovered edges---may cause bugs?
-        covered_edges_idx = np.array([self.get_idx(x) for x in np.transpose(np.where(np.logical_and(self.adj_matrix==0, np.tri(self.num_vertices, k=-1).T)))], dtype=int)
-
-        self.nbrhood_edge_counts[covered_edges_idx] = 0  # zeros out a row
-        self.common_neighbors[covered_edges_idx] = 0  # zeros out a row
-        
         # edges in at least 1 maximal clique
         at_least = self.nbrhood_edge_counts > 0
         

@@ -71,7 +71,22 @@ def test_find_cm_on_3_cycle():
 
 # Here are unit tests.
 
+def test_make_aux_on_triangle():
+    graph_triangle = np.asarray([
+        [1, 1, 1, 0, 0, 0],
+        [1, 1, 1, 1, 1, 0],
+        [1, 1, 1, 0, 1, 1],
+        [0, 1, 0, 1, 1, 0],
+        [0, 1, 1, 1, 1, 1],
+        [0, 0, 1, 0, 1, 1]])
+    graph = UndirectedDependenceGraph(graph_triangle)
+    graph.make_aux()
+
+    assert (graph.common_neighbors[[2, 3, 4, 8, 9, 13]]==0).all()
+
 def test_reduce_rule_1():
     pass
     # random graphs then add isolated verts and remove with rule_1
     # init new UDG with non-isolated verts and make_auk then compare values with assert
+
+    
