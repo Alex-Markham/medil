@@ -14,7 +14,7 @@ class UndirectedDependenceGraph(object):
         # doesn't behave well unless input is nparray;
         self.adj_matrix = adj_matrix
         self.num_vertices = len(adj_matrix)
-        self.num_edges = adj_matrix.sum() // 2 - self.num_vertices
+        self.num_edges = (adj_matrix.sum() - self.num_vertices) - 2
         self.verbose = verbose
 
     def add_edges(self, edges):
@@ -22,14 +22,14 @@ class UndirectedDependenceGraph(object):
         v_2s = edges[:, 1]
         self.adj_matrix[v_1s, v_2s] = 1
         self.adj_matrix[v_2s, v_1s] = 1
-        self.num_edges = self.adj_matrix.sum() // 2 - self.num_vertices
+        self.num_edges = (adj_matrix.sum() - self.num_vertices) - 2
 
     def rm_edges(self, edges):
         v_1s = edges[:, 0]
         v_2s = edges[:, 1]
         self.adj_matrix[v_1s, v_2s] = 0
         self.adj_matrix[v_2s, v_1s] = 0
-        self.num_edges = self.adj_matrix.sum() // 2 - self.num_vertices
+        self.num_edges = (adj_matrix.sum() - self.num_vertices) - 2
 
     def make_aux(self):
         # find neighbourhood for each vertex

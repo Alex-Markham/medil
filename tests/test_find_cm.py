@@ -5,11 +5,11 @@ from medil.ecc_algorithms import branch
 
 
 # Here are some integration tests.
-# def test_find_cm_on_3_cycle():
-#     cycle_3 = np.ones((3, 3), dtype=int)
-#     cover = find_cm(cycle_3, True)
-#     assert cover.shape==(1, 3)
-#     assert [1, 1, 1] in cover
+def test_find_cm_on_3_cycle():
+    cycle_3 = np.ones((3, 3), dtype=int)
+    cover = find_cm(cycle_3, True)
+    assert cover.shape==(1, 3)
+    assert [1, 1, 1] in cover
 
 
 # def test_reduction_rule_1_on_3cycle_plus_isolated():
@@ -72,5 +72,6 @@ from medil.ecc_algorithms import branch
 # Here are unit tests.
 
 def test_reduce_rule_1():
+    pass
     # random graphs then add isolated verts and remove with rule_1
     # init new UDG with non-isolated verts and make_auk then compare values with assert
