@@ -113,12 +113,15 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             udg.make_aux()
             self.get_idx = udg.get_idx
             
-        # need to update these all when self.cover_edges() is called?
+        # need to also update these all when self.cover_edges() is called? already done in rule_1
         self.common_neighbors = udg.common_neighbors.copy()
         self.nbrhood_edge_counts = udg.nbrhood_edge_counts.copy()
-        # and fun is
-        self.nbrhood = udg.nbrhood  # need to fix this :/ gotta update if other stuff changes
-                
+
+        # update when cover_edges() is called
+        self.extant_edges_idx = udg.extant_edges_idx.copy()
+        self.nbrhood = np.array(map(udg.nbrhood, np.arange(udg.max_num_verts)))
+
+
     def reset(self):
         self.__init__(self.unreduced)
         
@@ -161,6 +164,8 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
                 tiled = np.tile(open_nbrhood, (len(idx_nbrhoods_to_update), 1))  # instead of another loop
                 to_subtract = np.logical_and(tiled, self.common_neighbors[idx_nbrhoods_to_update]).sum(1)
                 self.nbrhood_edge_counts[idx_nbrhoods_to_update] -= to_subtract
+                # my own addition:
+                # self.nbrhood[:, vert] = 0
 
     def rule_2(self):
         # rule_2: If an uncovered edge {u,v} is contained in exactly
@@ -224,16 +229,13 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
                 self.cover_edges()
         
 
-    def choose_edge(self):    
+    def choose_nbrhood(self):    
         score = self.n_choose_2(self.common_neighbors.sum(1)) - self.nbrhood_edge_counts
         # score includes scores for non-existent edges, so have exclude those, otherwise could use .argmin()
-        extant_edges = np.transpose(np.triu(self.adj_matrix, 1).nonzero())
-        # if len(extant_edges) < 1:
-        #     return None
-        extant_edges_idx = np.fromiter({self.get_idx(edge) for edge in extant_edges}, dtype=int)
-
-        chosen_edge_idx = np.where(score==score[extant_edges_idx].min())[0][0]
-        return chosen_edge_idx
+        chosen_edge_idx = np.where(score==score[self.extant_edges_idx].min())[0][0]
+        # chosen_edge = np.where([self.get_idx(x) for x in np.arange(self.unreduced.max_num_verts)]==chosen_edge_idx)
+        # intersection = np.logical_or(self.adj_matrix[chosen_edge[0]], self.adj_matrix[chosen_edge[1]], int)
+        return self.nbrhood[chosen_edge_idx]
 
     def cover_edges(self):
         # always call after updating the cover
@@ -254,11 +256,14 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             
             # cover (remove from reduced_graph) edges
             self.rm_edges(covered_edges)
+            # update extant_edges_idx
+            rmed_edges_idx = self.get_idx(covered_edges)
+            self.extant_edges_idx = np.delete(self.extant_edges_idx, rmed_edges_idx)
+            # now here do all the updates to nbrs?
 
         if self.verbose:
             print("\t\t\t{} uncovered edges remaining".format(self.num_edges))
 
-        # now here do all the updates to nbrs, extant edges, etc.
 
 
 
