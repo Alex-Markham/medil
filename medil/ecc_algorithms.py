@@ -44,11 +44,11 @@ def branch(graph, k_num_cliques, the_cover):
     for clique_nodes in max_cliques(chosen_nbrhood):
         clique = np.zeros(reduced_graph.num_vertices, dtype=int)
         clique[clique_nodes] = 1
-        union = clique.reshape(1, -1) if the_cover is None else np.vstack((the_cover, clique))
+        union = clique.reshape(1, -1) if reduced_graph.the_cover is None else np.vstack((reduced_graph.the_cover, clique))
         the_cover_prime = branch(graph, k_num_cliques-1, union)
         if the_cover_prime is not None:
             return the_cover_prime
-    return the_cover
+    return reduced_graph.the_cover
 
 
 def max_cliques(nbrhood):
