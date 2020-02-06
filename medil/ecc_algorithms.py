@@ -17,38 +17,38 @@ def find_clique_min_cover(graph, verbose=False):
     while the_cover is None:
         if verbose:
             print("\ntesting for solutions with {}/{} cliques".format(num_cliques, max_intersect_num))
-        the_cover = branch(graph, num_cliques, the_cover)
+        reducible_graph = graph.reducible_copy()
+        the_cover = branch(reducible_graph, num_cliques, the_cover)
+        assert num_cliques < max_intersect_num
         num_cliques += 1
     return the_cover
 
 
-def branch(graph, k_num_cliques, the_cover):
-    reduced_graph = graph.reducible_copy()
-
-    reduced_graph.the_cover = the_cover
-    reduced_graph.cover_edges()
-    if reduced_graph.num_edges == 0:
+def branch(reducible_graph, k_num_cliques, the_cover):
+    reducible_graph.the_cover = the_cover
+    reducible_graph.cover_edges()
+    if reducible_graph.num_edges == 0:
         return the_cover
 
-    if graph.verbose:
+    if reducible_graph.verbose:
         print("\tbranching...")
 
-    reduced_graph.reduzieren(k_num_cliques)
-    k_num_cliques = reduced_graph.k_num_cliques
+    reducible_graph.reduzieren(k_num_cliques)
+    k_num_cliques = reducible_graph.k_num_cliques
     
     if k_num_cliques < 0:
         return None
 
-    chosen_edge = reduced_graph.choose_edge()
-    chosen_nbrhood = reduced_graph.nbrhood(chosen_edge)
+    chosen_edge = reducible_graph.choose_edge()
+    chosen_nbrhood = reducible_graph.nbrhood(chosen_edge)
     for clique_nodes in max_cliques(chosen_nbrhood):
-        clique = np.zeros(reduced_graph.num_vertices, dtype=int)
+        clique = np.zeros(reducible_graph.num_vertices, dtype=int)
         clique[clique_nodes] = 1
-        union = clique.reshape(1, -1) if reduced_graph.the_cover is None else np.vstack((reduced_graph.the_cover, clique))
-        the_cover_prime = branch(graph, k_num_cliques-1, union)
+        union = clique.reshape(1, -1) if reducible_graph.the_cover is None else np.vstack((reducible_graph.the_cover, clique))
+        the_cover_prime = branch(reducible_graph, k_num_cliques-1, union)
         if the_cover_prime is not None:
             return the_cover_prime
-    return reduced_graph.the_cover
+    return reducible_graph.the_cover
 
 
 def max_cliques(nbrhood):

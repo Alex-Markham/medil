@@ -55,8 +55,8 @@ class UndirectedDependenceGraph(object):
         
         extant_edges = np.transpose(np.triu(self.adj_matrix, 1).nonzero())
         self.extant_edges_idx = np.fromiter({self.get_idx(edge) for edge in extant_edges}, dtype=int)
-        extant_nbrs = np.array([nbrs(edge) for edge in extant_edges])
-        extant_nbrs_idx = np.array([self.get_idx(edge) for edge in extant_edges])
+        extant_nbrs = np.array([nbrs(edge) for edge in extant_edges], int)
+        extant_nbrs_idx = np.array([self.get_idx(edge) for edge in extant_edges], int)
 
         # from paper: set of N_{u, v} for all edges (u, v)
         self.common_neighbors[extant_nbrs_idx] = extant_nbrs
@@ -79,7 +79,7 @@ class UndirectedDependenceGraph(object):
         max_num_edges_in_nbrhood = lambda edge_idx: (self.nbrhood(edge_idx).sum() - mask(edge_idx).sum()) // 2
 
         # from paper: set of c_{u, v} for all edges (u, v)
-        self.nbrhood_edge_counts = np.array([max_num_edges_in_nbrhood(edge_idx) for edge_idx in np.arange(max_num_edges)])
+        self.nbrhood_edge_counts = np.array([max_num_edges_in_nbrhood(edge_idx) for edge_idx in np.arange(max_num_edges)], int)
 
         # important structs are:
         # self.common_neighbors 
@@ -164,9 +164,6 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
                 tiled = np.tile(open_nbrhood, (len(idx_nbrhoods_to_update), 1))  # instead of another loop
                 to_subtract = np.logical_and(tiled, self.common_neighbors[idx_nbrhoods_to_update]).sum(1)
                 self.nbrhood_edge_counts[idx_nbrhoods_to_update] -= to_subtract
-                    
-
-            
 
     def rule_2(self):
         # rule_2: If an uncovered edge {u,v} is contained in exactly
