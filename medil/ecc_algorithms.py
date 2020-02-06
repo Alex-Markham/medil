@@ -42,7 +42,7 @@ def branch(reducible_graph, k_num_cliques, the_cover):
     chosen_edge = reducible_graph.choose_edge()
     chosen_nbrhood = reducible_graph.nbrhood(chosen_edge)
     for clique_nodes in max_cliques(chosen_nbrhood):
-        clique = np.zeros(reducible_graph.num_vertices, dtype=int)
+        clique = np.zeros(reducible_graph.unreduced.num_vertices, dtype=int)
         clique[clique_nodes] = 1
         union = clique.reshape(1, -1) if reducible_graph.the_cover is None else np.vstack((reducible_graph.the_cover, clique))
         the_cover_prime = branch(reducible_graph, k_num_cliques-1, union)

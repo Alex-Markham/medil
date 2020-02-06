@@ -118,10 +118,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         self.nbrhood_edge_counts = udg.nbrhood_edge_counts.copy()
         # and fun is
         self.nbrhood = udg.nbrhood  # need to fix this :/ gotta update if other stuff changes
-        
-        extant_edges = np.transpose(np.triu(self.adj_matrix, 1).nonzero())
-        self.extant_edges_idx = np.fromiter({self.get_idx(edge) for edge in extant_edges}, dtype=int)
-        
+                
     def reset(self):
         self.__init__(self.unreduced)
         
@@ -139,7 +136,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             self.rule_2()
             if self.reducing:
                 continue
-            self.rule_3()
+            # self.rule_3()
 
     def rule_1(self):
         # rule_1: Remove isolated vertices and vertices that are only
@@ -177,13 +174,12 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         at_most = (self.n_choose_2(self.common_neighbors.sum(1)) - self.nbrhood_edge_counts) == 0
 
         # pick a clique containing edges in exactly 1 maximal clique
-        clique_idx = np.where((at_least & at_most)==True)[0][0]
-        clique = self.common_neighbors[clique_idx]
-
-        if clique.any():       # then apply Rule 2
+        clique_idxs = np.where((at_least & at_most)==True)[0]
+        if clique_idxs.shape[0] > 0:
             if self.verbose:
                 print("\t\t\tapplying Rule 2...")
-            self.the_cover = clique.reshape(1, -1) if self.the_cover is None else np.vstack((self.the_cover, cliques))
+            clique = self.common_neighbors[clique_idxs[0]].copy()
+            self.the_cover = clique.reshape(1, -1) if self.the_cover is None else np.vstack((self.the_cover, clique))
             self.cover_edges()
             self.k_num_cliques -= 1
             self.reducing = True
@@ -231,7 +227,12 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
     def choose_edge(self):    
         score = self.n_choose_2(self.common_neighbors.sum(1)) - self.nbrhood_edge_counts
         # score includes scores for non-existent edges, so have exclude those, otherwise could use .argmin()
-        chosen_edge_idx = np.where(score==score[self.extant_edges_idx].min())[0][0]
+        extant_edges = np.transpose(np.triu(self.adj_matrix, 1).nonzero())
+        # if len(extant_edges) < 1:
+        #     return None
+        extant_edges_idx = np.fromiter({self.get_idx(edge) for edge in extant_edges}, dtype=int)
+
+        chosen_edge_idx = np.where(score==score[extant_edges_idx].min())[0][0]
         return chosen_edge_idx
 
     def cover_edges(self):
