@@ -13,7 +13,8 @@ class UndirectedDependenceGraph(object):
     def __init__(self, adj_matrix, verbose=False):
         # doesn't behave well unless input is nparray;
         self.adj_matrix = adj_matrix
-        self.num_vertices = len(adj_matrix)
+        self.num_vertices = np.trace(adj_matrix)
+        self.max_num_verts = len(adj_matrix)
         self.num_edges = np.triu(adj_matrix, 1).sum()
         self.verbose = verbose
 
@@ -22,26 +23,26 @@ class UndirectedDependenceGraph(object):
         v_2s = edges[:, 1]
         self.adj_matrix[v_1s, v_2s] = 1
         self.adj_matrix[v_2s, v_1s] = 1
-        self.num_edges = self.np.triu(adj_matrix, 1).sum()
+        self.num_edges = np.triu(self.adj_matrix, 1).sum()
 
     def rm_edges(self, edges):
         v_1s = edges[:, 0]
         v_2s = edges[:, 1]
         self.adj_matrix[v_1s, v_2s] = 0
         self.adj_matrix[v_2s, v_1s] = 0
-        self.num_edges = self.np.triu(adj_matrix, 1).sum()
+        self.num_edges = np.triu(self.adj_matrix, 1).sum()
 
     def make_aux(self):
         # this makes the auxilliary structure described in INITIALIZATION in the paper
         
         # find neighbourhood for each vertex
         # each row corresponds to a unique edge
-        max_num_edges = self.n_choose_2(self.num_vertices)
-        self.common_neighbors= np.zeros((max_num_edges, self.num_vertices), int) # init
+        max_num_edges = self.n_choose_2(self.max_num_verts)
+        self.common_neighbors= np.zeros((max_num_edges, self.max_num_verts), int) # init
 
         # mapping of edges to unique row idx
-        triu_idx = np.triu_indices(self.num_vertices, 1)
-        nghbrhd_idx = np.zeros((self.num_vertices, self.num_vertices), int)
+        triu_idx = np.triu_indices(self.max_num_verts, 1)
+        nghbrhd_idx = np.zeros((self.max_num_verts, self.max_num_verts), int)
         nghbrhd_idx[triu_idx] = np.arange(max_num_edges)
         # nghbrhd_idx += nghbrhd_idx.T
         self.get_idx = lambda edge: nghbrhd_idx[edge[0], edge[1]]
@@ -106,8 +107,12 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         self.verbose = udg.verbose
         
         # from auxilliary structure
-        self.get_idx = udg.get_idx
-
+        try:
+            self.get_idx = udg.get_idx
+        except AttributeError:
+            udg.make_aux()
+            self.get_idx = udg.get_idx
+            
         # need to update these all when self.cover_edges() is called?
         self.common_neighbors = udg.common_neighbors.copy()
         self.nbrhood_edge_counts = udg.nbrhood_edge_counts.copy()
@@ -143,8 +148,19 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             # update auxilliary attributes; LEMMA 2
             self.adj_matrix[isolated_verts, isolated_verts] = 0
             self.num_vertices -= len(isolated_verts)
-            
-            self.common_neighbors = 0
+
+            # remove isolated_verts from common neighborhoods
+            self.common_neighbors[:, isolated_verts] = 0
+
+            # decrease nbrhood edge counts
+            for vert in isolated_verts:
+                open_nbrhood = self.adj_matrix[vert]  # open since already removed vert from adj_matrix
+                idx_nbrhoods_to_update = np.where(self.common_neighbors[:, vert]==1)[0]
+                tiled = np.tile(open_nbrhood, (len(idx_nbrhoods_to_update), 1))  # instead of another loop
+                to_subtract = np.logical_and(tiled, self.common_neighbors[idx_nbrhoods_to_update]).sum(1)
+                self.nbrhood_edge_counts[idx_nbrhoods_to_update] -= to_subtract
+                    
+
             
 
     def rule_2(self):

@@ -5,11 +5,11 @@ from medil.ecc_algorithms import branch
 
 
 # Here are some integration tests.
-def test_find_cm_on_3_cycle():
-    cycle_3 = np.ones((3, 3), dtype=int)
-    cover = find_cm(cycle_3, True)
-    assert cover.shape==(1, 3)
-    assert [1, 1, 1] in cover
+# def test_find_cm_on_3_cycle():
+#     cycle_3 = np.ones((3, 3), dtype=int)
+#     cover = find_cm(cycle_3, True)
+#     assert cover.shape==(1, 3)
+#     assert [1, 1, 1] in cover
 
 
 # def test_reduction_rule_1_on_3cycle_plus_isolated():
@@ -71,34 +71,46 @@ def test_find_cm_on_3_cycle():
 
 # Here are unit tests.
 
-def test_make_aux_on_triangle():
-    graph_triangle = np.asarray([
-        [1, 1, 1, 0, 0, 0],
-        [1, 1, 1, 1, 1, 0],
-        [1, 1, 1, 0, 1, 1],
-        [0, 1, 0, 1, 1, 0],
-        [0, 1, 1, 1, 1, 1],
-        [0, 0, 1, 0, 1, 1]])
-    graph = UndirectedDependenceGraph(graph_triangle)
-    graph.make_aux()
+# def test_make_aux_on_triangle():
+#     graph_triangle = np.asarray([
+#         [1, 1, 1, 0, 0, 0],
+#         [1, 1, 1, 1, 1, 0],
+#         [1, 1, 1, 0, 1, 1],
+#         [0, 1, 0, 1, 1, 0],
+#         [0, 1, 1, 1, 1, 1],
+#         [0, 0, 1, 0, 1, 1]])
+#     graph = UndirectedDependenceGraph(graph_triangle)
+#     graph.make_aux()
 
-    # non-edges:
-    assert (graph.common_neighbors[[2, 3, 4, 8, 9, 13]] == 0).all()
-    # edges:
-    assert (graph.common_neighbors[[0, 1]] == [1, 1, 1, 0, 0, 0]).all()
-    assert (graph.common_neighbors[5]      == [1, 1, 1, 0, 1, 0]).all()
-    assert (graph.common_neighbors[6]      == [0, 1, 0, 1, 1, 0]).all()
-    assert (graph.common_neighbors[7]      == [0, 1, 1, 1, 1, 0]).all()
-    assert (graph.common_neighbors[10]     == [0, 1, 1, 0, 1, 1]).all()
-    assert (graph.common_neighbors[11]     == [0, 0, 1, 0, 1, 1]).all()
-    assert (graph.common_neighbors[12]     == [0, 1, 0, 1, 1, 0]).all()
-    assert (graph.common_neighbors[14]     == [0, 0, 1, 0, 1, 1]).all()
+#     # non-edges:
+#     assert (graph.common_neighbors[[2, 3, 4, 8, 9, 13]] == 0).all()
+#     # edges:
+#     assert (graph.common_neighbors[[0, 1]] == [1, 1, 1, 0, 0, 0]).all()
+#     assert (graph.common_neighbors[5]      == [1, 1, 1, 0, 1, 0]).all()
+#     assert (graph.common_neighbors[6]      == [0, 1, 0, 1, 1, 0]).all()
+#     assert (graph.common_neighbors[7]      == [0, 1, 1, 1, 1, 0]).all()
+#     assert (graph.common_neighbors[10]     == [0, 1, 1, 0, 1, 1]).all()
+#     assert (graph.common_neighbors[11]     == [0, 0, 1, 0, 1, 1]).all()
+#     assert (graph.common_neighbors[12]     == [0, 1, 0, 1, 1, 0]).all()
+#     assert (graph.common_neighbors[14]     == [0, 0, 1, 0, 1, 1]).all()
 
-    assert (graph.nbrhood_edge_counts == [3, 3, 0, 0, 0, 5, 3, 5, 0, 0, 5, 3, 3, 0, 3]).all()
+#     assert (graph.nbrhood_edge_counts == [3, 3, 0, 0, 0, 5, 3, 5, 0, 0, 5, 3, 3, 0, 3]).all()
+
     
 def test_reduce_rule_1():
-    pass
-    # random graphs then add isolated verts and remove with rule_1
-    # init new UDG with non-isolated verts and make_auk then compare values with assert
+    graph = np.zeros((4, 4), dtype=int)  # init
+    graph[1:4, 1:4] = 1         # add 3cycle
 
+
+    # correct answer (assuming make_aux is correct)
+    correct = UndirectedDependenceGraph(graph)
+    correct.make_aux()
+
+    # to test
+    graph[0, 0] = 1             # add isolated vert
+    being_tested = UndirectedDependenceGraph(graph).reducible_copy()
+    being_tested.rule_1()
     
+    assert (correct.num_vertices == being_tested.num_vertices).all()
+    assert (correct.common_neighbors == being_tested.common_neighbors).all()
+    assert (correct.nbrhood_edge_counts == being_tested.nbrhood_edge_counts).all()    
