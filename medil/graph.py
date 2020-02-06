@@ -137,6 +137,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
                 print("\t\t\tapplying Rule 1...")
             
             self.adj_matrix[isolated_verts, isolated_verts] = 0
+            self.num_vertices -= len(isolated_verts)
 
     def rule_2(self):
         # rule_2: If an uncovered edge {u,v} is contained in exactly
