@@ -126,6 +126,9 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         self.__init__(self.unreduced)
         
     def reduzieren(self, k_num_cliques):
+        # reduce by first applying rule 1 and then repeatedly applying
+        # rule 2 or rule 3 (both of which followed by rule 1 again)
+        # until they don't apply
         if self.verbose:
             print('\t\treducing:')
         self.k_num_cliques = k_num_cliques
@@ -134,6 +137,8 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             self.reducing = False
             self.rule_1()
             self.rule_2()
+            if self.reducing:
+                continue
             self.rule_3()
 
     def rule_1(self):
@@ -184,9 +189,8 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             self.the_cover = cliques if self.the_cover is None else np.vstack((self.the_cover, cliques))
             self.cover_edges()
             self.k_num_cliques -= len(cliques)
-            return             # or rather self.rule_1()?y
-        # start the reducee loop over so Rule
-                                # 1 can 'clean up'
+            self.reducing = True
+        # start the loop over so Rule 1 can 'clean up'
 
 
     def rule_3(self):
@@ -213,21 +217,19 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         # guests[i, j] == True iff j is a guest of i
         guests = np.logical_and(~exits, self.adj_matrix)
 
-        applied_3 = False
-        for pair in np.transpose(np.where(guests)):
+        for pair in np.transpose(np.where(guests)):  # really a for-loop here?
             if self.the_cover is None:
                 break
             guest_rooms_idx = np.transpose(np.where(self.the_cover[:, pair[1]]))
             
             if np.logical_not(self.the_cover[guest_rooms_idx, pair[1]]).any(): # then apply rule
-                applied_3 = True
+                self.reducing = True
                 if self.verbose:
                     print("\t\t\tapplying Rule 3...")
-            # add host to all cliques containing guest
-            self.the_cover[guest_rooms_idx, pair[1]] = 1
-            self.cover_edges()
-        if applied_3:
-            return               #  need to start loop over?
+                # add host to all cliques containing guest
+                self.the_cover[guest_rooms_idx, pair[1]] = 1
+                self.cover_edges()
+        
 
     def choose_edge(self):    
         score = self.n_choose_2(self.common_neighbors.sum(1)) - self.nbrhood_edge_counts
