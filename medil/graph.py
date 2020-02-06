@@ -176,16 +176,16 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         # edges in at most 1 maximal clique
         at_most = (self.n_choose_2(self.common_neighbors.sum(1)) - self.nbrhood_edge_counts) == 0
 
-        # cliques containing edges in exactly 1 maximal clique
-        cliques = self.common_neighbors[at_least & at_most]
+        # pick a clique containing edges in exactly 1 maximal clique
+        clique_idx = np.nonzero(at_least & at_most)[0, 0]
+        clique = self.common_neighbors[clique_idx]
 
-        if cliques.any():       # then apply Rule 2
+        if clique.any():       # then apply Rule 2
             if self.verbose:
                 print("\t\t\tapplying Rule 2...")
-            cliques = np.unique(cliques, axis=0) # need to fix? just not as efficient as possible
-            self.the_cover = cliques if self.the_cover is None else np.vstack((self.the_cover, cliques))
+            self.the_cover = clique if self.the_cover is None else np.vstack((self.the_cover, cliques))
             self.cover_edges()
-            self.k_num_cliques -= len(cliques)
+            self.k_num_cliques -= 1
             self.reducing = True
         # start the loop over so Rule 1 can 'clean up'
 
