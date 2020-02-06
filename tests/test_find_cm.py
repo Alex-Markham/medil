@@ -82,8 +82,20 @@ def test_make_aux_on_triangle():
     graph = UndirectedDependenceGraph(graph_triangle)
     graph.make_aux()
 
-    assert (graph.common_neighbors[[2, 3, 4, 8, 9, 13]]==0).all()
+    # non-edges:
+    assert (graph.common_neighbors[[2, 3, 4, 8, 9, 13]] == 0).all()
+    # edges:
+    assert (graph.common_neighbors[[0, 1]] == [1, 1, 1, 0, 0, 0]).all()
+    assert (graph.common_neighbors[5]      == [1, 1, 1, 0, 1, 0]).all()
+    assert (graph.common_neighbors[6]      == [0, 1, 0, 1, 1, 0]).all()
+    assert (graph.common_neighbors[7]      == [0, 1, 1, 1, 1, 0]).all()
+    assert (graph.common_neighbors[10]     == [0, 1, 1, 0, 1, 1]).all()
+    assert (graph.common_neighbors[11]     == [0, 0, 1, 0, 1, 1]).all()
+    assert (graph.common_neighbors[12]     == [0, 1, 0, 1, 1, 0]).all()
+    assert (graph.common_neighbors[14]     == [0, 0, 1, 0, 1, 1]).all()
 
+    assert (graph.nbrhood_edge_counts == [3, 3, 0, 0, 0, 5, 3, 5, 0, 0, 5, 3, 3, 0, 3]).all()
+    
 def test_reduce_rule_1():
     pass
     # random graphs then add isolated verts and remove with rule_1
