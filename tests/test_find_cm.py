@@ -5,13 +5,12 @@ from medil.ecc_algorithms import branch
 
 
 # Here are some integration tests.
-def test_find_cm_on_3_cycle():
-    cycle_3 = np.ones((3, 3), dtype=int)
-    cover = find_cm(cycle_3, True)
-    assert cover.shape==(1, 3)
-    assert [1, 1, 1] in cover
+# def test_find_cm_on_3_cycle():
+#     cycle_3 = np.ones((3, 3), dtype=int)
+#     cover = find_cm(cycle_3, True)
+#     assert cover.shape==(1, 3)
+#     assert [1, 1, 1] in cover
 
-test_find_cm_on_3_cycle()
 
 # def test_reduction_rule_1_on_3cycle_plus_isolated():
 #     graph = np.zeros((4, 4), dtype=int)  # init
@@ -72,31 +71,6 @@ test_find_cm_on_3_cycle()
 
 # Here are unit tests.
 
-    
-# def test_reducee_on_real_data():
-#     results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
-#     all_deps = results['deps']
-#     deps = all_deps[2:63, 2:63].astype(int)
-
-    # graph = UndirectedDependenceGraph(deps)
-    # graph.make_aux()
-
-#     hmm = branch(graph, 1, None, True)
-
-#     chosen_edge = choose_edge(graph)
-#     graph.nbrhood(chosen_edge)  # this is empty!! shouldn't be
-#     # cover = find_cm(deps.astype(int), verbose=True)
-
-
-# def test_choose_edge_on_real_data():
-#     results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
-#     all_deps = results['deps']
-#     deps = all_deps[2:63, 2:63].astype(int)
-
-#     graph = UndirectedDependenceGraph(deps)
-#     graph.make_aux()
-
-#     chosen_edge = choose_edge(graph)
-#     chosen_nbrhood = graph.nbrhood(chosen_edge)
-#     graph.common_neighbors.sum(1)
-#     # bug in common_neighbors?
+def test_reduce_rule_1():
+    # random graphs then add isolated verts and remove with rule_1
+    # init new UDG with non-isolated verts and make_auk then compare values with assert
