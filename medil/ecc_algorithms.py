@@ -40,7 +40,7 @@ def branch(reducible_graph, k_num_cliques, the_cover):
         return None
 
     chosen_nbrhood = reducible_graph.choose_nbrhood()
-    for clique_nodes in max_cliques(chosen_nbrhood):
+    for clique_nodes in max_cliques(chosen_nbrhood):  # may need to change max_cliques to be from unreduced graph?
         clique = np.zeros(reducible_graph.unreduced.num_vertices, dtype=int)
         clique[clique_nodes] = 1
         union = clique.reshape(1, -1) if reducible_graph.the_cover is None else np.vstack((reducible_graph.the_cover, clique))

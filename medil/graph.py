@@ -117,9 +117,10 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         self.common_neighbors = udg.common_neighbors.copy()
         self.nbrhood_edge_counts = udg.nbrhood_edge_counts.copy()
 
-        # update when cover_edges() is called
+        # update when cover_edges() is called, actually maybe just extant_edges?
         self.extant_edges_idx = udg.extant_edges_idx.copy()
-        self.nbrhood = np.array(map(udg.nbrhood, np.arange(udg.max_num_verts)))
+        self.nbrhood = udg.nbrhood
+        # self.nbrhood = np.array(map(udg.nbrhood, np.arange(udg.max_num_verts)))  # easier if this is an array rather than fun, if it has to be updated
 
 
     def reset(self):
@@ -261,7 +262,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         idx_idx = np.array([np.where(self.extant_edges_idx==idx) for idx in rmed_edges_idx], int).flatten()
 
         self.extant_edges_idx = np.delete(self.extant_edges_idx, idx_idx)
-        # now here do all the updates to nbrs?
+        # now here do all the updates to nbrs?----actually probably don't want this? see 2clique house example
 
         if self.verbose:
             print("\t\t\t{} uncovered edges remaining".format(self.num_edges))
