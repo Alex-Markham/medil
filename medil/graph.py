@@ -185,12 +185,14 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             if self.verbose:
                 print("\t\t\tapplying Rule 2...")
             clique = self.common_neighbors[clique_idxs[0]].copy()
+            self.common_neighbors[clique_idxs[0]] = 0  # zero out row, to update struct? not in paper?
             self.the_cover = clique.reshape(1, -1) if self.the_cover is None else np.vstack((self.the_cover, clique))
             self.cover_edges()
+            print(self.the_cover, self.adj_matrix)
             self.k_num_cliques -= 1
             self.reducing = True
         # start the loop over so Rule 1 can 'clean up'
-
+        assert self.k_num_cliques > -5
 
     def rule_3(self):
         # rule_3: Consider a vertex v that has at least one
