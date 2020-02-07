@@ -39,6 +39,9 @@ def branch(reducible_graph, k_num_cliques, the_cover):
     if k_num_cliques < 0:
         return None
 
+    if reducible_graph.num_edges == 0:
+        return reducible_graph.the_cover  # not in paper, but seems necessary?
+
     chosen_nbrhood = reducible_graph.choose_nbrhood()
     for clique_nodes in max_cliques(chosen_nbrhood):  # may need to change max_cliques to be from unreduced graph?
         clique = np.zeros(reducible_graph.unreduced.num_vertices, dtype=int)

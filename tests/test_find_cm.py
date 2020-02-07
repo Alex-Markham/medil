@@ -20,34 +20,32 @@ def test_find_cm_on_3_cycle():
     assert cover.shape==(1, 3)
     assert [1, 1, 1] in cover
 
-# test_find_cm_on_3_cycle()
 
+def test_reduction_rule_1_on_3cycle_plus_isolated():
+    graph = np.zeros((4, 4), dtype=int)  # init
+    graph[1:4, 1:4] = 1         # add 3cycle
+    graph[0, 0] = 1             # add isolated vert
 
-# def test_reduction_rule_1_on_3cycle_plus_isolated():
-#     graph = np.zeros((4, 4), dtype=int)  # init
-#     graph[1:4, 1:4] = 1         # add 3cycle
-#     graph[0, 0] = 1             # add isolated vert
-
-#     cover = find_cm(graph, verbose=True)
+    cover = find_cm(graph, verbose=True)
     
-#     assert cover.shape==(1, 4)
-#     assert [0, 1, 1, 1] in cover
+    assert cover.shape==(1, 4)
+    assert [0, 1, 1, 1] in cover
 
 
-# def test_find_cm_on_triangle():
-#     graph_triangle = np.asarray([
-#         [1, 1, 1, 0, 0, 0],
-#         [1, 1, 1, 1, 1, 0],
-#         [1, 1, 1, 0, 1, 1],
-#         [0, 1, 0, 1, 1, 0],
-#         [0, 1, 1, 1, 1, 1],
-#         [0, 0, 1, 0, 1, 1]])
+def test_find_cm_on_triangle():
+    graph_triangle = np.asarray([
+        [1, 1, 1, 0, 0, 0],
+        [1, 1, 1, 1, 1, 0],
+        [1, 1, 1, 0, 1, 1],
+        [0, 1, 0, 1, 1, 0],
+        [0, 1, 1, 1, 1, 1],
+        [0, 0, 1, 0, 1, 1]])
 
-#     cover = find_cm(graph_triangle, True)
-#     assert cover.shape==(3, 6)
-#     assert [0, 0, 1, 0, 1, 1] in cover
-#     assert [0, 1, 0, 1, 1, 0] in cover
-#     assert [1, 1, 1, 0, 0, 0] in cover
+    cover = find_cm(graph_triangle, True)
+    assert cover.shape==(3, 6)
+    assert [0, 0, 1, 0, 1, 1] in cover
+    assert [0, 1, 0, 1, 1, 0] in cover
+    assert [1, 1, 1, 0, 0, 0] in cover
 
 # test_find_cm_on_triangle()
 
