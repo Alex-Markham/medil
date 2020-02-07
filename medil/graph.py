@@ -238,28 +238,30 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         return self.nbrhood[chosen_edge_idx]
 
     def cover_edges(self):
-        # always call after updating the cover
+        # always call after updating the cover; only on single recently added clique
         if self.the_cover is None:
             return self.adj_matrix
     
         # change edges to 0 if they're covered
-        for clique in self.the_cover:
-            covered = np.where(clique)[0]
+        clique = self.the_cover[-1]
+        covered = np.where(clique)[0]
         
-            # trick for getting combinations from idx
-            comb_idx = np.triu_indices(len(covered), 1)
+        # trick for getting combinations from idx
+        comb_idx = np.triu_indices(len(covered), 1)
         
-            # actual pairwise combinations; ie all edges (v_i, v_j) covered by the clique
-            covered_edges = np.empty((len(comb_idx[0]), 2), int)
-            covered_edges[:, 0] = covered[comb_idx[0]]
-            covered_edges[:, 1] = covered[comb_idx[1]]
-            
-            # cover (remove from reduced_graph) edges
-            self.rm_edges(covered_edges)
-            # update extant_edges_idx
-            rmed_edges_idx = self.get_idx(covered_edges)
-            self.extant_edges_idx = np.delete(self.extant_edges_idx, rmed_edges_idx)
-            # now here do all the updates to nbrs?
+        # actual pairwise combinations; ie all edges (v_i, v_j) covered by the clique
+        covered_edges = np.empty((len(comb_idx[0]), 2), int)
+        covered_edges[:, 0] = covered[comb_idx[0]]
+        covered_edges[:, 1] = covered[comb_idx[1]]
+        
+        # cover (remove from reduced_graph) edges
+        self.rm_edges(covered_edges)
+        # update extant_edges_idx
+        rmed_edges_idx = [self.get_idx(edge) for edge in covered_edges]
+        idx_idx = np.array([np.where(self.extant_edges_idx==idx) for idx in rmed_edges_idx], int).flatten()
+
+        self.extant_edges_idx = np.delete(self.extant_edges_idx, idx_idx)
+        # now here do all the updates to nbrs?
 
         if self.verbose:
             print("\t\t\t{} uncovered edges remaining".format(self.num_edges))

@@ -41,12 +41,13 @@ from medil.ecc_algorithms import branch
 #         [0, 1, 1, 1, 1, 1],
 #         [0, 0, 1, 0, 1, 1]])
 
-#     cover = find_cm(graph_triangle)
+#     cover = find_cm(graph_triangle, True)
 #     assert cover.shape==(3, 6)
 #     assert [0, 0, 1, 0, 1, 1] in cover
 #     assert [0, 1, 0, 1, 1, 0] in cover
 #     assert [1, 1, 1, 0, 0, 0] in cover
 
+# test_find_cm_on_triangle()
 
 # def test_find_cm_on_clean_am_cm_diff():
 #     graph  = np.asarray([
@@ -136,6 +137,25 @@ def test_reduce_rule_2_3cycle():
     assert graph.the_cover.shape == (1, 3)
     assert [1, 1, 1] in graph.the_cover
 
+
+def test_cover_edges():
+    graph_triangle = np.asarray([
+        [1, 1, 1, 0, 0, 0],
+        [1, 1, 1, 1, 1, 0],
+        [1, 1, 1, 0, 1, 1],
+        [0, 1, 0, 1, 1, 0],
+        [0, 1, 1, 1, 1, 1],
+        [0, 0, 1, 0, 1, 1]])
+
+    clique = np.array([1, 1, 1, 0, 0, 0], int)
+
+    being_tested = UndirectedDependenceGraph(graph_triangle).reducible_copy()
+    being_tested.the_cover = clique.reshape(1, 6)
+    being_tested.cover_edges()
+
+    assert (being_tested.adj_matrix[0] == [1, 0, 0, 0, 0, 0]).all()
+
+
 # def test_reduce_rule_2_triangle():
 #     graph_triangle = np.asarray([
 #         [1, 1, 1, 0, 0, 0],
@@ -145,3 +165,7 @@ def test_reduce_rule_2_3cycle():
 #         [0, 1, 1, 1, 1, 1],
 #         [0, 0, 1, 0, 1, 1]])
 #     graph = UndirectedDependenceGraph(graph_triangle)
+
+
+# def test_find_cm_on_2clique_house():
+#     grapyh = 5 nodes, 1 4-clique sharing an edge with a 3 clique
