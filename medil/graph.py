@@ -188,12 +188,10 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             self.common_neighbors[clique_idxs[0]] = 0  # zero out row, to update struct? not in paper?
             self.the_cover = clique.reshape(1, -1) if self.the_cover is None else np.vstack((self.the_cover, clique))
             self.cover_edges()
-            print(self.the_cover, self.adj_matrix)
             self.k_num_cliques -= 1
             self.reducing = True
         # start the loop over so Rule 1 can 'clean up'
-        assert self.k_num_cliques > -5
-
+        
     def rule_3(self):
         # rule_3: Consider a vertex v that has at least one
         # guest. If inhabitants (of the neighborhood) occupy the
@@ -238,7 +236,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         chosen_edge_idx = np.where(score==score[self.extant_edges_idx].min())[0][0]
         # chosen_edge = np.where([self.get_idx(x) for x in np.arange(self.unreduced.max_num_verts)]==chosen_edge_idx)
         # intersection = np.logical_or(self.adj_matrix[chosen_edge[0]], self.adj_matrix[chosen_edge[1]], int)
-        return self.nbrhood[chosen_edge_idx]
+        return self.nbrhood(chosen_edge_idx)
 
     def cover_edges(self):
         # always call after updating the cover; only on single recently added clique
