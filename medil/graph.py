@@ -140,7 +140,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             self.rule_2()
             if self.reducing:
                 continue
-            # self.rule_3()
+            self.rule_3()
 
     def rule_1(self):
         # rule_1: Remove isolated vertices and vertices that are only
