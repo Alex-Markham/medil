@@ -261,7 +261,8 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         self.rm_edges(covered_edges)
         # update extant_edges_idx
         rmed_edges_idx = [self.get_idx(edge) for edge in covered_edges]
-        idx_idx = np.array([np.where(self.extant_edges_idx==idx) for idx in rmed_edges_idx], int).flatten()
+        extant_rmed_edges_idx = [edge for edge in rmed_edges_idx if edge in self.extant_edges_idx]
+        idx_idx = np.array([np.where(self.extant_edges_idx==idx) for idx in extant_rmed_edges_idx], int).flatten()
 
         self.extant_edges_idx = np.delete(self.extant_edges_idx, idx_idx)
         # now here do all the updates to nbrs?----actually probably don't want this? see 2clique house example

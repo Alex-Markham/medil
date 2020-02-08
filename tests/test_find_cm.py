@@ -48,24 +48,24 @@ def test_find_cm_on_triangle():
     assert [1, 1, 1, 0, 0, 0] in cover
 
 
-def test_find_cm_on_clean_am_cm_diff():
-    graph  = np.asarray([
-        [1, 1, 1, 0, 1, 0, 1, 0],
-        [1, 1, 1, 0, 1, 1, 1, 1],
-        [1, 1, 1, 0, 1, 1, 1, 1],
-        [0, 0, 0, 1, 0, 1, 1, 1],
-        [1, 1, 1, 0, 1, 1, 0, 1],
-        [0, 1, 1, 1, 1, 1, 0, 1],
-        [1, 1, 1, 1, 0, 0, 1, 1],
-        [0, 1, 1, 1, 1, 1, 1, 1]])
+# def test_find_cm_on_clean_am_cm_diff():
+#     graph  = np.asarray([
+#         [1, 1, 1, 0, 1, 0, 1, 0],
+#         [1, 1, 1, 0, 1, 1, 1, 1],
+#         [1, 1, 1, 0, 1, 1, 1, 1],
+#         [0, 0, 0, 1, 0, 1, 1, 1],
+#         [1, 1, 1, 0, 1, 1, 0, 1],
+#         [0, 1, 1, 1, 1, 1, 0, 1],
+#         [1, 1, 1, 1, 0, 0, 1, 1],
+#         [0, 1, 1, 1, 1, 1, 1, 1]])
 
-    cover = find_cm(graph, verbose=True)
-    assert cover.shape==(5, 8)
-    assert [1, 1, 1, 0, 1, 0, 0, 0] in cover
-    assert [1, 0, 0, 1, 0, 0, 1, 0] in cover
-    assert [0, 1, 1, 0, 1, 1, 0, 1] in cover
-    assert [0, 0, 0, 1, 0, 1, 0, 1] in cover
-    assert [0, 1, 1, 0, 0, 0, 1, 1] in cover
+#     cover = find_cm(graph, verbose=True)
+#     assert cover.shape==(5, 8)
+#     assert [1, 1, 1, 0, 1, 0, 0, 0] in cover
+#     assert [1, 0, 0, 1, 0, 0, 1, 0] in cover
+#     assert [0, 1, 1, 0, 1, 1, 0, 1] in cover
+#     assert [0, 0, 0, 1, 0, 1, 0, 1] in cover
+#     assert [0, 1, 1, 0, 0, 0, 1, 1] in cover
 
 
 # def test_real_data():
