@@ -48,10 +48,11 @@ class UndirectedDependenceGraph(object):
         self.get_idx = lambda edge: nghbrhd_idx[edge[0], edge[1]]
         
         # reverse mapping
-        # edges_idx = np.transpose(triu_idx)
+        u, v = np.where(np.triu(np.ones_like(self.adj_matrix), 1))
+        self.get_edge = lambda idx: (u[idx], v[idx])
         
         # compute actual neighborhood for each edge = (v_1, v_2)
-        nbrs = lambda edge: np.logical_and(self.adj_matrix[edge[0]], self.adj_matrix[edge[1]])    
+        self.nbrs = lambda edge: np.logical_and(self.adj_matrix[edge[0]], self.adj_matrix[edge[1]])    
         
         extant_edges = np.transpose(np.triu(self.adj_matrix, 1).nonzero())
         self.extant_edges_idx = np.fromiter({self.get_idx(edge) for edge in extant_edges}, dtype=int)
@@ -75,7 +76,7 @@ class UndirectedDependenceGraph(object):
         # make subgraph-adjacency matrix, and then subtract diag and
         # divide by two to get num edges in subgraph---same as sum() of
         # triu(subgraph-adjacency matrix) but probably a bit faster
-        self.nbrhood = lambda edge_idx: self.adj_matrix[mask(edge_idx)][:, mask(edge_idx)]
+        nbrhood = lambda edge_idx: self.adj_matrix[mask(edge_idx)][:, mask(edge_idx)]
         max_num_edges_in_nbrhood = lambda edge_idx: (self.nbrhood(edge_idx).sum() - mask(edge_idx).sum()) // 2
 
         # from paper: set of c_{u, v} for all edges (u, v)
@@ -85,7 +86,7 @@ class UndirectedDependenceGraph(object):
         # self.common_neighbors 
         # self.nbrhood_edge_counts
         # # and fun is
-        # self.nbrhood
+        # self.nbrs
 
     @staticmethod
     def n_choose_2(n):
@@ -119,9 +120,8 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
 
         # update when cover_edges() is called, actually maybe just extant_edges?
         self.extant_edges_idx = udg.extant_edges_idx.copy()
-        self.nbrhood = udg.nbrhood
-        # self.nbrhood = np.array(map(udg.nbrhood, np.arange(udg.max_num_verts)))  # easier if this is an array rather than fun, if it has to be updated
-
+        self.nbrs = udg.nbrs
+        self.get_edge = udg.get_edge
 
     def reset(self):
         self.__init__(self.unreduced)
@@ -234,9 +234,11 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         score = self.n_choose_2(self.common_neighbors.sum(1)) - self.nbrhood_edge_counts
         # score includes scores for non-existent edges, so have exclude those, otherwise could use .argmin()
         chosen_edge_idx = np.where(score==score[self.extant_edges_idx].min())[0][0]
-        # chosen_edge = np.where([self.get_idx(x) for x in np.arange(self.unreduced.max_num_verts)]==chosen_edge_idx)
+        chosen_edge = self.get_edge(chosen_edge_idx)
+
+        # use this if it's from reduced graph
         # intersection = np.logical_or(self.adj_matrix[chosen_edge[0]], self.adj_matrix[chosen_edge[1]], int)
-        return self.nbrhood(chosen_edge_idx)
+        return self.nbrs(chosen_edge)
 
     def cover_edges(self):
         # always call after updating the cover; only on single recently added clique
