@@ -136,9 +136,11 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             self.reducing = False
             self.rule_1()
             self.rule_2()
+            if self.k_num_cliques <0:
+                return
             if self.reducing:
                 continue
-            self.rule_3()
+            # self.rule_3()
 
     def rule_1(self):
         # rule_1: Remove isolated vertices and vertices that are only
@@ -168,27 +170,44 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
 
     def rule_2(self):
         # rule_2: If an uncovered edge {u,v} is contained in exactly
-        # one maximal clique C, then add C to the solution, mark its
-        # edges as covered, and decrease k by one
-    
-        # edges in at least 1 maximal clique
-        at_least = self.nbrhood_edge_counts > 0
-        
-        # edges in at most 1 maximal clique
-        at_most = (self.n_choose_2(self.common_neighbors.sum(1)) - self.nbrhood_edge_counts) == 0
+        # one maximal clique C, i.e., the common neighbors of u and v
+        # induce a clique, then add C to the solution, mark its edges
+        # as covered, and decrease k by one
 
-        # pick a clique containing edges in exactly 1 maximal clique
-        clique_idxs = np.where((at_least & at_most)==True)[0]
-        if clique_idxs.shape[0] > 0:
+        score = self.n_choose_2(self.common_neighbors.sum(1)) - self.nbrhood_edge_counts
+        # score includes scores for non-existent edges, so have exclude those, otherwise could use .argmin()
+
+        clique_idxs = np.where(score[self.extant_edges_idx]==0)[0]
+        
+        if clique_idxs.size>0:
+            clique_idx = clique_idxs[0]
             if self.verbose:
                 print("\t\t\tapplying Rule 2...")
-            clique = self.common_neighbors[clique_idxs[0]].copy()
-            self.common_neighbors[clique_idxs[0]] = 0  # zero out row, to update struct? not in paper?
+            clique = self.common_neighbors[self.extant_edges_idx[clique_idx]].copy()
             self.the_cover = clique.reshape(1, -1) if self.the_cover is None else np.vstack((self.the_cover, clique))
             self.cover_edges()
             self.k_num_cliques -= 1
             self.reducing = True
         # start the loop over so Rule 1 can 'clean up'
+ 
+        # # edges in at least 1 maximal clique
+        # at_least = self.nbrhood_edge_counts > 0
+        
+        # # edges in at most 1 maximal clique
+        # at_most = (self.n_choose_2(self.common_neighbors.sum(1)) - self.nbrhood_edge_counts) == 0
+
+        # # pick a clique containing edges in exactly 1 maximal clique
+        # clique_idxs = np.where((at_least & at_most)==True)[0]
+        # if clique_idxs.shape[0] > 0:
+        #     if self.verbose:
+        #         print("\t\t\tapplying Rule 2...")
+        #     clique = self.common_neighbors[clique_idxs[0]].copy()
+        #     self.common_neighbors[clique_idxs[0]] = 0  # zero out row, to update struct? not in paper?
+        #     self.the_cover = clique.reshape(1, -1) if self.the_cover is None else np.vstack((self.the_cover, clique))
+        #     self.cover_edges()
+        #     self.k_num_cliques -= 1
+        #     self.reducing = True
+        # # start the loop over so Rule 1 can 'clean up'
         
     def rule_3(self):
         # rule_3: Consider a vertex v that has at least one
@@ -233,7 +252,6 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
                 self.the_cover[guest_rooms_idx, pair[1]] = 1
                 self.cover_edges()
         
-
     def choose_nbrhood(self):    
         score = self.n_choose_2(self.common_neighbors.sum(1)) - self.nbrhood_edge_counts
         # score includes scores for non-existent edges, so have exclude those, otherwise could use .argmin()
@@ -270,6 +288,9 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
 
         self.extant_edges_idx = np.delete(self.extant_edges_idx, idx_idx)
         # now here do all the updates to nbrs?----actually probably don't want this? see 2clique house example
+
+        # update self.common_neighbors
+        self.common_neighbors[rmed_edges_idx] = 0   # zero out rows covered edges
 
         if self.verbose:
             print("\t\t\t{} uncovered edges remaining".format(self.num_edges))
