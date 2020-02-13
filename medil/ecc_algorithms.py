@@ -21,7 +21,7 @@ def find_clique_min_cover(graph, verbose=False):
         the_cover = branch(reducible_graph, num_cliques, the_cover)
         assert num_cliques < max_intersect_num
         num_cliques += 1
-    return the_cover
+    return the_cover# reducible_graph.reconstruct_cover(the_cover) # according to rule_3
 
 
 def branch(reducible_graph, k_num_cliques, the_cover):

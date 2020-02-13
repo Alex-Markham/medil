@@ -107,12 +107,10 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         self.the_cover = None
         self.verbose = udg.verbose
         
-        # from auxilliary structure
-        try:
-            self.get_idx = udg.get_idx
-        except AttributeError:
+        # from auxilliary structure if needed
+        if not hasattr(udg, 'get_idx'):
             udg.make_aux()
-            self.get_idx = udg.get_idx
+        self.get_idx = udg.get_idx
             
         # need to also update these all when self.cover_edges() is called? already done in rule_1
         self.common_neighbors = udg.common_neighbors.copy()
@@ -202,6 +200,9 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         # relations needn't be reproduced in mathematical
         # abstractions)
 
+        # keep track of hosts/guests for reconstructing solution
+        self.host_dict = {}
+        
         exits = np.zeros((self.adj_matrix.shape), dtype=bool)
             
         for vert, nbrhood in enumerate(self.adj_matrix):
@@ -270,6 +271,14 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         if self.verbose:
             print("\t\t\t{} uncovered edges remaining".format(self.num_edges))
 
+    def reconstruct_cover(self, the_cover):
+        if not hasattr(self, 'host_dict'):  # then rule_3 wasn't applied
+            return the_cover
+        # reconstruct here
+        # for host in host_dict:
+        #     guests = host_dict[host]
+        #     check the cover for cliques containing guests, and add host to them
+        return the_cover_reconstructed
 
 
 
