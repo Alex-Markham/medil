@@ -175,8 +175,9 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         # as covered, and decrease k by one
 
         score = self.n_choose_2(self.common_neighbors.sum(1)) - self.nbrhood_edge_counts
-        # score includes scores for non-existent edges, so have exclude those, otherwise could use .argmin()
-
+        # score of n implies edge is in exactly n+1 maximal cliques,
+        # so we want edges with score 0
+        
         clique_idxs = np.where(score[self.extant_edges_idx]==0)[0]
         
         if clique_idxs.size>0:
@@ -189,25 +190,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             self.k_num_cliques -= 1
             self.reducing = True
         # start the loop over so Rule 1 can 'clean up'
- 
-        # # edges in at least 1 maximal clique
-        # at_least = self.nbrhood_edge_counts > 0
-        
-        # # edges in at most 1 maximal clique
-        # at_most = (self.n_choose_2(self.common_neighbors.sum(1)) - self.nbrhood_edge_counts) == 0
-
-        # # pick a clique containing edges in exactly 1 maximal clique
-        # clique_idxs = np.where((at_least & at_most)==True)[0]
-        # if clique_idxs.shape[0] > 0:
-        #     if self.verbose:
-        #         print("\t\t\tapplying Rule 2...")
-        #     clique = self.common_neighbors[clique_idxs[0]].copy()
-        #     self.common_neighbors[clique_idxs[0]] = 0  # zero out row, to update struct? not in paper?
-        #     self.the_cover = clique.reshape(1, -1) if self.the_cover is None else np.vstack((self.the_cover, clique))
-        #     self.cover_edges()
-        #     self.k_num_cliques -= 1
-        #     self.reducing = True
-        # # start the loop over so Rule 1 can 'clean up'
+        # self.common_neighbors[clique_idxs[0]] = 0  # zero out row, to update struct? not in paper?
         
     def rule_3(self):
         # rule_3: Consider a vertex v that has at least one
