@@ -38,7 +38,7 @@ class UndirectedDependenceGraph(object):
         # find neighbourhood for each vertex
         # each row corresponds to a unique edge
         max_num_edges = self.n_choose_2(self.max_num_verts)
-        self.common_neighbors= np.zeros((max_num_edges, self.max_num_verts), int) # init
+        self.common_neighbors = np.zeros((max_num_edges, self.max_num_verts), int) # init
 
         # mapping of edges to unique row idx
         triu_idx = np.triu_indices(self.max_num_verts, 1)
