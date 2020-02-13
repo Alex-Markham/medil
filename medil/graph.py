@@ -202,6 +202,9 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
 
         # keep track of hosts/guests for reconstructing solution
         self.host_dict = {}
+
+        for nbrhood in self.adj_matrix:
+            pass
         
         exits = np.zeros((self.adj_matrix.shape), dtype=bool)
             

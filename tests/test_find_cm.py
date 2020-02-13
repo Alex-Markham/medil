@@ -46,7 +46,8 @@ def test_find_cm_on_triangle():
     assert [0, 0, 1, 0, 1, 1] in cover
     assert [0, 1, 0, 1, 1, 0] in cover
     assert [1, 1, 1, 0, 0, 0] in cover
-
+    assert [1, 0, 1, 1, 1, 1] in cover
+    
 
 def test_find_cm_on_clean_am_cm_diff():
     graph  = np.asarray([
