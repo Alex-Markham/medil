@@ -43,9 +43,10 @@ def branch(reducible_graph, k_num_cliques, the_cover):
 
     chosen_nbrhood = reducible_graph.choose_nbrhood()
     for clique_nodes in max_cliques(chosen_nbrhood):
+        if len(clique_nodes) == 1:  # then this vert has been rmed; quirk of max_cliques
+            continue
         clique = np.zeros(reducible_graph.unreduced.num_vertices, dtype=int)
         clique[clique_nodes] = 1
-        print(clique)
         union = clique.reshape(1, -1) if reducible_graph.the_cover is None else np.vstack((reducible_graph.the_cover, clique))
         the_cover_prime = branch(reducible_graph, k_num_cliques-1, union)
         if the_cover_prime is not None:

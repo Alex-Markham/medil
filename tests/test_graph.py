@@ -1,6 +1,5 @@
 import numpy as np
 from medil.graph import UndirectedDependenceGraph
-from medil.ecc_algorithms import max_cliques
 
 
 def test_make_aux_on_triangle():
@@ -78,31 +77,6 @@ def test_cover_edges():
     assert (being_tested.adj_matrix[0] == [1, 0, 0, 0, 0, 0]).all()
 
 
-def test_find_max_cliques():
-    results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
-    all_deps = results['deps']
-
-    deps = all_deps[2:63, 2:63]
-
-    c0_idx = [2, 3, 15, 17, 19, 29, 33, 39, 49, 52, 54, 55]
-    c0_deps = deps[:, c0_idx][c0_idx, :]
-
-    graph = UndirectedDependenceGraph(np.array(c0_deps, int)).reducible_copy()
-
-    score = graph.n_choose_2(graph.common_neighbors.sum(1)) - graph.nbrhood_edge_counts
-
-    chosen = graph.common_neighbors[1].astype(bool)
-    
-    subgraph_adj = graph.adj_matrix[chosen, :][:, chosen]
-
-    mc = list(max_cliques(subgraph_adj))
-
-    assert (np.array(mc) == [[0, 2, 4, 5, 7, 9, 8, 1],
-                             [0, 2, 4, 5, 7, 9, 8, 6],
-                             [0, 2, 4, 5, 7, 9, 3, 1],
-                             [0, 2, 4, 5, 7, 9, 3, 6]]).all()
-
-    
 def test_reduce_rule_3_example_from_paper():
     graph = np.array([[1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0],
                       [1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0],
