@@ -326,4 +326,3 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
 
 # class MCM(object):
 # implement as large DAG adj matrix over L and M, or smaller bigraph for L-M connections and DAG adj matirx for L->L connections
-

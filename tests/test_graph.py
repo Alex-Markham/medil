@@ -118,7 +118,7 @@ def test_reduce_rule_3_example_from_paper():
 
     graph = UndirectedDependenceGraph(np.array(graph)).reducible_copy()
 
-    graph.verbose = True
+    # graph.verbose = True
     graph.rule_3()
 
     # correct info stored for reconstruction
@@ -144,7 +144,7 @@ def test_reconstruct_rule_3_example_from_paper():
 
     graph = UndirectedDependenceGraph(np.array(graph)).reducible_copy()
 
-    graph.verbose = True
+    # graph.verbose = True
     graph.rule_3()
     graph.reduzieren(7)
 
@@ -172,29 +172,25 @@ def test_reconstruct_rule_3_example_from_paper():
     cover = graph.reconstruct_cover(graph.the_cover)
     correct_recon_cover = np.array([[0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1],
                                     [0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0],
-                                    [0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0],
-                                    [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-                                    [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                                    [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-                                    [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+                                    [0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0]])
     
     assert (~np.any(cover - correct_recon_cover[0], axis=1)).any()
     assert (~np.any(cover - correct_recon_cover[1], axis=1)).any()
     assert (~np.any(cover - correct_recon_cover[2], axis=1)).any()
-    assert (~np.any(cover - correct_recon_cover[3], axis=1)).any()
-    assert (~np.any(cover - correct_recon_cover[4], axis=1)).any()
-    assert (~np.any(cover - correct_recon_cover[5], axis=1)).any()
-    assert (~np.any(cover - correct_recon_cover[6], axis=1)).any()
+    assert (~np.any(cover - correct_reduced_cover[3], axis=1)).any()
+    assert (~np.any(cover - correct_reduced_cover[4], axis=1)).any()
+    assert (~np.any(cover - correct_reduced_cover[5], axis=1)).any()
+    assert (~np.any(cover - correct_reduced_cover[6], axis=1)).any()
     
     
     
 # def test_reduce_rule_3_real_data():
-#     results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
-#     all_deps = results['deps']
+    # results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
+    # all_deps = results['deps']
 
-#     deps = all_deps[2:63, 2:63]
+    # deps = all_deps[2:63, 2:63]
 
-#     c0_idx = [2, 3, 15, 17, 19, 29, 33, 39, 49, 52, 54, 55]
-#     c0_deps = deps[:, c0_idx][c0_idx, :]
+    # c0_idx = [2, 3, 15, 17, 19, 29, 33, 39, 49, 52, 54, 55]
+    # c0_deps = deps[:, c0_idx][c0_idx, :]
 
-#     graph = UndirectedDependenceGraph(np.array(c0_deps, int)).reducible_copy()
+    # graph = UndirectedDependenceGraph(np.array(c0_deps, int)).reducible_copy()
