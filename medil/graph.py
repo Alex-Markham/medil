@@ -231,15 +231,22 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             prisoners = np.logical_and(~exits, self.adj_matrix[vert])
             prisoners[vert] = False  # a vert isn't it's own prisoner
 
-            # if applies:
-            #     self.reducing = True
-            #     if self.verbose:
-            #         print("\t\t\tapplying Rule 3...")
-            #     # add host to all cliques containing guest
-            #     self.the_cover[guest_rooms_idx, pair[1]] = 1
-            #     self.cover_edges()
-            #     # keep track of deleted nodes and their prisoners for reconstructing solution
-            #     self. = {}
+            # check if each exit is adjacent to at least one prisoner
+            prisoners_dominate_exits = self.adj_matrix[prisoners][:, exits].sum(0)
+            if prisoners_dominate_exits.all():  # apply the rule
+                self.reducing = True
+                if self.verbose:
+                    print("\t\t\tapplying Rule 3...")
+
+                # delete vertex by zeroing out row and col
+                self.adj_matrix[vert, :] = 0
+                self.adj_matrix[:, vert] = 0
+
+                # keep track of deleted nodes and their prisoners for reconstructing solution
+                if not hasattr(self, 'reduced_away'):
+                    self.reduced_away = np.zeros_like(self.adj_matrix, bool)
+                self.reduced_away[vert] = prisoners
+                break
 
         
     def choose_nbrhood(self):    

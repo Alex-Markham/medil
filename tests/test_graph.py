@@ -1,8 +1,6 @@
 import numpy as np
 from medil.graph import UndirectedDependenceGraph
-from medil.ecc_algorithms import branch
 from medil.ecc_algorithms import max_cliques
-from medil.ecc_algorithms import find_clique_min_cover as find_cm
 
 
 def test_make_aux_on_triangle():
@@ -120,16 +118,19 @@ def test_reduce_rule_3_example_from_paper():
 
     graph = UndirectedDependenceGraph(np.array(graph)).reducible_copy()
 
+    graph.verbose = True
+    graph.rule_3()
+
+    assert graph.reduced_away.sum(1)[4]
 
 
+# def test_reduce_rule_3_real_data():
+#     results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
+#     all_deps = results['deps']
 
-def test_reduce_rule_3_real_data():
-    results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
-    all_deps = results['deps']
+#     deps = all_deps[2:63, 2:63]
 
-    deps = all_deps[2:63, 2:63]
+#     c0_idx = [2, 3, 15, 17, 19, 29, 33, 39, 49, 52, 54, 55]
+#     c0_deps = deps[:, c0_idx][c0_idx, :]
 
-    c0_idx = [2, 3, 15, 17, 19, 29, 33, 39, 49, 52, 54, 55]
-    c0_deps = deps[:, c0_idx][c0_idx, :]
-
-    graph = UndirectedDependenceGraph(np.array(c0_deps, int)).reducible_copy()
+#     graph = UndirectedDependenceGraph(np.array(c0_deps, int)).reducible_copy()
