@@ -98,9 +98,8 @@ def test_find_cm_on_clean_am_cm_diff():
 
 #     deps = all_deps[2:63, 2:63]
 
-#     cover = find_cm(deps.astype(int), verbose=True)
+#     cover = find_cm(deps.astype(int))
 #     print(cover)
-# test_real_data()
 
 
 # Here are unit tests.    
