@@ -20,7 +20,7 @@ def find_clique_min_cover(graph, verbose=False):
         reducible_graph = graph.reducible_copy()
         the_cover = branch(reducible_graph, num_cliques, the_cover)
         num_cliques += 1
-    return the_cover# reducible_graph.reconstruct_cover(the_cover) # according to rule_3
+    return reducible_graph.reconstruct_cover(the_cover) # according to rule_3
 
 
 def branch(reducible_graph, k_num_cliques, the_cover):
@@ -48,6 +48,7 @@ def branch(reducible_graph, k_num_cliques, the_cover):
         clique = np.zeros(reducible_graph.unreduced.num_vertices, dtype=int)
         clique[clique_nodes] = 1
         union = clique.reshape(1, -1) if reducible_graph.the_cover is None else np.vstack((reducible_graph.the_cover, clique))
+        print(union)
         the_cover_prime = branch(reducible_graph, k_num_cliques-1, union)
         if the_cover_prime is not None:
             return the_cover_prime

@@ -144,8 +144,9 @@ def test_branch_on_real_data_c0():
 
     graph.reduzieren(0)
     chosen = graph.choose_nbrhood()
-    
+    mc = list(max_cliques(chosen))
 
+# test_branch_on_real_data_c0()
 # def test_find_cm_on_2clique_house():
 #     grapyh = 5 nodes, 1 4-clique sharing an edge with a 3 clique
 

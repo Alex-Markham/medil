@@ -307,13 +307,13 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
     def reconstruct_cover(self, the_cover):
         if not hasattr(self, 'reduced_away'):  # then rule_3 wasn't applied
             return the_cover
-        
+
         # add the reduced away vert to all covering cliques containing at least one of its prisoners
         to_expand = np.flatnonzero(self.reduced_away.sum(1))
         for vert in to_expand:
             prisoners = self.reduced_away[vert]
             tiled_prisoners = np.tile(prisoners, (len(the_cover), 1))  # instead of another loop
-            cliques_to_update_mask = np.logical_and(tiled_prisoners, the_cover).sum(1)
+            cliques_to_update_mask = np.logical_and(tiled_prisoners, the_cover).sum(1).astype(bool)
             the_cover[cliques_to_update_mask, vert] = 1
 
         return the_cover

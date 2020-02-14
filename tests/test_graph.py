@@ -144,18 +144,17 @@ def test_reconstruct_rule_3_example_from_paper():
     assert (~np.any(cover - correct_reduced_cover[6], axis=1)).any()
 
     cover = graph.reconstruct_cover(graph.the_cover)
-    correct_recon_cover = np.array([[0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1],
-                                    [0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0],
-                                    [0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0]])
+    correct_recon_cover = np.array([[0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0],
+                                    [0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0],
+                                    [1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0]])
     
     assert (~np.any(cover - correct_recon_cover[0], axis=1)).any()
     assert (~np.any(cover - correct_recon_cover[1], axis=1)).any()
     assert (~np.any(cover - correct_recon_cover[2], axis=1)).any()
-    assert (~np.any(cover - correct_reduced_cover[3], axis=1)).any()
+    assert (~np.any(cover - correct_reduced_cover[0], axis=1)).any()
+    assert (~np.any(cover - correct_reduced_cover[1], axis=1)).any()
     assert (~np.any(cover - correct_reduced_cover[4], axis=1)).any()
     assert (~np.any(cover - correct_reduced_cover[5], axis=1)).any()
-    assert (~np.any(cover - correct_reduced_cover[6], axis=1)).any()
-    
     
     
 # def test_reduce_rule_3_real_data():
