@@ -19,7 +19,6 @@ def find_clique_min_cover(graph, verbose=False):
             print("\ntesting for solutions with {}/{} cliques".format(num_cliques, max_intersect_num))
         reducible_graph = graph.reducible_copy()
         the_cover = branch(reducible_graph, num_cliques, the_cover)
-        assert num_cliques < max_intersect_num
         num_cliques += 1
     return the_cover# reducible_graph.reconstruct_cover(the_cover) # according to rule_3
 
@@ -43,9 +42,10 @@ def branch(reducible_graph, k_num_cliques, the_cover):
         return reducible_graph.the_cover  # not in paper, but seems necessary?
 
     chosen_nbrhood = reducible_graph.choose_nbrhood()
-    for clique_nodes in max_cliques(chosen_nbrhood):  # may need to change max_cliques to be from unreduced graph?
+    for clique_nodes in max_cliques(chosen_nbrhood):
         clique = np.zeros(reducible_graph.unreduced.num_vertices, dtype=int)
         clique[clique_nodes] = 1
+        print(clique)
         union = clique.reshape(1, -1) if reducible_graph.the_cover is None else np.vstack((reducible_graph.the_cover, clique))
         the_cover_prime = branch(reducible_graph, k_num_cliques-1, union)
         if the_cover_prime is not None:

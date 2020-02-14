@@ -168,6 +168,21 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
                 # my own addition:
                 # self.nbrhood[:, vert] = 0
 
+        max_num_edges = self.n_choose_2(self.unreduced.max_num_verts)
+        mask = lambda edge_idx: np.array(self.common_neighbors[edge_idx], dtype=bool)
+        
+        # make subgraph-adjacency matrix, and then subtract diag and
+        # divide by two to get num edges in subgraph---same as sum() of
+        # triu(subgraph-adjacency matrix) but probably a bit faster
+        nbrhood = lambda edge_idx: self.adj_matrix[mask(edge_idx)][:, mask(edge_idx)]
+        max_num_edges_in_nbrhood = lambda edge_idx: (nbrhood(edge_idx).sum() - mask(edge_idx).sum()) // 2
+
+        # from paper: set of c_{u, v} for all edges (u, v)
+        self.nbrhood_edge_counts = np.array([max_num_edges_in_nbrhood(edge_idx) for edge_idx in np.arange(max_num_edges)], int)
+        # assert (nbrhood_edge_counts==self.nbrhood_edge_counts).all()
+        # print(nbrhood_edge_counts, self.nbrhood_edge_counts)
+        # need to fix!!!!!!!! updated isn't working; so just recomputing for now
+
     def rule_2(self):
         # rule_2: If an uncovered edge {u,v} is contained in exactly
         # one maximal clique C, i.e., the common neighbors of u and v
@@ -181,7 +196,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         clique_idxs = np.where(score[self.extant_edges_idx]==0)[0]
         
         if clique_idxs.size>0:
-            clique_idx = clique_idxs[0]
+            clique_idx = clique_idxs[-1]
             if self.verbose:
                 print("\t\t\tapplying Rule 2...")
             clique = self.common_neighbors[self.extant_edges_idx[clique_idx]].copy()
@@ -242,7 +257,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         chosen_edge = self.get_edge(chosen_edge_idx)
 
         # use this if it's from reduced graph
-        # intersection = np.logical_or(self.adj_matrix[chosen_edge[0]], self.adj_matrix[chosen_edge[1]], int)
+        # intersection = np.logical_or(self.adj_matrix[chosen_edge[0]], self.adj_matrix[chosen_edge[1]]).astype(int)
         return self.nbrs(chosen_edge)
 
     def cover_edges(self):

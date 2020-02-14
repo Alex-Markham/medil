@@ -2,7 +2,7 @@ import numpy as np
 from medil.ecc_algorithms import find_clique_min_cover as find_cm
 from medil.graph import UndirectedDependenceGraph
 from medil.ecc_algorithms import branch
-
+from medil.ecc_algorithms import max_cliques
 
 # Here are some integration tests.
 # def test_find_cm_on_trivial_edgeless_graph():
@@ -53,23 +53,23 @@ def test_find_cm_on_triangle():
     assert (~np.any(cover - correct_cover[2], axis=1)).any()
     
 
-# def test_find_cm_on_clean_am_cm_diff():
-#     graph = np.array([[1, 1, 1, 1, 1, 0, 1, 0],
-#                          [1, 1, 1, 0, 1, 1, 1, 1],
-#                          [1, 1, 1, 0, 1, 1, 1, 1],
-#                          [1, 0, 0, 1, 0, 1, 1, 1], 
-#                          [1, 1, 1, 0, 1, 1, 0, 1],
-#                          [0, 1, 1, 1, 1, 1, 0, 1],
-#                          [1, 1, 1, 1 ,0, 0, 1, 1],
-#                          [0, 1, 1, 1, 1, 1, 1, 1]])
+def test_find_cm_on_clean_am_cm_diff():
+    graph = np.array([[1, 1, 1, 1, 1, 0, 1, 0],
+                         [1, 1, 1, 0, 1, 1, 1, 1],
+                         [1, 1, 1, 0, 1, 1, 1, 1],
+                         [1, 0, 0, 1, 0, 1, 1, 1], 
+                         [1, 1, 1, 0, 1, 1, 0, 1],
+                         [0, 1, 1, 1, 1, 1, 0, 1],
+                         [1, 1, 1, 1, 0, 0, 1, 1],
+                         [0, 1, 1, 1, 1, 1, 1, 1]])
      
-#     cover = find_cm(graph, verbose=True)
-#     assert cover.shape==(5, 8)
-#     correct_cover = np.array([[1, 1, 1, 0, 1, 0, 0, 0],
-#                               [1, 0, 0, 1, 0, 0, 1, 0],
-#                               [0, 1, 1, 0, 1, 1, 0, 1],
-#                               [0, 0, 0, 1, 0, 1, 0, 1],
-#                               [0, 1, 1, 0, 0, 0, 1, 1]])
+    cover = find_cm(graph, verbose=True)
+    assert cover.shape==(5, 8)
+    correct_cover = np.array([[1, 1, 1, 0, 1, 0, 0, 0],
+                              [1, 0, 0, 1, 0, 0, 1, 0],
+                              [0, 1, 1, 0, 1, 1, 0, 1],
+                              [0, 0, 0, 1, 0, 1, 0, 1],
+                              [0, 1, 1, 0, 0, 0, 1, 1]])
 
                               
 #     assert (~np.any(cover - correct_cover[0], axis=1)).any()
@@ -136,6 +136,27 @@ def test_reduce_rule_1_on_isolated_plus_3cycle():
     assert (correct.nbrhood_edge_counts == being_tested.nbrhood_edge_counts).all()    
 
 
+def test_find_max_cliques():
+    graph = np.array([[1, 1, 1, 1, 1, 0, 1, 0],
+                      [1, 1, 1, 0, 1, 1, 1, 1],
+                      [1, 1, 1, 0, 1, 1, 1, 1],
+                      [1, 0, 0, 1, 0, 1, 1, 1], 
+                      [1, 1, 1, 0, 1, 1, 0, 1],
+                      [0, 1, 1, 1, 1, 1, 0, 1],
+                      [1, 1, 1, 1, 0, 0, 1, 1],
+                      [0, 1, 1, 1, 1, 1, 1, 1]])
+
+    graph = UndirectedDependenceGraph(graph).reducible_copy()
+    graph.k_num_cliques = 5
+    graph.rule_2()
+    graph.rule_2()
+    graph.rule_1()    
+    graph.rule_2()
+    graph.rule_1()    
+    graph.rule_2()
+    graph.rule_1()
+ 
+    
 def test_reduce_rule_1_on_triangle():
     graph_triangle = np.asarray([
         [1, 1, 1, 0, 0, 0],
