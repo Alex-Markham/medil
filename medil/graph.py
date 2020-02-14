@@ -238,9 +238,10 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
                 if self.verbose:
                     print("\t\t\tapplying Rule 3...")
 
-                # delete vertex by zeroing out row and col
-                self.adj_matrix[vert, :] = 0
-                self.adj_matrix[:, vert] = 0
+                # mark edges covered so rule_1 will delete vertex
+                edges = np.array([[vert, u] for u in np.flatnonzero(self.adj_matrix[vert]) if vert != u])
+                edges.sort()    # so they're in triu, so that self.get_idx works
+                self.cover_edges(edges)
 
                 # keep track of deleted nodes and their prisoners for reconstructing solution
                 if not hasattr(self, 'reduced_away'):
@@ -266,23 +267,27 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         chosen_nbrhood[:, ~mask] = 0
         return chosen_nbrhood
 
-    def cover_edges(self):
-        # always call after updating the cover; only on single recently added clique
-        if self.the_cover is None:
-            return self.adj_matrix
-    
-        # change edges to 0 if they're covered
-        clique = self.the_cover[-1]
-        covered = np.where(clique)[0]
-        
-        # trick for getting combinations from idx
-        comb_idx = np.triu_indices(len(covered), 1)
-        
-        # actual pairwise combinations; ie all edges (v_i, v_j) covered by the clique
-        covered_edges = np.empty((len(comb_idx[0]), 2), int)
-        covered_edges[:, 0] = covered[comb_idx[0]]
-        covered_edges[:, 1] = covered[comb_idx[1]]
-        
+    def cover_edges(self, edges=None):
+        if edges is None:
+            # always call after updating the cover; only on single, recently added clique
+            if self.the_cover is None:
+                return self.adj_matrix
+
+            # change edges to 0 if they're covered
+            clique = self.the_cover[-1]
+            covered = np.where(clique)[0]
+            
+            # trick for getting combinations from idx
+            comb_idx = np.triu_indices(len(covered), 1)
+            
+            # actual pairwise combinations; ie all edges (v_i, v_j) covered by the clique
+            covered_edges = np.empty((len(comb_idx[0]), 2), int)
+            covered_edges[:, 0] = covered[comb_idx[0]]
+            covered_edges[:, 1] = covered[comb_idx[1]]
+
+        else:
+            covered_edges = edges
+            
         # cover (remove from reduced_graph) edges
         self.rm_edges(covered_edges)
         # update extant_edges_idx
@@ -300,13 +305,18 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             print("\t\t\t{} uncovered edges remaining".format(self.num_edges))
 
     def reconstruct_cover(self, the_cover):
-        if not hasattr(self, 'host_dict'):  # then rule_3 wasn't applied
+        if not hasattr(self, 'reduced_away'):  # then rule_3 wasn't applied
             return the_cover
-        # reconstruct here
-        # for host in host_dict:
-        #     guests = host_dict[host]
-        #     check the cover for cliques containing guests, and add host to them
-        return the_cover_reconstructed
+        
+        # add the reduced away vert to all covering cliques containing at least one of its prisoners
+        to_expand = np.flatnonzero(self.reduced_away.sum(1))
+        for vert in to_expand:
+            prisoners = self.reduced_away[vert]
+            tiled_prisoners = np.tile(prisoners, (len(the_cover), 1))  # instead of another loop
+            cliques_to_update_mask = np.logical_and(tiled_prisoners, the_cover).sum(1)
+            the_cover[cliques_to_update_mask, vert] = 1
+
+        return the_cover
 
 
 
