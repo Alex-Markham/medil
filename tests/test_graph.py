@@ -2,6 +2,7 @@ import numpy as np
 from medil.graph import UndirectedDependenceGraph
 from medil.ecc_algorithms import branch
 from medil.ecc_algorithms import max_cliques
+from medil.ecc_algorithms import find_clique_min_cover as find_cm
 
 
 def test_make_aux_on_triangle():
@@ -80,48 +81,55 @@ def test_cover_edges():
 
 
 def test_find_max_cliques():
-    graph = np.array([[1, 1, 1, 1, 1, 0, 1, 0],
-                      [1, 1, 1, 0, 1, 1, 1, 1],
-                      [1, 1, 1, 0, 1, 1, 1, 1],
-                      [1, 0, 0, 1, 0, 1, 1, 1], 
-                      [1, 1, 1, 0, 1, 1, 0, 1],
-                      [0, 1, 1, 1, 1, 1, 0, 1],
-                      [1, 1, 1, 1, 0, 0, 1, 1],
-                      [0, 1, 1, 1, 1, 1, 1, 1]])
+    results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
+    all_deps = results['deps']
 
-    graph = UndirectedDependenceGraph(graph).reducible_copy()
-    graph.k_num_cliques = 5
-    graph.verbose = True
-    graph.rule_2()
-    # print(graph.adj_matrix)
-    graph.rule_2()
-    # print(graph.adj_matrix)
-    graph.rule_1()
-    # print(graph.adj_matrix)
-    graph.rule_2()
-    # print(graph.adj_matrix)
-    graph.rule_1()    
-    # print(graph.adj_matrix)
-    graph.rule_2()
-    # print(graph.adj_matrix)
-    graph.rule_1()
-    # print(graph.adj_matrix)
-    
+    deps = all_deps[2:63, 2:63]
+
+    c0_idx = [2, 3, 15, 17, 19, 29, 33, 39, 49, 52, 54, 55]
+    c0_deps = deps[:, c0_idx][c0_idx, :]
+
+    graph = UndirectedDependenceGraph(np.array(c0_deps, int)).reducible_copy()
+
     score = graph.n_choose_2(graph.common_neighbors.sum(1)) - graph.nbrhood_edge_counts
 
+    chosen = graph.common_neighbors[1].astype(bool)
+    
+    subgraph_adj = graph.adj_matrix[chosen, :][:, chosen]
 
-            # max_num_edges = self.n_choose_2(self.unreduced.max_num_verts)
-        # mask = lambda edge_idx: np.array(self.common_neighbors[edge_idx], dtype=bool)
-        
-        # # make subgraph-adjacency matrix, and then subtract diag and
-        # # divide by two to get num edges in subgraph---same as sum() of
-        # # triu(subgraph-adjacency matrix) but probably a bit faster
-        # nbrhood = lambda edge_idx: self.adj_matrix[mask(edge_idx)][:, mask(edge_idx)]
-        # max_num_edges_in_nbrhood = lambda edge_idx: (nbrhood(edge_idx).sum() - mask(edge_idx).sum()) // 2
+    mc = list(max_cliques(subgraph_adj))
 
-        # # from paper: set of c_{u, v} for all edges (u, v)
-        # self.nbrhood_edge_counts = np.array([max_num_edges_in_nbrhood(edge_idx) for edge_idx in np.arange(max_num_edges)], int)
-        # # assert (nbrhood_edge_counts==self.nbrhood_edge_counts).all()
-        # # print(nbrhood_edge_counts, self.nbrhood_edge_counts)
-        # # need to fix!!!!!!!! update isn't working; so just recomputing for now
-        # # # # # # # # but actually update produces correct result though recomputing doesn't?
+    assert (np.array(mc) == [[0, 2, 4, 5, 7, 9, 8, 1],
+                             [0, 2, 4, 5, 7, 9, 8, 6],
+                             [0, 2, 4, 5, 7, 9, 3, 1],
+                             [0, 2, 4, 5, 7, 9, 3, 6]]).all()
+
+    
+def test_reduce_rule_3_example_from_paper():
+    graph = np.array([[1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0],
+                      [1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0],
+                      [0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0],
+                      [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                      [1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0],
+                      [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                      [0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0],
+                      [0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1],
+                      [0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0],
+                      [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0],
+                      [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1]], int)
+
+    graph = UndirectedDependenceGraph(np.array(graph)).reducible_copy()
+
+
+
+
+def test_reduce_rule_3_real_data():
+    results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
+    all_deps = results['deps']
+
+    deps = all_deps[2:63, 2:63]
+
+    c0_idx = [2, 3, 15, 17, 19, 29, 33, 39, 49, 52, 54, 55]
+    c0_deps = deps[:, c0_idx][c0_idx, :]
+
+    graph = UndirectedDependenceGraph(np.array(c0_deps, int)).reducible_copy()

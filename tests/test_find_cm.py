@@ -100,7 +100,8 @@ def test_find_cm_on_clean_am_cm_diff():
 #     c0_deps = deps[:, c0_idx][c0_idx, :]
 
 #     graph = UndirectedDependenceGraph(np.array(c0_deps, int)).reducible_copy()
-        
+
+#     cover = find_cm(np.array(c0_deps, int))
     
 # def test_find_cm_on_2clique_house():
 #     grapyh = 5 nodes, 1 4-clique sharing an edge with a 3 clique

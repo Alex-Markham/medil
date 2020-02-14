@@ -211,56 +211,53 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         
     def rule_3(self):
         # rule_3: Consider a vertex v that has at least one
-        # guest. If inhabitants (of the neighborhood) occupy the
-        # gates, then delete v. To reconstruct a solution for the
-        # unreduced instance, add v to every clique containing a
-        # guest of v. (prisoneers -> guests; dominate ->
-        # occupy; exits -> gates; hierarchical social structures and
-        # relations needn't be reproduced in mathematical
-        # abstractions)
-
-        # keep track of hosts/guests for reconstructing solution
-        self.host_dict = {}
-
-        for nbrhood in self.adj_matrix:
-            pass
+        # prisoner. If each prisoner is connected to at least one
+        # vertex other than v via an uncovered edge (automatically
+        # given if instance is reduced w.r.t. rules 1 and 2), and the
+        # prisoners dominate the exit,s then delete v. To reconstruct
+        # a solution for the unreduced instance, add v to every clique
+        # containing a prisoner of v.
         
-        exits = np.zeros((self.adj_matrix.shape), dtype=bool)
-            
         for vert, nbrhood in enumerate(self.adj_matrix):
             if nbrhood[vert]==0: # then nbrhood is empty
                 continue
+            exits = np.zeros(self.unreduced.max_num_verts, bool)
             nbrs = np.flatnonzero(nbrhood)
             for nbr in nbrs:
                 if (nbrhood - self.adj_matrix[nbr] == -1).any():
-                    exits[vert, nbr] = True
-        # exits[i, j] == True iff j is an exit for i
+                    exits[nbr] = True
+            # exits[j] == True iff j is an exit for vert
+            # prisoners[j] == True iff j is a prisoner of vert    
+            prisoners = np.logical_and(~exits, self.adj_matrix[vert])
+            prisoners[vert] = False  # a vert isn't it's own prisoner
 
-        # guests[i, j] == True iff j is a guest of i
-        guests = np.logical_and(~exits, self.adj_matrix)
+            # if applies:
+            #     self.reducing = True
+            #     if self.verbose:
+            #         print("\t\t\tapplying Rule 3...")
+            #     # add host to all cliques containing guest
+            #     self.the_cover[guest_rooms_idx, pair[1]] = 1
+            #     self.cover_edges()
+            #     # keep track of deleted nodes and their prisoners for reconstructing solution
+            #     self. = {}
 
-        for pair in np.transpose(np.where(guests)):  # really a for-loop here?
-            if self.the_cover is None:
-                break
-            guest_rooms_idx = np.transpose(np.where(self.the_cover[:, pair[1]]))
-            
-            if np.logical_not(self.the_cover[guest_rooms_idx, pair[1]]).any(): # then apply rule
-                self.reducing = True
-                if self.verbose:
-                    print("\t\t\tapplying Rule 3...")
-                # add host to all cliques containing guest
-                self.the_cover[guest_rooms_idx, pair[1]] = 1
-                self.cover_edges()
         
     def choose_nbrhood(self):    
         score = self.n_choose_2(self.common_neighbors.sum(1)) - self.nbrhood_edge_counts
         # score includes scores for non-existent edges, so have exclude those, otherwise could use .argmin()
         chosen_edge_idx = np.where(score==score[self.extant_edges_idx].min())[0][0]
-        chosen_edge = self.get_edge(chosen_edge_idx)
-
+        # chosen_edge = self.get_edge(chosen_edge_idx)
+        # self.nbrs(chosen_edge) # same as common_neighbors
+        
         # use this if it's from reduced graph
         # intersection = np.logical_or(self.adj_matrix[chosen_edge[0]], self.adj_matrix[chosen_edge[1]]).astype(int)
-        return self.nbrs(chosen_edge)
+
+        mask = self.common_neighbors[chosen_edge_idx].astype(bool)
+
+        chosen_nbrhood = self.adj_matrix.copy()
+        chosen_nbrhood[~mask, :] = 0
+        chosen_nbrhood[:, ~mask] = 0
+        return chosen_nbrhood
 
     def cover_edges(self):
         # always call after updating the cover; only on single recently added clique
