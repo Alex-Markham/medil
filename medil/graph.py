@@ -155,18 +155,19 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             self.adj_matrix[isolated_verts, isolated_verts] = 0
             self.num_vertices -= len(isolated_verts)
 
-            # remove isolated_verts from common neighborhoods
-            self.common_neighbors[:, isolated_verts] = 0
-
             # decrease nbrhood edge counts
             for vert in isolated_verts:
-                open_nbrhood = self.adj_matrix[vert]  # open since already removed vert from adj_matrix
+                open_nbrhood = self.unreduced.adj_matrix[vert].copy()
+                open_nbrhood[vert] = 0
                 idx_nbrhoods_to_update = np.where(self.common_neighbors[:, vert]==1)[0]
                 tiled = np.tile(open_nbrhood, (len(idx_nbrhoods_to_update), 1))  # instead of another loop
                 to_subtract = np.logical_and(tiled, self.common_neighbors[idx_nbrhoods_to_update]).sum(1)
                 self.nbrhood_edge_counts[idx_nbrhoods_to_update] -= to_subtract
                 # my own addition:
                 # self.nbrhood[:, vert] = 0
+
+            # remove isolated_verts from common neighborhoods
+            self.common_neighbors[:, isolated_verts] = 0
 
         # max_num_edges = self.n_choose_2(self.unreduced.max_num_verts)
         # mask = lambda edge_idx: np.array(self.common_neighbors[edge_idx], dtype=bool)
@@ -289,7 +290,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         # now here do all the updates to nbrs?----actually probably don't want this? see 2clique house example
 
         # update self.common_neighbors
-        self.common_neighbors[rmed_edges_idx] = 0   # zero out rows covered edges
+        # self.common_neighbors[rmed_edges_idx] = 0   # zero out rows covered edges; maybe not necessary, since common_neighbors is (probably?) only called with extant_edges_idx?
 
         if self.verbose:
             print("\t\t\t{} uncovered edges remaining".format(self.num_edges))
