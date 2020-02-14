@@ -129,22 +129,22 @@ def test_find_max_cliques():
                              [0, 2, 4, 5, 7, 9, 3, 6]]).all()
 
     
-def test_branch_on_real_data_c0():
-    results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
-    all_deps = results['deps']
-    deps = all_deps[2:63, 2:63]
+# def test_branch_on_real_data_c0():
+    # results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
+    # all_deps = results['deps']
+    # deps = all_deps[2:63, 2:63]
 
-    c0_idx = [2, 3, 15, 17, 19, 29, 33, 39, 49, 52, 54, 55]
-    c0_deps = deps[:, c0_idx][c0_idx, :]
+    # c0_idx = [2, 3, 15, 17, 19, 29, 33, 39, 49, 52, 54, 55]
+    # c0_deps = deps[:, c0_idx][c0_idx, :]
 
-    cover = find_cm(np.array(c0_deps, int), True)
+    # cover = find_cm(np.array(c0_deps, int), True)
 
-    graph = UndirectedDependenceGraph(np.array(c0_deps, int)).reducible_copy()
-    graph.verbose = True
+    # graph = UndirectedDependenceGraph(np.array(c0_deps, int)).reducible_copy()
+    # graph.verbose = True
 
-    graph.reduzieren(0)
-    chosen = graph.choose_nbrhood()
-    mc = list(max_cliques(chosen))
+    # graph.reduzieren(0)
+    # chosen = graph.choose_nbrhood()
+    # mc = list(max_cliques(chosen))
 
 # test_branch_on_real_data_c0()
 # def test_find_cm_on_2clique_house():
