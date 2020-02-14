@@ -12,7 +12,12 @@ def find_clique_min_cover(graph, verbose=False):
     num_cliques = 0
     the_cover = None
     if verbose:
+        # find bound for cliques in solution
         max_intersect_num = graph.num_vertices ** 2 // 4
+        if max_intersect_num < graph.num_edges:
+            p = graph.n_choose_2(graph.num_vertices) - graph.num_edges
+            t = int(np.sqrt(p))
+            max_intersect_num = p + t            
         print("solution has at most {} cliques.".format(max_intersect_num))
     while the_cover is None:
         if verbose:
