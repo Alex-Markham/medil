@@ -11,7 +11,7 @@ def find_clique_min_cover(graph, verbose=False):
 
     num_cliques = 0
     the_cover = None
-    if verbose:
+    if True:
         # find bound for cliques in solution
         max_intersect_num = graph.num_vertices ** 2 // 4
         if max_intersect_num < graph.num_edges:
@@ -20,11 +20,13 @@ def find_clique_min_cover(graph, verbose=False):
             max_intersect_num = p + t            
         print("solution has at most {} cliques.".format(max_intersect_num))
     while the_cover is None:
-        if verbose:
+        if True:
             print("\ntesting for solutions with {}/{} cliques".format(num_cliques, max_intersect_num))
         reducible_graph = graph.reducible_copy()
         the_cover = branch(reducible_graph, num_cliques, the_cover)
         num_cliques += 1
+        if num_cliques > max_intersect_num:
+            return reducible_graph.reconstruct_cover(the_cover) # according to rule_3
     return reducible_graph.reconstruct_cover(the_cover) # according to rule_3
 
 
