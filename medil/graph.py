@@ -167,7 +167,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
                 # self.nbrhood[:, vert] = 0
 
             # remove isolated_verts from common neighborhoods
-            self.common_neighbors[:, isolated_verts] = 0
+            # self.common_neighbors[:, isolated_verts] = 0
 
         # max_num_edges = self.n_choose_2(self.unreduced.max_num_verts)
         # mask = lambda edge_idx: np.array(self.common_neighbors[edge_idx], dtype=bool)
