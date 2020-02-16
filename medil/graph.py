@@ -229,7 +229,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             # exits[j] == True iff j is an exit for vert
             # prisoners[j] == True iff j is a prisoner of vert    
             prisoners = np.logical_and(~exits, self.adj_matrix[vert])
-            prisoners[vert] = False  # a vert isn't it's own prisoner
+            prisoners[vert] = False  # a vert isn't its own prisoner
 
             # check if each exit is adjacent to at least one prisoner
             prisoners_dominate_exits = self.adj_matrix[prisoners][:, exits].sum(0)
