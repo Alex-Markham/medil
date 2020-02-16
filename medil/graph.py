@@ -304,6 +304,13 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         if self.verbose:
             print("\t\t\t{} uncovered edges remaining".format(self.num_edges))
 
+        if edges is None:
+            cover_orig = self.the_cover
+            while self.the_cover.size > 1:
+                self.the_cover = self.the_cover[:-1]
+                self.cover_edges
+            self.the_cover = cover_orig
+
     def reconstruct_cover(self, the_cover):
         if not hasattr(self, 'reduced_away'):  # then rule_3 wasn't applied
             return the_cover

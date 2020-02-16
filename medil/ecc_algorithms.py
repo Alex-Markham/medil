@@ -9,7 +9,7 @@ def find_clique_min_cover(graph, verbose=False):
     graph = UndirectedDependenceGraph(graph, verbose)
     graph.make_aux()
 
-    num_cliques = 500
+    num_cliques = 1500
     the_cover = None
     if True:
         # find bound for cliques in solution
@@ -21,7 +21,7 @@ def find_clique_min_cover(graph, verbose=False):
         print("solution has at most {} cliques.".format(max_intersect_num))
     while the_cover is None:
         if True:
-            print("\ntesting for solutions with {}/{}/{} cliques".format(num_cliques, max_intersect_num2, max_intersect_num))
+            print("\ntesting for solutions with {}/{}/{} cliques".format(num_cliques, max_intersect_num2, max_intersect_num, graph.num_edges))
         reducible_graph = graph.reducible_copy()
         the_cover = branch(reducible_graph, num_cliques, the_cover)
         num_cliques += 1
