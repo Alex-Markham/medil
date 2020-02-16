@@ -306,9 +306,9 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
 
         if edges is None:
             cover_orig = self.the_cover
-            while self.the_cover.size > 1:
+            while self.the_cover.shape[0] > 1:
                 self.the_cover = self.the_cover[:-1]
-                self.cover_edges
+                self.cover_edges()
             self.the_cover = cover_orig
 
     def reconstruct_cover(self, the_cover):
