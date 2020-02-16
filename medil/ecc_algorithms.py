@@ -9,7 +9,7 @@ def find_clique_min_cover(graph, verbose=False):
     graph = UndirectedDependenceGraph(graph, verbose)
     graph.make_aux()
 
-    num_cliques = 0
+    num_cliques = 500
     the_cover = None
     if True:
         # find bound for cliques in solution
