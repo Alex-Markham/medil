@@ -15,7 +15,8 @@ More information can be found in the [documentation](https://medil.causal.dev) o
 
 
 ### 1. Installation
-You can install the package via pip by running `pip install git+https://gitlab.com/alex-markham/medil.git#egg=medil` in a terminal.
+You can install the package using pip by running `pip install git+https://gitlab.com/alex-markham/medil.git#egg=medil` in a terminal.
+If you have problems, try using a fresh python 3.7 virtual environment, installing numba, and then scipy, before using the above command.
 
 ### 2. Basic usage
 
