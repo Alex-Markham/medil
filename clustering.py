@@ -6,9 +6,9 @@ from sklearn.cluster import SpectralClustering
 
 
 ## psuedo code:
-# 1. fix sample order for n samples of k features
-# 2. compute a n-by-k_choose_2 'contribution' matrix where c_ij is the contribution of sample i to the pairwaise correlation which would be the sum of column j
-# 3. do PCA on contribution matrix
+# 1. fix sample order for n samples of m features
+# 2. compute a n-by-m_choose_2 'contribution' matrix where c_ij is the contribution of sample i to the pairwaise correlation which would be the sum of column j
+# 3. use n-by-n covariance of contribution matrix as affinity matrix for spectral clustering (equivalent to doing PCA on contribution matrix)
 
 
 def make_linear_contribution_matrix(data):

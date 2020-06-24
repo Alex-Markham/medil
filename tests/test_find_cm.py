@@ -103,30 +103,30 @@ def test_find_cm_on_clean_am_cm_diff():
 
 
 # Here are unit tests.    
-def test_find_max_cliques():
-    results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
-    all_deps = results['deps']
+# def test_find_max_cliques():
+ #    results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
+ #    all_deps = results['deps']
 
-    deps = all_deps[2:63, 2:63]
+ #    deps = all_deps[2:63, 2:63]
 
-    c0_idx = [2, 3, 15, 17, 19, 29, 33, 39, 49, 52, 54, 55]
-    c0_deps = deps[:, c0_idx][c0_idx, :]
+ #    c0_idx = [2, 3, 15, 17, 19, 29, 33, 39, 49, 52, 54, 55]
+ #    c0_deps = deps[:, c0_idx][c0_idx, :]
 
-    graph = UndirectedDependenceGraph(np.array(c0_deps, int)).reducible_copy()
+ #    graph = UndirectedDependenceGraph(np.array(c0_deps, int)).reducible_copy()
 
-    score = graph.n_choose_2(graph.common_neighbors.sum(1)) - graph.nbrhood_edge_counts
+ #    score = graph.n_choose_2(graph.common_neighbors.sum(1)) - graph.nbrhood_edge_counts
 
-    chosen = graph.common_neighbors[1].astype(bool)
+ #    chosen = graph.common_neighbors[1].astype(bool)
     
-    subgraph_adj = graph.adj_matrix[chosen, :][:, chosen]
+ #    subgraph_adj = graph.adj_matrix[chosen, :][:, chosen]
 
-    mc = list(max_cliques(subgraph_adj))
+ #    mc = list(max_cliques(subgraph_adj))
 
-    assert (np.array(mc) == [[0, 2, 4, 5, 7, 9, 8, 1],
-                             [0, 2, 4, 5, 7, 9, 8, 6],
-                             [0, 2, 4, 5, 7, 9, 3, 1],
-                             [0, 2, 4, 5, 7, 9, 3, 6]]).all()
-
+ #    assert (np.array(mc) == [[0, 2, 4, 5, 7, 9, 8, 1],
+ #                             [0, 2, 4, 5, 7, 9, 8, 6],
+ #                             [0, 2, 4, 5, 7, 9, 3, 1],
+ #                             [0, 2, 4, 5, 7, 9, 3, 6]]).all()
+ 
     
 # def test_branch_on_real_data_c0():
     # results = np.load("/home/alex/Projects/mcm_paper/uai_2020/data_analysis/monte_carlo_test_results_1000.npz")
