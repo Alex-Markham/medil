@@ -121,6 +121,8 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         self.nbrs = udg.nbrs
         self.get_edge = udg.get_edge
 
+        # add a pre-branch copy here?
+
     def reset(self):
         self.__init__(self.unreduced)
         
