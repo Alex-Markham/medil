@@ -14,6 +14,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - limited (linear) data simulation
 - causal clustering
 
+## [0.4.0] - 2020-0X-XX ##
+### Fixed ###
+- bug in max\_intersection\_num calculation
+- exception handling for edgeless graph
+
+### Removed ###
+- hack to stop while loop in 
+
 ## [0.3.0] - 2020-04-13 ##
 ### Added ###
 - installation via pip and git

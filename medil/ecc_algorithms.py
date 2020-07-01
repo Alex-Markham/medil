@@ -5,13 +5,17 @@ from .graph import UndirectedDependenceGraph
 import numpy as np
 
 
-def find_clique_min_cover(graph, verbose=False):
+def find_clique_min_cover(graph, verbose=True):
     graph = UndirectedDependenceGraph(graph, verbose)
-    graph.make_aux()
+    try:
+        graph.make_aux()
+    except ValueError:
+        print("The input graph doesn't appear to have any edges!")
+        return graph.adj_matrix
 
-    num_cliques = 709
+    num_cliques = 1
     the_cover = None
-    if True:
+    if verbose:
         # find bound for cliques in solution
         max_intersect_num = graph.num_vertices ** 2 // 4
         if max_intersect_num < graph.num_edges:
@@ -20,13 +24,14 @@ def find_clique_min_cover(graph, verbose=False):
             max_intersect_num = p + t if p > 0 else 1
         print("solution has at most {} cliques.".format(max_intersect_num))
     while the_cover is None:
-        if True:
-            print("\ntesting for solutions with {}/{} cliques".format(num_cliques, max_intersect_num))
         reducible_graph = graph.reducible_copy()
+        if verbose:
+            print("\ntesting for solutions with {}/{} cliques".format(num_cliques, max_intersect_num))
         the_cover = branch(reducible_graph, num_cliques, the_cover)
         num_cliques += 1
-        if num_cliques > graph.num_edges:
-            return reducible_graph.reconstruct_cover(the_cover) # according to rule_3
+        # hack to make it stop on coping data set:
+        # if num_cliques > graph.num_edges:
+        #     return reducible_graph.reconstruct_cover(the_cover) # according to rule_3
     return reducible_graph.reconstruct_cover(the_cover) # according to rule_3
 
 
