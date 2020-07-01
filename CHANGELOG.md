@@ -20,7 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - exception handling for edgeless graph
 
 ### Removed ###
-- hack to stop while loop in 
+- hack to stop while loop in find_clique_min_cover()
 
 ## [0.3.0] - 2020-04-13 ##
 ### Added ###

@@ -29,9 +29,7 @@ def find_clique_min_cover(graph, verbose=True):
             print("\ntesting for solutions with {}/{} cliques".format(num_cliques, max_intersect_num))
         the_cover = branch(reducible_graph, num_cliques, the_cover)
         num_cliques += 1
-        # hack to make it stop on coping data set:
-        # if num_cliques > graph.num_edges:
-        #     return reducible_graph.reconstruct_cover(the_cover) # according to rule_3
+
     return reducible_graph.reconstruct_cover(the_cover) # according to rule_3
 
 
