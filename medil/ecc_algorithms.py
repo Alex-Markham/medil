@@ -14,7 +14,6 @@ def find_clique_min_cover(graph, verbose=True):
         return graph.adj_matrix
 
     num_cliques = 1
-    the_cover = None
     if verbose:
         # find bound for cliques in solution
         max_intersect_num = graph.num_vertices ** 2 // 4
@@ -23,21 +22,20 @@ def find_clique_min_cover(graph, verbose=True):
             t = int(np.sqrt(p))
             max_intersect_num = p + t if p > 0 else 1
         print("solution has at most {} cliques.".format(max_intersect_num))
-    while the_cover is None:
-        reducible_graph = graph.reducible_copy()
+    while graph.the_cover is None:
         if verbose:
             print("\ntesting for solutions with {}/{} cliques".format(num_cliques, max_intersect_num))
-        the_cover = branch(reducible_graph, num_cliques, the_cover)
+        graph = branch(graph, num_cliques)
         num_cliques += 1
 
-    return reducible_graph.reconstruct_cover(the_cover) # according to rule_3
+    return graph.reconstruct_cover() # according to rule_3
 
 
-def branch(reducible_graph, k_num_cliques, the_cover):
-    reducible_graph.the_cover = the_cover
+def branch(graph, k_num_cliques):
+    reducible_graph = graph.reducible_copy()
     reducible_graph.cover_edges()
     if reducible_graph.num_edges == 0:
-        return the_cover
+        return reducible_graph
 
     if reducible_graph.verbose:
         print("\tbranching...")
@@ -46,11 +44,10 @@ def branch(reducible_graph, k_num_cliques, the_cover):
     k_num_cliques = reducible_graph.k_num_cliques
     
     if k_num_cliques < 0:
-        # set to pre-branch here, and move line 27 out of the while loop?
-        return None
+        return graph
 
     if reducible_graph.num_edges == 0:
-        return reducible_graph.the_cover  # not in paper, but seems necessary?
+        return reducible_graph
 
     chosen_nbrhood = reducible_graph.choose_nbrhood()
     for clique_nodes in max_cliques(chosen_nbrhood):
@@ -60,10 +57,11 @@ def branch(reducible_graph, k_num_cliques, the_cover):
         clique[clique_nodes] = 1
         union = clique.reshape(1, -1) if reducible_graph.the_cover is None else np.vstack((reducible_graph.the_cover, clique))
 
-        the_cover_prime = branch(reducible_graph, k_num_cliques-1, union)
-        if the_cover_prime is not None:
-            return the_cover_prime
-    return None
+        graph_prime.the_cover = union
+        graph_prime = branch(reducible_graph, k_num_cliques-1)
+        if graph_prime.the_cover is not None:
+            return graph_prime
+    return graph
 
 
 def max_cliques(nbrhood):

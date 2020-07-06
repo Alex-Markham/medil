@@ -143,7 +143,7 @@ def test_reconstruct_rule_3_example_from_paper():
     assert (~np.any(cover - correct_reduced_cover[5], axis=1)).any()
     assert (~np.any(cover - correct_reduced_cover[6], axis=1)).any()
 
-    cover = graph.reconstruct_cover(graph.the_cover)
+    cover = graph.reconstruct_cover()
     correct_recon_cover = np.array([[0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0],
                                     [0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0],
                                     [1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0]])
