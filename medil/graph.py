@@ -17,7 +17,6 @@ class UndirectedDependenceGraph(object):
         self.max_num_verts = len(adj_matrix)
         self.num_edges = np.triu(adj_matrix, 1).sum()
         self.verbose = verbose
-        self.the_cover = None
 
     def add_edges(self, edges):
         v_1s = edges[:, 0]
@@ -105,7 +104,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         self.num_vertices = udg.num_vertices
         self.num_edges = udg.num_edges
 
-        self.the_cover = udg.the_cover
+        self.the_cover = None
         self.verbose = udg.verbose
         
         # from auxilliary structure if needed
@@ -139,7 +138,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             self.reducing = False
             self.rule_1()
             self.rule_2()
-            if self.k_num_cliques < 0:
+            if self.k_num_cliques <0:
                 return
             if self.reducing:
                 continue
@@ -314,19 +313,19 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         #         self.cover_edges()
         #     self.the_cover = cover_orig
 
-    def reconstruct_cover(self):
+    def reconstruct_cover(self, the_cover):
         if not hasattr(self, 'reduced_away'):  # then rule_3 wasn't applied
-            return self.the_cover
+            return the_cover
 
         # add the reduced away vert to all covering cliques containing at least one of its prisoners
         to_expand = np.flatnonzero(self.reduced_away.sum(1))
         for vert in to_expand:
             prisoners = self.reduced_away[vert]
-            tiled_prisoners = np.tile(prisoners, (len(self.the_cover), 1))  # instead of another loop
-            cliques_to_update_mask = np.logical_and(tiled_prisoners, self.the_cover).sum(1).astype(bool)
-            self.the_cover[cliques_to_update_mask, vert] = 1
+            tiled_prisoners = np.tile(prisoners, (len(the_cover), 1))  # instead of another loop
+            cliques_to_update_mask = np.logical_and(tiled_prisoners, the_cover).sum(1).astype(bool)
+            the_cover[cliques_to_update_mask, vert] = 1
 
-        return self.the_cover
+        return the_cover
 
 
 
