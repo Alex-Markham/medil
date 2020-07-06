@@ -46,7 +46,6 @@ def branch(reducible_graph, k_num_cliques, the_cover):
     k_num_cliques = reducible_graph.k_num_cliques
     
     if k_num_cliques < 0:
-        # set to pre-branch here, and move line 27 out of the while loop?
         return None
 
     if reducible_graph.num_edges == 0:
