@@ -34,19 +34,19 @@ def find_clique_min_cover(graph, verbose=True):
 
 def branch(graph, k_num_cliques, the_cover):
     branch_graph = graph.reducible_copy()
-    if the_cover is not None:
-        print(the_cover)
-        for clique in the_cover:  # this might not be necessary, since the_cover_prime is only +1 clique
-            print('clique: {}'.format(clique))
-            branch_graph.the_cover = [clique]
-            branch_graph.cover_edges()  # only works one clique at a time, or on a list of edges
+    # if the_cover is not None:
+    #     print(the_cover)
+    #     for clique in the_cover:  # this might not be necessary, since the_cover_prime is only +1 clique
+    #         print('clique: {}'.format(clique))
+    #         branch_graph.the_cover = [clique]
+    #         branch_graph.cover_edges()  # only works one clique at a time, or on a list of edges
+    branch_graph.the_cover = the_cover
+    branch_graph.cover_edges()
+    
     if branch_graph.num_edges == 0:
         return branch_graph.reconstruct_cover(the_cover)
-    else:
-        branch_graph.the_cover = the_cover
 
-    if branch_graph.verbose:
-        print("\tbranching...")
+    # branch_graph.the_cover = the_cover
 
     branch_graph.reduzieren(k_num_cliques)
     k_num_cliques = branch_graph.k_num_cliques
@@ -58,6 +58,7 @@ def branch(graph, k_num_cliques, the_cover):
         return branch_graph.the_cover  # not in paper, but speeds it up slightly; or rather return None?
 
     chosen_nbrhood = branch_graph.choose_nbrhood()
+    # print("num cliques: {}".format(len([x for x in max_cliques(chosen_nbrhood)])))
     for clique_nodes in max_cliques(chosen_nbrhood):
         if len(clique_nodes) == 1:  # then this vert has been rmed; quirk of max_cliques
             continue
