@@ -271,7 +271,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         if edges is None:
             # always call after updating the cover; only on single, recently added clique
             if self.the_cover is None:
-                return self.adj_matrix
+                return # self.adj_matrix
 
             # change edges to 0 if they're covered
             clique = self.the_cover[-1]

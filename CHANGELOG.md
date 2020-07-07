@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Fixed ###
 - bug in max\_intersection\_num calculation
 - exception handling for edgeless graph
+- bug with graph.cover_edges() use in ecc.branch()
 
 ### Removed ###
 - hack to stop while loop in find_clique_min_cover()

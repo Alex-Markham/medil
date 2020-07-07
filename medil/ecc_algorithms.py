@@ -34,10 +34,14 @@ def find_clique_min_cover(graph, verbose=True):
 
 
 def branch(reducible_graph, k_num_cliques, the_cover):
-    reducible_graph.the_cover = the_cover
-    reducible_graph.cover_edges()
+    if the_cover is not None:
+        for clique in the_cover:
+            reducible_graph.the_cover = clique
+            reducible_graph.cover_edges()  # only works one clique at a time, or on a list of edges
     if reducible_graph.num_edges == 0:
         return the_cover
+    else:
+        reducible_graph.the_cover = the_cover
 
     if reducible_graph.verbose:
         print("\tbranching...")
