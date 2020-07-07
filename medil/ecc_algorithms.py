@@ -57,7 +57,7 @@ def branch(graph, k_num_cliques, the_cover):
     if branch_graph.num_edges == 0:  # equiv to len(branch_graph.extant_edges_idx)==0
         return branch_graph.the_cover  # not in paper, but speeds it up slightly; or rather return None?
 
-    chosen_nbrhood = reducible_graph.choose_nbrhood()
+    chosen_nbrhood = branch_graph.choose_nbrhood()
     for clique_nodes in max_cliques(chosen_nbrhood):
         if len(clique_nodes) == 1:  # then this vert has been rmed; quirk of max_cliques
             continue
