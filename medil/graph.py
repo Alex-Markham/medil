@@ -121,6 +121,10 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
         self.nbrs = udg.nbrs
         self.get_edge = udg.get_edge
 
+        if hasattr(udg, 'reduced_away'):  # then rule_3 wasn't applied
+            self.reduced_away = udg.reduced_away
+
+
     def reset(self):
         self.__init__(self.unreduced)
         

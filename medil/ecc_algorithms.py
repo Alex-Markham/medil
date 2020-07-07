@@ -29,7 +29,7 @@ def find_clique_min_cover(graph, verbose=True):
         the_cover = branch(graph, num_cliques, the_cover)
         num_cliques += 1
 
-    return reducible_graph.reconstruct_cover(the_cover) # according to rule_3
+    return the_cover
 
 
 def branch(graph, k_num_cliques, the_cover):
@@ -37,11 +37,11 @@ def branch(graph, k_num_cliques, the_cover):
     if the_cover is not None:
         print(the_cover)
         for clique in the_cover:  # this might not be necessary, since the_cover_prime is only +1 clique
-            print('clique: {}'.format{clique})
+            print('clique: {}'.format(clique))
             branch_graph.the_cover = [clique]
             branch_graph.cover_edges()  # only works one clique at a time, or on a list of edges
     if branch_graph.num_edges == 0:
-        return the_cover
+        return branch_graph.reconstruct_cover(the_cover)
     else:
         branch_graph.the_cover = the_cover
 
@@ -54,10 +54,9 @@ def branch(graph, k_num_cliques, the_cover):
     if k_num_cliques < 0:
         return None
 
-    if branch_graph.num_edges == 0:
-        return graph.the_cover  # not in paper, but speeds it up slightly
-
-    chosen_nbrhood = branch_graph.choose_nbrhood()
+    if branch_graph.num_edges == 0:  # equiv to len(branch_graph.extant_edges_idx)==0
+        return branch_graph.the_cover  # not in paper, but speeds it up slightly; or rather return None?
+    
     for clique_nodes in max_cliques(chosen_nbrhood):
         if len(clique_nodes) == 1:  # then this vert has been rmed; quirk of max_cliques
             continue
