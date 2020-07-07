@@ -99,7 +99,7 @@ class UndirectedDependenceGraph(object):
 class ReducibleUndDepGraph(UndirectedDependenceGraph):
 
     def __init__(self, udg):
-        self.unreduced = udg
+        self.unreduced = udg.unreduced if hasattr(udg, 'unreduced') else udg
         self.adj_matrix = udg.adj_matrix.copy()
         self.num_vertices = udg.num_vertices
         self.num_edges = udg.num_edges
