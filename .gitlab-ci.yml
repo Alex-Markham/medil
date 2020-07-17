@@ -2,7 +2,8 @@ image: alpine
 
 pages:
   script:
-  - pip install sphinx python-dev py2-pip
+  - apk --no-cache --update add py2-pip python-dev
+  - pip install sphinx
   - apk --no-cache add make
   - cd docs
   - make html
