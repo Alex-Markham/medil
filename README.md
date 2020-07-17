@@ -88,4 +88,5 @@ Refer to [LICENSE](https://gitlab.com/alex-markham/medil/blob/master/LICENSE), w
 Refer to [CHANGELOG](https://gitlab.com/alex-markham/medil/blob/master/CHANGELOG.md) to see planned features and history of the already implemented features. 
 
 ### 7. References
-[^fn1]: Alex Markham and Moritz Grosse-Wentrup (2019). *Measurement Dependence Inducing Latent Causal Models*. arXiv:1910.08778 [stat.ML]. ([link](https://arxiv.org/abs/1910.08778))
+[^fn1]: Alex Markham and Moritz Grosse-Wentrup (2019). Measurement Dependence Inducing Latent Causal Models. *Conference on Uncertainty in Artificial Intelligence (UAI)*, 2020. ISSN 2640-3498. URL [http:
+//www.auai.org/uai2020/proceedings/244\_main\_paper.pdf.](http://www.auai.org/uai2020/proceedings/244_main_paper.pdf)
