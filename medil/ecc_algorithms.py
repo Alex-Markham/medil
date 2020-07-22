@@ -56,7 +56,7 @@ def branch(graph, k_num_cliques, the_cover):
 
     if branch_graph.num_edges == 0:  # equiv to len(branch_graph.extant_edges_idx)==0
         return branch_graph.the_cover  # not in paper, but speeds it up slightly; or rather return None?
-
+    
     chosen_nbrhood = branch_graph.choose_nbrhood()
     # print("num cliques: {}".format(len([x for x in max_cliques(chosen_nbrhood)])))
     for clique_nodes in max_cliques(chosen_nbrhood):
@@ -78,7 +78,7 @@ def max_cliques(nbrhood):
     
     if len(nbrhood) == 0:
         return
-
+    
     # convert adjacency matrix to nx style graph
     # adapted from nx.find_cliques to find max cliques
 

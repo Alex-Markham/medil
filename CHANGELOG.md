@@ -9,24 +9,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - add HSIC test
 - implement AM clique cover
 ### In progress###
-- learn actual functions corresponding to minMCM edges (causal FA)
-- module for displaying graphs
-- limited (linear) data simulation
 - causal clustering
 
 ## [0.4.0] - 2020-0X-XX ##
+### Added ###
+- can now learn functional MCM instead of just structure (using GAN architecture)
+- data simulation (using same GAN architecture)
+- module for displaying graphs
+
 ### Fixed ###
 - bug in max\_intersection\_num calculation
 - exception handling for edgeless graph
 - bug with graph.cover\_edges() use in ecc.find\_cm.branch()
 - bug with using graph copy outside of ecc.find\_cm.branch() rather than within
+- bug where graph.choose\_nbrhood() picked wrong edge (and gave edgeless nbrhood)
 
 ### Removed ###
 - hack to stop while loop in find\_clique\_min\_cover()
 
 ### Changed ###
 - default verbosity of output
-- reducible\_graph var name to branch\_grap
+- reducible\_graph var name to branch\_graph
 
 ## [0.3.0] - 2020-04-13 ##
 ### Added ###

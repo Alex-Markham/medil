@@ -254,21 +254,22 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
                 break
 
         
-    def choose_nbrhood(self):    
-        score = self.n_choose_2(self.common_neighbors.sum(1)) - self.nbrhood_edge_counts
-        # score includes scores for non-existent edges, so have exclude those, otherwise could use .argmin()
-        chosen_edge_idx = np.where(score==score[self.extant_edges_idx].min())[0][0]
-        # chosen_edge = self.get_edge(chosen_edge_idx)
-        # self.nbrs(chosen_edge) # same as common_neighbors
-        
-        # use this if it's from reduced graph
-        # intersection = np.logical_or(self.adj_matrix[chosen_edge[0]], self.adj_matrix[chosen_edge[1]]).astype(int)
+    def choose_nbrhood(self):
+        # only compute for existing edges
+        common_neighbors = self.common_neighbors[self.extant_edges_idx]
+        nbrhood_edge_counts = self.nbrhood_edge_counts[self.extant_edges_idx]
+        score = self.n_choose_2(common_neighbors.sum(1)) - nbrhood_edge_counts
 
-        mask = self.common_neighbors[chosen_edge_idx].astype(bool)
+        # idx in reduced idx list, not from full edge list
+        chosen_edge_idx = score.argmin()
+
+        mask = common_neighbors[chosen_edge_idx].astype(bool)
 
         chosen_nbrhood = self.adj_matrix.copy()
         chosen_nbrhood[~mask, :] = 0
         chosen_nbrhood[:, ~mask] = 0
+        if chosen_nbrhood.sum() <= mask.sum():
+            raise ValueError('This nbrhood has no edges')
         return chosen_nbrhood
 
     def cover_edges(self, edges=None):
