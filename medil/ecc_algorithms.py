@@ -5,7 +5,7 @@ from .graph import UndirectedDependenceGraph
 import numpy as np
 
 
-def find_clique_min_cover(graph, verbose=True):
+def find_clique_min_cover(graph, verbose=False):
     graph = UndirectedDependenceGraph(graph, verbose)
     try:
         graph.make_aux()
