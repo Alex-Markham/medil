@@ -7,7 +7,7 @@ only:
 -------------------------------------------------------------------------------
 
 [for conda package](https://stackoverflow.com/questions/49474575/how-to-install-my-own-python-module-package-via-conda-and-watch-its-changes)
-[need to register at pypi](https://pypi.org/)
+[for uploading to pip](https://packaging.python.org/tutorials/packaging-projects/)
 
 -------------------------------------------------------------------------------
 

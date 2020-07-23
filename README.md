@@ -14,7 +14,7 @@ More information can be found in the [documentation](https://medil.causal.dev) o
 ---
 
 ### 1. Installation
-You can install the package using pip by running `pip install git+https://gitlab.com/alex-markham/medil.git#egg=medil` in a terminal.
+You can install the package using pip by running `pip install medil` in a terminal.
 The default only requires NumPy and only allows for limited data simulation, linear Pearson correlation independence testing, and structure learning.
 There are additional optional requirements for extra features:
 
@@ -24,7 +24,7 @@ There are additional optional requirements for extra features:
 | `'vis'` | Uses [NetworkX](https://networkx.github.io/), [matplotlib](https://matplotlib.org/) and [seaborn](https://seaborn.pydata.org/) for various graph visualization and various plots. |
 | `'dcor'` | Uses [dcor](https://dcor.readthedocs.io/) to compute the (nonlinear) distance correlation.   |
 
-In order to use these features, simply append the corresponding keys after the package name, e.g., `pip install git+https://gitlab.com/alex-markham/medil.git#egg=medil['vis', 'dcor']`.
+In order to use these features, simply append the corresponding keys after the package name, e.g., `pip install medil['vis', 'dcor']`.
 
 If you have problems installing `dcor`, try using a fresh python 3.7 virtual environment, and first installing `numba`, and then `scipy` before installing `medil` with the `'dcor'` key.
 

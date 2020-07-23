@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [0.4.0] - 2020-0X-XX ##
 ### Added ###
+- package now available on pip
 - can now learn functional MCM instead of just structure (using GAN architecture)
 - data simulation (using same GAN architecture)
 - module for visualizing graphs and making various other plots
