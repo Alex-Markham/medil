@@ -15,7 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added ###
 - can now learn functional MCM instead of just structure (using GAN architecture)
 - data simulation (using same GAN architecture)
-- module for displaying graphs
+- module for visualizing graphs and making various other plots
 
 ### Fixed ###
 - bug in max\_intersection\_num calculation
@@ -30,6 +30,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Changed ###
 - default verbosity of output
 - reducible\_graph var name to branch\_graph
+- package requirements
+- updated README
 
 ## [0.3.0] - 2020-04-13 ##
 ### Added ###
