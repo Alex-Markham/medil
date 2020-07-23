@@ -1,6 +1,5 @@
 ## MeDIL
 This package is for causal inference using the Measurement Dependence Inducing Latent (MeDIL) Causal Model framework[^fn1]. 
-This package is a work in progress, and there are many features I plan but have yet to implement, but doing so will take some time, especially considering I am primarily a theoritician and not a software engineer.
 More information can be found in the [documentation](https://medil.causal.dev) or on the [project web page](https://causal.dev/projects/medil)
 
 ---
