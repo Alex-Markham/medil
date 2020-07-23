@@ -1,5 +1,6 @@
 ## MeDIL
-This package is for causal inference using the Measurement Dependence Inducing Latent (MeDIL) Causal Model framework[^fn1]. 
+This package is for causal inference using the Measurement Dependence Inducing Latent (MeDIL) Causal Model framework[^fn1].
+Please cite our UAI paper if you make use of this package in your research.
 More information can be found in the [documentation](https://medil.causal.dev) or on the [project web page](https://causal.dev/projects/medil)
 
 ---
@@ -12,10 +13,20 @@ More information can be found in the [documentation](https://medil.causal.dev) o
 - [7. References](#7-references)
 ---
 
-
 ### 1. Installation
 You can install the package using pip by running `pip install git+https://gitlab.com/alex-markham/medil.git#egg=medil` in a terminal.
-If you have problems, try using a fresh python 3.7 virtual environment, installing numba, and then scipy, before using the above command.
+The default only requires NumPy and only allows for limited data simulation, linear Pearson correlation independence testing, and structure learning.
+There are additional optional requirements for extra features:
+
+| Key | Description |
+| :-------------: | :---------- |
+| `'gan'` | Uses [PyTorch](https://pytorch.org/) to make generative adversarial networks (GANs) for advanced data simulation and learning the functional MeDIL causal model. |
+| `'vis'` | Uses [NetworkX](https://networkx.github.io/), [matplotlib](https://matplotlib.org/) and [seaborn](https://seaborn.pydata.org/) for various graph visualization and various plots. |
+| `'dcor'` | Uses [dcor](https://dcor.readthedocs.io/) to compute the (nonlinear) distance correlation.   |
+
+In order to use these features, simply append the corresponding keys after the package name, e.g., ``pip install git+https://gitlab.com/alex-markham/medil.git#egg=medil['vis', 'dcor']`.
+
+If you have problems installing `dcor`, try using a fresh python 3.7 virtual environment, and first installing `numba`, and then `scipy` before installing `medil` with the `'dcor'` key.
 
 ### 2. Basic usage
 
