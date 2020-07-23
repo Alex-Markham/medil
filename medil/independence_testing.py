@@ -3,6 +3,13 @@ from dcor import pairwise, distance_correlation as distcorr
 from multiprocessing import Pool
 
 
+def dependencies(null_hyp, iota, p_values, alpha):
+    null_indep = null_hyp <= iota
+    accept_null = p_values >= alpha
+    independencies = null_indep & accept_null
+    return ~independencies     # dependencies
+
+
 def hypothesis_test(data, num_resamples, null_corr=None):
     # data must be a matrix of shape num_vars X num_samples
     
@@ -33,11 +40,34 @@ def hypothesis_test(data, num_resamples, null_corr=None):
     return p_values, null_corr
 
 
-def dependencies(null_hyp, iota, p_values, alpha):
-    null_indep = null_hyp <= iota
-    accept_null = p_values >= alpha
-    independencies = null_indep & accept_null
-    return ~independencies     # dependencies
+def rhoperm(x, name=None, num_perms=1000):
+    '''Computes Pearson's correlation coefficient with p-values.
+
+    rho, p = rhoperm(x, num_perms=1000)
+
+    Input variable x has to be of dimension [observations X
+    variables]. The p-values are computed by a permutation test.
+
+    '''
+
+    num_samps, num_vars = x.shape
+
+    # Correlation matrix
+    rho = np.corrcoef(x, rowvar=False)
+
+    # permutation test for p-values
+    p = np.zeros([num_vars, num_vars])
+    alt_rho_idx = np.triu_indices(2 * num_vars, num_vars + 1)
+    rho_idx = np.triu_indices(num_vars, 1)
+    for perm in range(num_perms):
+        x_perm = permute_within_columns(x)
+        alt_rho = np.corrcoef(x, x_perm, rowvar=False)
+        p[rho_idx] += abs(alt_rho[alt_rho_idx]) > abs(rho[rho_idx])
+    p = (p + p.T) / num_perms
+
+    if name is not None:
+        np.savez(name + '_perm', rho=rho, p=p)
+    return rho, p
 
 
 def permute_within_rows(x):
