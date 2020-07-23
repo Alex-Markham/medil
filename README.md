@@ -20,9 +20,11 @@ There are additional optional requirements for extra features:
 
 | Key | Description |
 | :-------------: | :---------- |
+| `'gan'` | Uses [PyTorch](https://pytorch.org/) to make generative adversarial networks (GANs) for advanced data simulation and learning the functional MeDIL causal model. |
+| `'vis'` | Uses [NetworkX](https://networkx.github.io/), [matplotlib](https://matplotlib.org/) and [seaborn](https://seaborn.pydata.org/) for graph visualization and various plots. |
 | `'dcor'` | Uses [dcor](https://dcor.readthedocs.io/) to compute the (nonlinear) distance correlation.   |
 
-In order to use these features, simply append the corresponding keys after the package name, e.g., `pip install medil['dcor']`.
+In order to use these features, simply append the corresponding keys after the package name, e.g., `pip install medil['vis', 'dcor']`.
 
 If you have problems installing `dcor`, try using a fresh python 3.7 virtual environment, and first installing `numba`, and then `scipy` before installing `medil` with the `'dcor'` key.
 
