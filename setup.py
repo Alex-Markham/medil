@@ -8,6 +8,6 @@ setup(name='medil',
       extras_require={
           'dcor': ['dcor'],
           'GAN' : ['pytorch'],
-          'visualization' : ['matplotlib', 'networkx']
+          'vis' : ['matplotlib', 'networkx']
       }
 )
