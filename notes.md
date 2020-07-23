@@ -4,8 +4,12 @@ only:
     - docs/*
   - master
 
+-------------------------------------------------------------------------------
 
 [for conda package](https://stackoverflow.com/questions/49474575/how-to-install-my-own-python-module-package-via-conda-and-watch-its-changes)
+[need to register at pypi](https://pypi.org/)
+
+-------------------------------------------------------------------------------
 
 Pushing new release: don't forget to update version number in setup.py 
 ```bash
@@ -15,6 +19,8 @@ git push origin v0.X.0
 git push origin develop:master
 ```
 
+-------------------------------------------------------------------------------
+
 Structuring the Project (in descending order of importance/usefulness/detail):
   * [seems to say everything, but is a lot of reading](https://docs.python-guide.org/writing/structure/)
   * [extensive---probably useful for a while](https://python-packaging.readthedocs.io/en/latest/minimal.html)
@@ -23,5 +29,3 @@ Structuring the Project (in descending order of importance/usefulness/detail):
   
 [testing in python](https://realpython.com/python-testing/)
 [more testing](https://docs.python-guide.org/writing/tests/)
-
-
