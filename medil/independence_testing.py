@@ -7,7 +7,29 @@ except ImportError:
     print("""With your current packages, only Pearson correlation is available for independence testing. For a nonlinear measure, install the dcor package.""")
     
 
-def dependencies(null_hyp, iota, p_values, alpha):
+def dependencies(null_hyp, iota=0.1, p_values, alpha=0.05):
+    """Returns the estimated Undirected Dependency Graph in the form of an adjacency matrix.
+
+    Parameters
+    ----------
+    null_hyp : 2d numpy array of floats
+               A square matrix `N`, where :math:`N_{i,j}` is the measured association value (e.g., correlation) between random variables :math:`R_i` and :math:`R_j`.
+
+    iota : float, optional
+           The threshold on the measure of association below which two random variables are considered indendent.
+
+    p_values : 2d numpy array of floats
+               A square matrix `P`, where :math:`P_{i,j}` is the probability of obtaining a result at least as extreme as the one given by :math:`N_{i, j}`.
+    
+    alpha : float, optional
+            The threshold on the p-values above which a result is considered statistically significant.
+
+    Returns
+    -------
+    2d numpy array of bools
+        A square matrix `D`, where :math:`D_{i,j}` is true if and only if the corresponding random variables :math:`R_i` and :math:`R_j` are estimated to be dependent.
+
+    """
     null_indep = null_hyp <= iota
     accept_null = p_values >= alpha
     independencies = null_indep & accept_null
@@ -15,8 +37,10 @@ def dependencies(null_hyp, iota, p_values, alpha):
 
 
 def hypothesis_test(data, num_resamples, measure='pearson', null_corr=None):
+    """
+    
     # data must be a matrix of shape num_vars X num_samples
-
+    """
     if measure == 'pearson':
         compute_corr = pearson
     elif measure == 'distance':
