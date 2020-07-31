@@ -7,13 +7,13 @@ except ImportError:
     print("""With your current packages, only Pearson correlation is available for independence testing. For a nonlinear measure, install the dcor package.""")
     
 
-def dependencies(null_hyp, iota=0.1, p_values, alpha=0.05):
+def dependencies(null_corr, iota=0.1, p_values, alpha=0.05):
     """Returns the estimated Undirected Dependency Graph in the form of an adjacency matrix.
 
     Parameters
     ----------
-    null_hyp : 2d numpy array of floats
-               A square matrix `N`, where :math:`N_{i,j}` is the measured association value (e.g., correlation) between random variables :math:`R_i` and :math:`R_j`.
+    null_corr : 2d numpy array of floats
+                A square matrix `N`, where :math:`N_{i,j}` is the measured association value (e.g., correlation) between random variables :math:`R_i` and :math:`R_j`.
 
     iota : float, optional
            The threshold on the measure of association below which two random variables are considered indendent.
@@ -30,16 +30,34 @@ def dependencies(null_hyp, iota=0.1, p_values, alpha=0.05):
         A square matrix `D`, where :math:`D_{i,j}` is true if and only if the corresponding random variables :math:`R_i` and :math:`R_j` are estimated to be dependent.
 
     """
-    null_indep = null_hyp <= iota
+    null_indep = null_corr <= iota
     accept_null = p_values >= alpha
     independencies = null_indep & accept_null
     return ~independencies     # dependencies
 
 
-def hypothesis_test(data, num_resamples, measure='pearson', null_corr=None):
-    """
-    
-    # data must be a matrix of shape num_vars X num_samples
+def hypothesis_test(data, num_resamples, measure='pearson'):
+    """Performs random permutation tests to estimate independence.
+
+    Parameters
+    ----------
+    data : 2d numpy array of floats or ints
+           A :math:`M \times N` matrix with `N` samples of `M` random variables.
+
+    num_resamples : int, optional
+                    Number of permutations used to calculate p-values.
+
+    measure : str, optional
+              Measure of association to use as test statistic. 
+
+    Returns
+    -------
+    p_values : 2d numpy array of floats
+               A square matrix `P`, where :math:`P_{i,j}` is the probability of obtaining a result at least as extreme as the one given by :math:`N_{i, j}`.
+
+    null_corr : 2d numpy array of floats
+                A square matrix `N`, where :math:`N_{i,j}` is the measured association value (e.g., correlation) between random variables :math:`R_i` and :math:`R_j`.
+
     """
     if measure == 'pearson':
         compute_corr = pearson
@@ -48,8 +66,7 @@ def hypothesis_test(data, num_resamples, measure='pearson', null_corr=None):
     else:
         print("{} is not (yet) a supported correlation measure".format(measure))
         
-    if null_corr is None:
-        null_corr = compute_corr(data)
+    null_corr = compute_corr(data)
 
     # initialize aux vars used in loop
     p_values = np.zeros(null_corr.shape)
