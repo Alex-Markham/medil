@@ -1,4 +1,4 @@
-# notes: maybe find_minMCM()
+OB# notes: maybe find_minMCM()
 # min='latents' or 'causal_relations' 
 # eventually add options: for listing all minMCMs of each type; using quick heuristic alg for just one; and minMCM other than the ones given by the user
 from .graph import UndirectedDependenceGraph
@@ -6,6 +6,20 @@ import numpy as np
 
 
 def find_clique_min_cover(graph, verbose=False):
+    """Returns the clique-minimum edge clique cover.
+
+    Parameters
+    ----------
+    graph : 2d numpy array
+            Adjacency matrix for undirected graph.
+
+    Returns
+    -------
+
+    Notes
+    -----
+
+    """
     graph = UndirectedDependenceGraph(graph, verbose)
     try:
         graph.make_aux()
@@ -33,6 +47,20 @@ def find_clique_min_cover(graph, verbose=False):
 
 
 def branch(graph, k_num_cliques, the_cover):
+    """Returns the clique-minimum edge clique cover.
+
+    Parameters
+    ----------
+    graph : 2d numpy array
+            Adjacency matrix for undirected graph.
+
+    Returns
+    -------
+
+    Notes
+    -----
+
+    """
     branch_graph = graph.reducible_copy()
     # if the_cover is not None:
     #     print(the_cover)
@@ -73,6 +101,20 @@ def branch(graph, k_num_cliques, the_cover):
 
 
 def max_cliques(nbrhood):
+    """Returns the clique-minimum edge clique cover.
+
+    Parameters
+    ----------
+    graph : 2d numpy array
+            Adjacency matrix for undirected graph.
+
+    Returns
+    -------
+
+    Notes
+    -----
+
+    """
     # pieced together from nx.from_numpy_array and nx.find_cliques,
     # which is output sensitive :)
     
