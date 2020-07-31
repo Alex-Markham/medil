@@ -85,6 +85,22 @@ def hypothesis_test(data, num_resamples, measure='pearson'):
 
 
 def distance(data, perm=False):
+    """Computes distance correlation on (if `perm`, permuted) data set.
+    
+    Paramaters
+    ----------
+    data : 2d numpy array of floats or ints
+           A :math:`M \times N` matrix with `N` samples of `M` random variables.
+
+    perm : bool, optional
+           Whether distance correlation is computed on permuted or original data.
+
+    Returns
+    -------
+    2d numpy array of floats
+        A square matrix `C`, where :math:`C_{i,j}` is (if `perm`, a sample from the null distribution of) the distance correlation between random variables :math:`R_i` and :math:`R_j`.
+    
+    """
     if not perm:
         with Pool() as pool:
             corr = pairwise(distcorr, data, pool=pool)
@@ -97,6 +113,22 @@ def distance(data, perm=False):
 
 
 def pearson(data, num_resamples, measure='pearson', null_corr=None):
+    """Computes Pearson product-moment correlation coefficient on (if `perm`, permuted) data set.
+    
+    Paramaters
+    ----------
+    data : 2d numpy array of floats or ints
+           A :math:`M \times N` matrix with `N` samples of `M` random variables.
+
+    perm : bool, optional
+           Whether distance correlation is computed on permuted or original data.
+
+    Returns
+    -------
+    2d numpy array of floats
+        A square matrix `C`, where :math:`C_{i,j}` is (if `perm`, a sample from the null distribution of) the Pearson correlation between random variables :math:`R_i` and :math:`R_j`.
+    
+    """
     if not perm:
         corr = np.corrcoef(data)
     else:
@@ -106,6 +138,18 @@ def pearson(data, num_resamples, measure='pearson', null_corr=None):
 
 
 def permute_within_rows(x):
+    """Randomly rearrange values according to column index without changing row index.
+    
+    Parameters
+    ----------
+    x : 2d numpy array
+
+    Returns
+    -------
+    2d numpy array
+        Reordered copy of input.
+
+    """
     # get random new index for col of each element
     col_idx = np.random.sample(x.shape).argsort(axis=1)
 
