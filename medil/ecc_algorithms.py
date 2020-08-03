@@ -1,6 +1,3 @@
-OB# notes: maybe find_minMCM()
-# min='latents' or 'causal_relations' 
-# eventually add options: for listing all minMCMs of each type; using quick heuristic alg for just one; and minMCM other than the ones given by the user
 from .graph import UndirectedDependenceGraph
 import numpy as np
 
@@ -10,14 +7,20 @@ def find_clique_min_cover(graph, verbose=False):
 
     Parameters
     ----------
-    graph : 2d numpy array
+    graph : 2d numpy array 
             Adjacency matrix for undirected graph.
+
+    verbose : bool, optional
+              Wether or not to print verbose output.
 
     Returns
     -------
+    the_cover : 2d numpy array
+                Biadjacency matrix representing edge clique cover.
 
     Notes
     -----
+    need to add citation
 
     """
     graph = UndirectedDependenceGraph(graph, verbose)
@@ -47,18 +50,29 @@ def find_clique_min_cover(graph, verbose=False):
 
 
 def branch(graph, k_num_cliques, the_cover):
-    """Returns the clique-minimum edge clique cover.
+    """Helper function for `find_clique_min_cover()`.
+
+    Describing the solution search space as a tree, this function tests whether the given node is a solution, and it branches if not,
 
     Parameters
     ----------
-    graph : 2d numpy array
-            Adjacency matrix for undirected graph.
+    graph : UndirectedDependenceGraph()
+            Class for representing undirected graph and auxilliary data used in edge clique cover algorithm.
+
+    k_num_cliques : int
+                    Current depth of search; number of cliques in cover being testet for solution.
+
+    the_cover : 2d numpy array
+                Biadjacency matrix representing (possibly partial) edge clique cover.
 
     Returns
     -------
+    2d numpy array or None
+        Biadjacency matrix representing (complete) edge clique cover or None if cover is only partial.
 
     Notes
     -----
+    need to add citation
 
     """
     branch_graph = graph.reducible_copy()
@@ -105,25 +119,24 @@ def max_cliques(nbrhood):
 
     Parameters
     ----------
-    graph : 2d numpy array
-            Adjacency matrix for undirected graph.
+    nbrhood : 2d numpy array
+            Adjacency matrix for undirected (sub)graph.
 
     Returns
     -------
+    generator
+        
 
     Notes
     -----
+    pieced together from nx.from_numpy_array and nx.find_cliques,
+    which is output sensitive
 
-    """
-    # pieced together from nx.from_numpy_array and nx.find_cliques,
-    # which is output sensitive :)
-    
+    """    
     if len(nbrhood) == 0:
         return
     
     # convert adjacency matrix to nx style graph
-    # adapted from nx.find_cliques to find max cliques
-
     adj = {u: {v for v in np.nonzero(nbrhood[u])[0] if v != u} for u in range(len(nbrhood))}
     Q = [None]
 
