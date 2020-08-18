@@ -10,6 +10,8 @@ Welcome to medil's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   source/*
+
 .. mdinclude:: ../README.md
 
 
