@@ -4,6 +4,7 @@ pages:
   script:
   - apk --no-cache add py3-pip python3-dev
   - pip install sphinx m2r2
+  - sphinx-apidoc -f -o docs/source medil
   - apk --no-cache add make
   - cd docs
   - make html
