@@ -6,7 +6,7 @@ pages:
   - pip install sphinx m2r2 sphinx-rtd-theme
   - sphinx-apidoc -f -T -o docs medil
   - mv docs/medil.rst docs/documentation.rst
-  - sed -i "1s/.*/Documentation/" docs/medil.rst
+  - sed -i "1s/.*/Documentation/" docs/documentation.rst
   - apk --no-cache add make
   - cd docs
   - make html
