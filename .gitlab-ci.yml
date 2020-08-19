@@ -5,8 +5,8 @@ pages:
   - apk --no-cache add py3-pip python3-dev
   - pip install sphinx m2r2
   - sphinx-apidoc -f -T -o docs medil
-  - sed -i "1s/.*/Documentation/" medil.rst
   - mv docs/medil.rst docs/documentation.rst
+  - sed -i "1s/.*/Documentation/" docs/medil.rst
   - apk --no-cache add make
   - cd docs
   - make html
