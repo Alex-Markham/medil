@@ -16,5 +16,5 @@ test/ecc_test
 
 # docs rendered files
 docs/_build
-docs/_static
-docs/_templates
+
+
