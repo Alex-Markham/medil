@@ -31,7 +31,7 @@ author = 'Alex Markham'
 extensions = ['m2r2', 'sphinx.ext.autosummary', 'sphinx.ext.napoleon', 'sphinx_rtd_theme']
 source_suffix = ['.rst', '.md']
 
-autodoc_mock_imports = ["numpy"
+autodoc_mock_imports = ["numpy"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
