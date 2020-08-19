@@ -2,19 +2,19 @@ import numpy as np
 
 
 class UndirectedDependenceGraph(object):
-"""Class definitions for various types and representations of graphs.
+    """Class definitions for various types and representations of graphs.
 
-Parameters
-----------
+    Parameters
+    ----------
 
 
-Notes
------
-The algorithms for finding the minMCM via ECC contain many algebraic
-operations, so adjacency matrix representation (via NumPy) is most
-covenient.
+    Notes
+    -----
+    The algorithms for finding the minMCM via ECC contain many algebraic
+    operations, so adjacency matrix representation (via NumPy) is most
+    covenient.
 
-"""
+    """
     def __init__(self, adj_matrix, verbose=False):
         # doesn't behave well unless input is nparray;
         self.adj_matrix = adj_matrix

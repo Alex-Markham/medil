@@ -7,7 +7,7 @@ except ImportError:
     print("""With your current packages, only Pearson correlation is available for independence testing. For a nonlinear measure, install the dcor package.""")
     
 
-def dependencies(null_corr, iota=0.1, p_values, alpha=0.05):
+def dependencies(null_corr, p_values, iota=0.1, alpha=0.05):
     """Returns the estimated Undirected Dependency Graph in the form of an adjacency matrix.
 
     Parameters
@@ -107,8 +107,8 @@ def distance(data, perm=False):
     else:
         data_permed = permute_within_rows(data)
         data_permed_2 = permute_within_rows(data)
-            with Pool() as pool:
-                corr = pairwise(distcorr, data_permed, data_permed_2, pool=pool)
+        with Pool() as pool:
+            corr = pairwise(distcorr, data_permed, data_permed_2, pool=pool)
     return corr
 
 
