@@ -7,8 +7,14 @@ Welcome to medil's documentation!
 
    installation
    tutorial
-   documentation
 
+Modules
+=======
+.. autosummary::
+   :toctree: modules
+
+   medil.graph
+   medil.independence_testing
 
 Indices and tables
 ==================
