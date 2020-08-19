@@ -4,7 +4,6 @@ pages:
   script:
   - apk --no-cache add py3-pip python3-dev make
   - pip install sphinx m2r2 sphinx-rtd-theme
-  - PYTHONPATH=. sphinx-autogen docs/index.rst
   - cd docs
   - make html
   - cd ..
