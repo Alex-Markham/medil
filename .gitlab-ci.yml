@@ -9,7 +9,7 @@ pages:
   - sed -i "1s/.*/Documentation/" docs/documentation.rst
   - apk --no-cache add make
   - cd docs
-  - make html
+  - make clean; make html
   - cd ..
   - mv docs/_build/html/ public/
   artifacts:
