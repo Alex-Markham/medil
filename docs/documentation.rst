@@ -3,7 +3,7 @@ Documentation
 These are the submodules of MeDIL
 
 .. autosummary::
-   :toctree: modules
+   :toctree:
 	     
    medil.graph
    medil.independence_testing
