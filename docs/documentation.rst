@@ -3,7 +3,8 @@ Documentation
 These are the submodules of MeDIL
 
 .. autosummary::
-   :toctree: 
+   :toctree: _autosummary
+   :template: custom-module-template.rst
    :recursive:
       
    medil
