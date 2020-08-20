@@ -34,6 +34,9 @@ source_suffix = ['.rst', '.md']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+
 autosummary_mock_imports = ['numpy']
 autosummary_generate = True
 
