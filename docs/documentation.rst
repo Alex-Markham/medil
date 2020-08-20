@@ -1,10 +1,9 @@
-Documentation
-=============
-These are the submodules of MeDIL
+API List
+========
 
 .. autosummary::
    :toctree:
+   :template: custom-module.rst
    :recursive:
       
    medil
-   medil.independence_testing.permute_within_rows
