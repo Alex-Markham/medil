@@ -92,7 +92,7 @@ Additionally, if you would like to use this package or any of its code in a proj
 If you would like to contribute, you can [contact me](https://causal.dev/#contact) and fork this repo.
 
 ### 5. License
-Refer to [LICENSE](https://gitlab.com/alex-markham/medil/blob/master/LICENSE), which is the GNU General Public License v3.
+Refer to [LICENSE](https://gitlab.com/alex-markham/medil/blob/master/LICENSE), which is the GNU Affero General Public License v3.
 
 ### 6. Changelog
 Refer to [CHANGELOG](https://gitlab.com/alex-markham/medil/blob/master/CHANGELOG.md) to see planned features and history of the already implemented features. 
