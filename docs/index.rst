@@ -8,6 +8,7 @@ Welcome to medil's documentation!
    installation
    tutorial
    apilist
+   license
    changelog
    citing
    references
