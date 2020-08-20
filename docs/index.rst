@@ -7,7 +7,10 @@ Welcome to medil's documentation!
 
    installation
    tutorial
-   documentation
+   apilist
+   changelog
+   citing
+   references
 
 Indices and tables
 ==================
