@@ -1,9 +1,9 @@
 Documentation
 =============
 These are the submodules of MeDIL
-.. toctree::
-   :maxdepth: 4
-   :autosummary:
-   
+
+.. autosummary::
+   :toctree:
+
    medil.graph
    medil.independence_testing
