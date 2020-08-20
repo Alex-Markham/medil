@@ -28,7 +28,7 @@ author = 'Alex Markham'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['m2r2', 'sphinx.ext.autosummary', 'sphinx.ext.napoleon', 'sphinx_rtd_theme']
+extensions = ['m2r2', 'sphinx.ext.autodoc', 'sphinx.ext.autosummary', 'sphinx.ext.napoleon', 'sphinx_rtd_theme', 'sphinx.ext.viewcode']
 source_suffix = ['.rst', '.md']
 
 autosummary_mock_imports = ['numpy']
