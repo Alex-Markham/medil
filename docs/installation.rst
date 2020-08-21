@@ -8,11 +8,11 @@ There are additional optional requirements for extra features:
 +------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | Key        | Description                                                                                                                                                                     | 
 +============+=================================================================================================================================================================================+
+| ``'dcor'`` | Uses `dcor <https://dcor.readthedocs.io/>`_ to compute the (nonlinear) distance correlation.                                                                                    |
++------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``'gan'``  | Uses `PyTorch <https://pytorch.org/>`_ to make generative adversarial networks (GANs) for advanced data simulation and learning the functional MeDIL causal model.              |
 +------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``'vis'``  | Uses `NetworkX <https://networkx.github.io/>`_, `matplotlib <https://matplotlib.org/>`_ and `seaborn <https://seaborn.pydata.org/>`_ for graph visualization and various plots. |
-+------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| ``'dcor'`` | Uses `dcor <https://dcor.readthedocs.io/>`_ to compute the (nonlinear) distance correlation.                                                                                    |
 +------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 In order to use these features, simply append the corresponding keys after the package name, e.g., ``pip install medil['vis', 'dcor']``.
