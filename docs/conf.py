@@ -22,6 +22,15 @@ project = 'MeDIL'
 copyright = '2019–2020, Alex Markham'
 author = 'Alex Markham'
 
+# The version info for the project you're documenting, acts as replacement for
+# |version| and |release|, also used in various other places throughout the
+# built documents.
+#
+# The full version, including alpha/beta/rc tags.
+with open('../setup.py') as f:
+    lines = f.readlines()
+    v_line = lines[4]
+    version = v_line[15:-3]
 
 # -- General configuration ---------------------------------------------------
 
