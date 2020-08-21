@@ -1,33 +1,48 @@
+"""Functions for independence testing on samples of random variables.
+
+"""
+
 import numpy as np
 
 from multiprocessing import Pool
 try:
     from dcor import pairwise, distance_correlation as distcorr
 except ImportError:
-    print("""With your current packages, only Pearson correlation is available for independence testing. For a nonlinear measure, install the dcor package.""")
+    print("With your current packages, only Pearson correlation is",
+          "available for independence testing. For a nonlinear",
+          "measure, install the dcor package.")
     
 
 def dependencies(null_corr, p_values, iota=0.1, alpha=0.05):
-    """Returns the estimated Undirected Dependency Graph in the form of an adjacency matrix.
+    r"""Returns the estimated Undirected Dependency Graph in the form 
+    of an adjacency matrix.
 
     Parameters
     ----------
     null_corr : 2d numpy array of floats
-                A square matrix `N`, where :math:`N_{i,j}` is the measured association value (e.g., correlation) between random variables :math:`R_i` and :math:`R_j`.
+                A square matrix `N`, where :math:`N_{i,j}` is the 
+                measured association value (e.g., correlation) between
+                random variables :math:`R_i` and :math:`R_j`.
 
     iota : float, optional
-           The threshold on the measure of association below which two random variables are considered indendent.
+           The threshold on the measure of association below which two
+           random variables are considered indendent.
 
     p_values : 2d numpy array of floats
-               A square matrix `P`, where :math:`P_{i,j}` is the probability of obtaining a result at least as extreme as the one given by :math:`N_{i, j}`.
+               A square matrix `P`, where :math:`P_{i,j}` is the 
+               probability of obtaining a result at least as extreme
+               as the one given by :math:`N_{i, j}`.
     
     alpha : float, optional
-            The threshold on the p-values above which a result is considered statistically significant.
+            The threshold on the p-values above which a result is
+            considered statistically significant.
 
     Returns
     -------
     2d numpy array of bools
-        A square matrix `D`, where :math:`D_{i,j}` is true if and only if the corresponding random variables :math:`R_i` and :math:`R_j` are estimated to be dependent.
+        A square matrix `D`, where :math:`D_{i,j}` is true if and only
+        if the corresponding random variables :math:`R_i` and
+        :math:`R_j` are estimated to be dependent.
 
     """
     null_indep = null_corr <= iota
@@ -37,12 +52,13 @@ def dependencies(null_corr, p_values, iota=0.1, alpha=0.05):
 
 
 def hypothesis_test(data, num_resamples, measure='pearson'):
-    """Performs random permutation tests to estimate independence.
+    r"""Performs random permutation tests to estimate independence.
 
     Parameters
     ----------
     data : 2d numpy array of floats or ints
-           A :math:`M \times N` matrix with `N` samples of `M` random variables.
+           A :math:`M \times N` matrix with :math:`N` samples of
+           :math`M` random variables.
 
     num_resamples : int, optional
                     Number of permutations used to calculate p-values.
@@ -53,10 +69,14 @@ def hypothesis_test(data, num_resamples, measure='pearson'):
     Returns
     -------
     p_values : 2d numpy array of floats
-               A square matrix `P`, where :math:`P_{i,j}` is the probability of obtaining a result at least as extreme as the one given by :math:`N_{i, j}`.
+               A square matrix :math:`P`, where :math:`P_{i,j}` is the
+               probability of obtaining a result at least as extreme
+               as the one given by :math:`N_{i, j}`.
 
     null_corr : 2d numpy array of floats
-                A square matrix `N`, where :math:`N_{i,j}` is the measured association value (e.g., correlation) between random variables :math:`R_i` and :math:`R_j`.
+                A square matrix :math:`N`, where :math:`N_{i,j}` is 
+                the measured association value (e.g., correlation) 
+                between random variables :math:`R_i` and :math:`R_j`.
 
     """
     if measure == 'pearson':
@@ -64,13 +84,14 @@ def hypothesis_test(data, num_resamples, measure='pearson'):
     elif measure == 'distance':
         compute_corr = distance
     else:
-        print("{} is not (yet) a supported correlation measure".format(measure))
+        print("{} is not a supported correlation measure".format(measure))
         
     null_corr = compute_corr(data)
 
     # initialize aux vars used in loop
     p_values = np.zeros(null_corr.shape)
-    num_loops = num_resamples if measure != 'distance' else int(np.ceil(num_resamples / 2))
+    num_loops = num_resamples if measure != 'distance' \
+                else int(np.ceil(num_resamples / 2))
     for _ in range(num_loops):
         perm_corr = compute_corr(data, perm=True)
         p_values += np.array(perm_corr>=null_corr, int)
@@ -85,20 +106,25 @@ def hypothesis_test(data, num_resamples, measure='pearson'):
 
 
 def distance(data, perm=False):
-    """Computes distance correlation on (if `perm`, permuted) data set.
+    r"""Computes distance correlation on (if ``perm``, permuted) data set.
     
     Paramaters
     ----------
     data : 2d numpy array of floats or ints
-           A :math:`M \times N` matrix with `N` samples of `M` random variables.
+           A :math:`M \times N` matrix with :math:`N` samples of
+           :math:`M` random variables.
 
     perm : bool, optional
-           Whether distance correlation is computed on permuted or original data.
+           Whether distance correlation is computed on permuted or 
+           original data.
 
     Returns
     -------
     2d numpy array of floats
-        A square matrix `C`, where :math:`C_{i,j}` is (if `perm`, a sample from the null distribution of) the distance correlation between random variables :math:`R_i` and :math:`R_j`.
+        A square matrix :math:`C`, where :math:`C_{i,j}` is
+        (if ``perm``, a sample from the null distribution of)
+        the distance correlation between random variables :math:`R_i`
+        and :math:`R_j`.
     
     """
     if not perm:
@@ -113,22 +139,26 @@ def distance(data, perm=False):
 
 
 def pearson(data, num_resamples, measure='pearson', null_corr=None):
-    """Computes Pearson product-moment correlation coefficient on (if `perm`, permuted) data set.
+    r"""Computes Pearson product-moment correlation coefficient on (if ``perm``, permuted) data set.
     
-    Paramaters
-    ----------
-    data : 2d numpy array of floats or ints
-           A :math:`M \times N` matrix with `N` samples of `M` random variables.
+     Paramaters
+     ----------
+     data : 2d numpy array of floats or ints
+            A :math:`M \times N` matrix with :math:`N` samples of :math:`M` random variables.
 
-    perm : bool, optional
-           Whether distance correlation is computed on permuted or original data.
+     perm : bool, optional
+            Whether distance correlation is computed on permuted or 
+            original data.
 
-    Returns
-    -------
-    2d numpy array of floats
-        A square matrix `C`, where :math:`C_{i,j}` is (if `perm`, a sample from the null distribution of) the Pearson correlation between random variables :math:`R_i` and :math:`R_j`.
+     Returns
+     -------
+     2d numpy array of floats
+         A square matrix :math:`C`, where :math:`C_{i,j}` is 
+         (if ``perm``, a sample from the null distribution of) 
+         the Pearson correlation between random variables :math:`R_i` 
+         and :math:`R_j`.
     
-    """
+     """
     if not perm:
         corr = np.corrcoef(data)
     else:
@@ -138,7 +168,8 @@ def pearson(data, num_resamples, measure='pearson', null_corr=None):
 
 
 def permute_within_rows(x):
-    """Randomly rearrange values according to column index without changing row index.
+    """Randomly rearrange values according to column index without 
+    changing row index.
     
     Parameters
     ----------
