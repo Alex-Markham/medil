@@ -49,6 +49,9 @@ napoleon_numpy_docstring = True
 autosummary_mock_imports = ['numpy']
 autosummary_generate = True
 
+# A list of prefixs that are ignored when creating the module index. (new in Sphinx 0.6)
+modindex_common_prefix = ["medil."]
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
