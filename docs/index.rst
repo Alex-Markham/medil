@@ -6,16 +6,10 @@ Welcome to MeDIL's documentation!
    :caption: Contents:
 
    installation
+   theory   
    tutorial
    apilist
    license
    changelog
    citing
    references
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
