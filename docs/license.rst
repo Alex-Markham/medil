@@ -7,5 +7,5 @@ MeDIL is licensed with the GNU AGPL version 3.0 or later.
    :alt: purple GNU AGPL v3 Free Software logo
    :align: center
 
-.. raw::
-   :file: ../LICENSE
+.. literalinclude:: ../LICENSE.txt
+   :language: text
