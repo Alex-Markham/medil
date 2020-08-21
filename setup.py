@@ -1,7 +1,7 @@
 from setuptools import setup
 
 
-setup(name='medil',
+setup(name='MeDIL',
       version='0.5.0',
       packages=['medil'],
       install_requires=['numpy'],
