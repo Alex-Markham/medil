@@ -28,7 +28,7 @@ author = 'Alex Markham'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['m2r2', 'sphinx.ext.autodoc', 'sphinx.ext.autosummary', 'sphinx.ext.napoleon', 'sphinx_rtd_theme', 'sphinx.ext.viewcode', 'sphinx.ext.mathjax']
+extensions = ['m2r2', 'sphinx.ext.autodoc', 'sphinx.ext.autosummary', 'sphinx.ext.napoleon', 'sphinx_rtd_theme', 'sphinx.ext.viewcode', 'sphinx.ext.mathjax', 'sphinxcontrib.bibtex']
 source_suffix = ['.rst', '.md']
 
 # The name of the Pygments (syntax highlighting) style to use.
