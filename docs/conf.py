@@ -19,7 +19,7 @@ import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
 project = 'MeDIL'
-copyright = '2019, Alex Markham'
+copyright = '2019–2020, Alex Markham'
 author = 'Alex Markham'
 
 
