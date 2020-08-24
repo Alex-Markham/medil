@@ -3,8 +3,9 @@ image: pytorchlightning/pytorch_lightning:latest-py3.7-torch1.4
 pytest:
   stage: test
   script:
-  - apk --no-cache add py3-pip py3-scipy py3-matplotlib
-  - pip install pytest .[all]
+  - apk add py3-pip
+  - pip install pytest numba .[all]
+  - apk add latest-py3.7-torch1.4
   - pytest --junitxml=report.xml
   artifacts:
     reports:
