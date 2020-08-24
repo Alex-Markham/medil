@@ -3,7 +3,7 @@ image: alpine
 rspec:
   stage: test
   script:
-  - pip apk --no-cache add py3-pip python3-dev
+  - apk --no-cache add py3-pip python3-dev
   - pip install pytest-cov
   - pytest --cov=medil
   - coverage html
