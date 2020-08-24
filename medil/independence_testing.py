@@ -13,7 +13,7 @@ except ImportError:
           "measure, install the dcor package.")
     
 
-def dependencies(null_corr, p_values, iota=0.1, alpha=0.05):
+def dependencies(null_corr, p_values, iota=0.05, alpha=0.05):
     r"""Returns the estimated Undirected Dependency Graph in the form 
     of an adjacency matrix.
 
