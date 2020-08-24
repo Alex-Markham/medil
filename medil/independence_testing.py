@@ -1,7 +1,4 @@
-"""Functions for independence testing on samples of random variables.
-
-"""
-
+"""Independence testing on samples of random variables."""
 import numpy as np
 
 from multiprocessing import Pool
