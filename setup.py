@@ -9,5 +9,6 @@ setup(name='MeDIL',
           'dcor': ['dcor'],
           'GAN' : ['pytorch'],
           'vis' : ['matplotlib', 'networkx']
+          'all' : ['dcor', 'pytorch', 'matplotlib', 'networkx']
       }
 )
