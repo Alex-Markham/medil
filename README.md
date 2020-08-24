@@ -1,5 +1,5 @@
 ## MeDIL
-MeDIL is a Pythoon package for causal inference, focusing on the Measurement Dependence Inducing Latent (MeDIL) Causal Model framework[^fn1].
+MeDIL is a Python package for causal inference, focusing on the Measurement Dependence Inducing Latent (MeDIL) Causal Model framework[^fn1].
 
 More information can be found in the [documentation](https://medil.causal.dev) or on the [project web page](https://causal.dev/project/medil)
 
