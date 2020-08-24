@@ -1,15 +1,15 @@
-image: pytorchlightning/pytorch_lightning:latest-py3.7-torch1.4
+# image: pytorchlightning/pytorch_lightning:latest-py3.7-torch1.4
 
-pytest:
-  stage: test
-  script:
-  - apk add py3-pip
-  - pip install pytest numba .[all]
-  - apk add latest-py3.7-torch1.4
-  - pytest --junitxml=report.xml
-  artifacts:
-    reports:
-      junit: report.xml
+# pytest:
+#   stage: test
+#   script:
+#   - apk --no-cache add py3-pip
+#   - pip install pytest numba .[all]
+#   - apk --no-cache add latest-py3.7-torch1.4
+#   - pytest --junitxml=report.xml
+#   artifacts:
+#     reports:
+#       junit: report.xml
 
 
 image: alpine
