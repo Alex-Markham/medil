@@ -1,4 +1,4 @@
-image: alpine
+image: pytorch/pytorch:latest
 
 pytest:
   stage: test
@@ -11,7 +11,7 @@ pytest:
       junit: report.xml
 
 
-
+image: alpine
 
 pages:
   stage: deploy
