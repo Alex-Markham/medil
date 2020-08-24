@@ -58,7 +58,7 @@ def hypothesis_test(data, num_resamples, measure='pearson'):
     ----------
     data : 2d numpy array of floats or ints
            A :math:`M \times N` matrix with :math:`N` samples of
-           :math`M` random variables.
+           :math:`M` random variables.
 
     num_resamples : int, optional
                     Number of permutations used to calculate p-values.
@@ -107,8 +107,8 @@ def hypothesis_test(data, num_resamples, measure='pearson'):
 
 def distance(data, perm=False):
     r"""Computes distance correlation on (if ``perm``, permuted) data set.
-    
-    Paramaters
+
+    Parameters
     ----------
     data : 2d numpy array of floats or ints
            A :math:`M \times N` matrix with :math:`N` samples of
@@ -125,7 +125,7 @@ def distance(data, perm=False):
         (if ``perm``, a sample from the null distribution of)
         the distance correlation between random variables :math:`R_i`
         and :math:`R_j`.
-    
+
     """
     if not perm:
         with Pool() as pool:
@@ -139,26 +139,28 @@ def distance(data, perm=False):
 
 
 def pearson(data, num_resamples, measure='pearson', null_corr=None):
-    r"""Computes Pearson product-moment correlation coefficient on (if ``perm``, permuted) data set.
-    
-     Paramaters
-     ----------
-     data : 2d numpy array of floats or ints
-            A :math:`M \times N` matrix with :math:`N` samples of :math:`M` random variables.
+    r"""Computes Pearson product-moment correlation coefficient on 
+    (if ``perm``, permuted) data set.
 
-     perm : bool, optional
-            Whether distance correlation is computed on permuted or 
-            original data.
+    Parameters
+    ----------
+    data : 2d numpy array of floats or ints
+           A :math:`M \times N` matrix with :math:`N` samples of
+           :math:`M` random variables.
 
-     Returns
-     -------
-     2d numpy array of floats
-         A square matrix :math:`C`, where :math:`C_{i,j}` is 
-         (if ``perm``, a sample from the null distribution of) 
-         the Pearson correlation between random variables :math:`R_i` 
-         and :math:`R_j`.
-    
-     """
+    perm : bool, optional
+           Whether Pearson correlation is computed on permuted or 
+           original data.
+
+    Returns
+    -------
+    2d numpy array of floats
+        A square matrix :math:`C`, where :math:`C_{i,j}` is
+        (if ``perm``, a sample from the null distribution of)
+        the Pearson correlation between random variables :math:`R_i`
+        and :math:`R_j`.
+
+    """
     if not perm:
         corr = np.corrcoef(data)
     else:
