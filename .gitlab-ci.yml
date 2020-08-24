@@ -9,7 +9,7 @@ rspec:
   - coverage html
   artifacts:
     paths:
-    - coverage/
+    - htmlcov/
 
 pages:
   stage: deploy
@@ -19,7 +19,7 @@ pages:
   - make html
   - cd ..
   - mv docs/_build/html/ public/
-  - mv coverage/ public/
+  - mv htmlcov/ public/
   artifacts:
     paths:
     - public
