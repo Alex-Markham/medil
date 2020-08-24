@@ -7,7 +7,7 @@ setup(name='MeDIL',
       install_requires=['numpy'],
       extras_require={
           'dcor': ['dcor'],
-          'GAN' : ['torch'],
+          'GAN' : ['pytorch-lightning'],
           'vis' : ['matplotlib', 'networkx'],
           'all' : ['dcor', 'torch', 'matplotlib', 'networkx']
       }
