@@ -1,13 +1,26 @@
 image: alpine
 
-pages:
+rspec:
+  stage: test
   script:
-  - apk --no-cache add py3-pip python3-dev make
+  - pip apk --no-cache add py3-pip python3-dev
+  - pip install pytest-cov
+  - pytest --cov=medil
+  - coverage html
+  artifacts:
+    paths:
+    - coverage/
+
+pages:
+  stage: deploy
+  script:
+  - apk --no-cache add make
   - pip install sphinx m2r2 sphinx-rtd-theme sphinxcontrib-bibtex
   - cd docs
   - make html
   - cd ..
   - mv docs/_build/html/ public/
+  - mv coverage/ public/
   artifacts:
     paths:
     - public
