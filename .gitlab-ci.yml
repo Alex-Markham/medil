@@ -3,7 +3,7 @@ image: alpine
 rspec:
   stage: test
   script:
-  - apk --no-cache add py3-pip python3-dev
+  - apk --no-cache add py3-pip python3-dev make automake g++
   - pip install numpy pytest-cov
   - pytest --cov=medil
   - coverage html
@@ -14,7 +14,6 @@ rspec:
 pages:
   stage: deploy
   script:
-  - apk --no-cache add make
   - pip install sphinx m2r2 sphinx-rtd-theme sphinxcontrib-bibtex
   - cd docs
   - make html
