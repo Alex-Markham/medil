@@ -1,9 +1,9 @@
-image: pytorchlightning/pytorch_lightning
+image: pytorchlightning/pytorch_lightning:latest-py3.7-torch1.4
 
 pytest:
   stage: test
   script:
-  - apk --no-cache add py3-pip python3-dev py3-scipy py3-matplotlib
+  - apk --no-cache add py3-pip py3-scipy py3-matplotlib
   - pip install pytest .[all]
   - pytest --junitxml=report.xml
   artifacts:
