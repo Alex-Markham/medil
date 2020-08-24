@@ -5,10 +5,13 @@ pytest:
   script:
   - apk --no-cache add py3-pip python3-dev make automake g++
   - pip install pytest .
-  - pytest --junit=report.xml
+  - pytest --junitxml=report.xml
   artifacts:
     reports:
       junit: report.xml
+
+
+
 
 pages:
   stage: deploy
