@@ -4,7 +4,7 @@ rspec:
   stage: test
   script:
   - apk --no-cache add py3-pip python3-dev
-  - pip install pytest-cov
+  - pip install numpy pytest-cov
   - pytest --cov=medil
   - coverage html
   artifacts:
