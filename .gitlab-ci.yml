@@ -1,10 +1,10 @@
-image: pytorch/pytorch:latest
+image: pytorchlightning/pytorch_lightning
 
 pytest:
   stage: test
   script:
-  - apk --no-cache add py3-pip python3-dev make automake g++
-  - pip install pytest .
+  - apk --no-cache add py3-pip python3-dev py3-scipy py3-matplotlib
+  - pip install pytest .[all]
   - pytest --junitxml=report.xml
   artifacts:
     reports:
