@@ -1,5 +1,4 @@
 image: continuumio/miniconda3
-
 pytest:
   stage: test
   script:
@@ -11,9 +10,7 @@ pytest:
     reports:
       junit: report.xml
 
-
 image: alpine
-
 pages:
   stage: deploy
   script:
