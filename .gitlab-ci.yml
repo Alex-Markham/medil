@@ -2,6 +2,7 @@ image: python:3.7
 pytest:
   stage: test
   script:
+  - apk add py3-pip python3-dev
   - pip install numba
   - pip install pytest .[all]
   - pytest --junitxml=report.xml
@@ -9,16 +10,17 @@ pytest:
     reports:
       junit: report.xml
 
-image: alpine
-pages:
-  stage: deploy
-  script:
-  - apk --no-cache add py3-pip python3-dev make
-  - pip install sphinx m2r2 sphinx-rtd-theme sphinxcontrib-bibtex
-  - cd docs
-  - make html
-  - cd ..
-  - mv docs/_build/html/ public/
-  artifacts:
-    paths:
-    - public
+# image: alpine
+# pages:
+#   stage: deploy
+#   script:
+#   - apk add py3-pip python3-dev make
+#   - pip install sphinx m2r2 sphinx-rtd-theme sphinxcontrib-bibtex
+#   - cd docs
+#   - make html
+#   - cd ..
+#   - mv docs/_build/html/ public/
+#   artifacts:
+#     paths:
+#     - public
+ 
