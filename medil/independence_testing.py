@@ -2,13 +2,12 @@
 import numpy as np
 
 from multiprocessing import Pool
+
 try:
     from dcor import pairwise, distance_correlation as distcorr
 except ImportError:
-    print("With your current packages, only Pearson correlation is",
-          "available for independence testing. For a nonlinear",
-          "measure, install the dcor package.")
-    
+    pass
+
 
 def dependencies(null_corr, p_values, iota=0.05, alpha=0.05):
     r"""Returns the estimated Undirected Dependency Graph in the form 
@@ -45,10 +44,10 @@ def dependencies(null_corr, p_values, iota=0.05, alpha=0.05):
     null_indep = null_corr <= iota
     accept_null = p_values >= alpha
     independencies = null_indep & accept_null
-    return ~independencies     # dependencies
+    return ~independencies  # dependencies
 
 
-def hypothesis_test(data, num_resamples, measure='pearson'):
+def hypothesis_test(data, num_resamples, measure="pearson"):
     r"""Performs random permutation tests to estimate independence.
 
     Parameters
@@ -76,34 +75,35 @@ def hypothesis_test(data, num_resamples, measure='pearson'):
                 between random variables :math:`R_i` and :math:`R_j`.
 
     """
-    if measure == 'pearson':
+    if measure == "pearson":
         compute_corr = pearson
-    elif measure == 'distance':
+    elif measure == "distance":
         compute_corr = distance
     else:
         print("{} is not a supported correlation measure".format(measure))
-        
+
     null_corr = compute_corr(data)
 
     # initialize aux vars used in loop
     p_values = np.zeros(null_corr.shape)
-    num_loops = num_resamples if measure != 'distance' \
-                else int(np.ceil(num_resamples / 2))
+    num_loops = (
+        num_resamples if measure != "distance" else int(np.ceil(num_resamples / 2))
+    )
     for _ in range(num_loops):
         perm_corr = compute_corr(data, perm=True)
-        p_values += np.array(perm_corr>=null_corr, int)
+        p_values += np.array(perm_corr >= null_corr, int)
 
     # trick for halfing num loops needed for num_resamples because of
     # distcov assymetry; only works if threshold is (nontrivially
     # above) 0
-    p_values += p_values.T    
-    p_values /= num_loops if measure != 'dcor' else 2 * num_loops
+    p_values += p_values.T
+    p_values /= num_loops if measure != "dcor" else 2 * num_loops
 
     return p_values, null_corr
 
 
 def distance(data, perm=False):
-    r"""Computes distance correlation on (if ``perm``, permuted) data set.
+    r"""Compute distance correlation on (if ``perm``, permuted) data set.
 
     Parameters
     ----------
@@ -124,6 +124,12 @@ def distance(data, perm=False):
         and :math:`R_j`.
 
     """
+    try:
+        pairwise
+    except NameError:
+        raise ImportError(
+            "Please install the dcor package to use this feature: `pip install dcor`."
+        )
     if not perm:
         with Pool() as pool:
             corr = pairwise(distcorr, data, pool=pool)
@@ -135,7 +141,7 @@ def distance(data, perm=False):
     return corr
 
 
-def pearson(data, num_resamples, measure='pearson', null_corr=None):
+def pearson(data, num_resamples, measure="pearson", null_corr=None):
     r"""Computes Pearson product-moment correlation coefficient on 
     (if ``perm``, permuted) data set.
 
