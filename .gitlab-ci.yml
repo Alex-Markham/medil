@@ -2,7 +2,7 @@ pytest:
   image: continuumio/miniconda3
   stage: test
   script:
-  - conda update --prefix /opt/conda anaconda
+  - conda update conda
   - conda install numba pip
   - pip install pytest .[all]
   - pytest --junitxml=report.xml
