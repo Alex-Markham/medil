@@ -1,5 +1,5 @@
 pytest:
-  image: conitinuumio/miniconda3
+  image: continuumio/miniconda3
   stage: test
   script:
   - conda update -n base 
