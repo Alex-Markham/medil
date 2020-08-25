@@ -1,26 +1,26 @@
-image: python:3.7
 pytest:
+  image: conitinuumio/miniconda3
   stage: test
   script:
-  - apk add py3-pip python3-dev
-  - pip install numba
+  - conda update -n base 
+  - conda install numba pip
   - pip install pytest .[all]
   - pytest --junitxml=report.xml
   artifacts:
     reports:
       junit: report.xml
 
-# image: alpine
-# pages:
-#   stage: deploy
-#   script:
-#   - apk add py3-pip python3-dev make
-#   - pip install sphinx m2r2 sphinx-rtd-theme sphinxcontrib-bibtex
-#   - cd docs
-#   - make html
-#   - cd ..
-#   - mv docs/_build/html/ public/
-#   artifacts:
-#     paths:
-#     - public
+pages:
+  image: alpine
+  stage: deploy
+  script:
+  - apk add py3-pip python3-dev make
+  - pip install sphinx m2r2 sphinx-rtd-theme sphinxcontrib-bibtex
+  - cd docs
+  - make html
+  - cd ..
+  - mv docs/_build/html/ public/
+  artifacts:
+    paths:
+    - public
  
