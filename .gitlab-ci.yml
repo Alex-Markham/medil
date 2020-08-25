@@ -4,11 +4,11 @@ pytest:
   script:
   - conda update conda
   - conda install numba pip
-  - pip install pytest .[all]
-  - pytest --junitxml=report.xml
+  - pip install pytest-cov .[all]
+  - python -m pytest --cov=medil
   artifacts:
     reports:
-      junit: report.xml
+      - coverage.xml
 
 pages:
   image: alpine
