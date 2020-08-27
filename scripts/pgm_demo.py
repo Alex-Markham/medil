@@ -24,13 +24,13 @@ num_latent, num_observed = triangle_MCM.shape
 decoder = MeasurementModel(biadj_mat=triangle_MCM)
 sampler = gaussian_mixture_sampler(num_latent)
 
-input_sample, output_sample = decoder.sample(sampler, num_samples=100)
+input_sample, output_sample = decoder.sample(sampler, num_samples=1000)
 # output_sample are from measurement variables
 
 
 # step 1: estimate UDG
-null_corr, p_vals = hypothesis_test(output_sample, num_resamples=10, measure='distance')
-dep_graph = dependencies(null_corr, threshold=.1, p_vals, alpha=.1)
+p_vals, null_corr = hypothesis_test(output_sample.T, num_resamples=10, measure='distance')
+dep_graph = dependencies(null_corr, .1, p_vals, .1)
 # dep_graph is adjacency matrix of the estimated UDG
 
 
@@ -42,9 +42,10 @@ learned_biadj_mat = find_cm(dep_graph)
 num_latent, num_observed = learned_biadj_mat.shape
 
 decoder = MeasurementModel(biadj_mat=learned_biadj_mat)
-sampler = data_utils.uniform_sampler(num_latent)
+sampler = uniform_sampler(num_latent)
 
-mmd_net = GAN(decoder, latent_sampler=sampler, batch_size=100)
+
+mmd_net = GAN(input_samples, decoder, latent_sampler=sampler, batch_size=100)
 mmd_net.train_on_dataset(output_sample)
 
 trainer = Trainer(min_epochs=1000)
