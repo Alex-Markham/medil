@@ -54,14 +54,14 @@ am_cm_diff_UDG = np.array(
 
 ## Corresponding example MCMs as biadjacency matriies
 
-simple_M_cover = np.array(
+simple_M_MCM = np.array(
     [
         [1, 1, 0],
         [0, 1, 1]
     ]
 )
 
-triangle_cover = np.array(
+triangle_MCM = np.array(
     [
         [1, 1, 1, 0, 0, 0],
         [0, 1, 0, 1, 1, 0],
@@ -69,7 +69,7 @@ triangle_cover = np.array(
     ]
 )
 
-more_latents_cover = np.array(
+more_latents_MCM = np.array(
     [
         [1, 1, 0, 0, 0, 0],
         [0, 1, 1, 0, 0, 0],
@@ -82,7 +82,7 @@ more_latents_cover = np.array(
     ]
 )
 
-am_cm_diff_cover = np.array(
+am_cm_diff_MCM = np.array(
     [
         [1, 1, 1, 0, 1, 0, 0, 0],
         [1, 0, 0, 1, 0, 0, 1, 0],
