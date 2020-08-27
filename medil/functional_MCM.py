@@ -50,9 +50,16 @@ def uniform_sampler(num_latent, low=-1, high=1):
 
 
 class NNMechanism(nn.Module):
-
-    def __init__(self, num_causes, num_hidden_layers=1, num_hidden_units=20,
-                 non_linearity='tanh', output=None, noise_function=None, noise_coeff=1.0):
+    def __init__(
+        self,
+        num_causes,
+        num_hidden_layers=1,
+        num_hidden_units=20,
+        non_linearity="tanh",
+        output=None,
+        noise_function=None,
+        noise_coeff=1.0,
+    ):
         """
 
         :param num_causes:
@@ -76,13 +83,13 @@ class NNMechanism(nn.Module):
         # Select Activation function
         activation = nn.Identity
 
-        if non_linearity is 'tanh':
+        if non_linearity is "tanh":
             activation = nn.Tanh
-        elif non_linearity is 'relu':
+        elif non_linearity is "relu":
             activation = nn.ReLU
-        elif non_linearity is 'sigmoid':
+        elif non_linearity is "sigmoid":
             activation = nn.Sigmoid
-        elif non_linearity is 'gelu':
+        elif non_linearity is "gelu":
             activation = nn.GELU
 
         # Initialise Layers
@@ -92,9 +99,9 @@ class NNMechanism(nn.Module):
 
         # Output Layer
         final = nn.Identity
-        if output is 'tanh':
+        if output is "tanh":
             final = nn.Tanh
-        elif output is 'sigmoid':
+        elif output is "sigmoid":
             final = nn.Sigmoid
 
         layers.append(activation())
@@ -111,7 +118,7 @@ class NNMechanism(nn.Module):
         # print('final', layers[-2].weight, 'pre-final',layers[-4].weight)
 
         # Exogenous Noise function
-        self.noise_function = lambda n: dist.Normal(0,0.1).sample((n, 1))
+        self.noise_function = lambda n: dist.Normal(0, 0.1).sample((n, 1))
 
         if noise_function is not None:
             self.noise_function = noise_function
@@ -138,28 +145,44 @@ class NNMechanism(nn.Module):
 
 
 class MeasurementModel(nn.Module):
-
-    def __init__(self, biadj_mat, num_hidden_layers=1, num_hidden_units=20,
-                 non_linearity='tanh', output='none', noise_function=None, noise_coeff=1.0, debug=False):
+    def __init__(
+        self,
+        biadj_mat,
+        num_hidden_layers=1,
+        num_hidden_units=20,
+        non_linearity="tanh",
+        output="none",
+        noise_function=None,
+        noise_coeff=1.0,
+        debug=False,
+    ):
 
         super().__init__()
 
         self.biadj_mat = biadj_mat
         self.debug = debug
 
-        self.hparams = {'num_hidden_layers': num_hidden_layers,
-                        'num_hidden_units': num_hidden_units,
-                        'non_linearity': non_linearity,
-                        'output': output,
-                        'noise_coeff':noise_coeff
-                        }
+        self.hparams = {
+            "num_hidden_layers": num_hidden_layers,
+            "num_hidden_units": num_hidden_units,
+            "non_linearity": non_linearity,
+            "output": output,
+            "noise_coeff": noise_coeff,
+        }
 
         self.num_latent = biadj_mat.shape[0]
         self.num_obs = biadj_mat.shape[1]
 
-        self.subset_mask = [np.argwhere(self.biadj_mat[:, idx]).squeeze(axis=-1) for idx in range(self.num_obs)]
+        self.subset_mask = [
+            np.argwhere(self.biadj_mat[:, idx]).squeeze(axis=-1)
+            for idx in range(self.num_obs)
+        ]
 
-        print("Generator initialised. #latent: {}, #observed: {}".format(self.num_latent, self.num_obs))
+        print(
+            "Generator initialised. #latent: {}, #observed: {}".format(
+                self.num_latent, self.num_obs
+            )
+        )
 
         forward_dict = {}
 
@@ -167,38 +190,49 @@ class MeasurementModel(nn.Module):
 
             num_latent_causes = np.sum(self.biadj_mat[:, idx].astype(int))
 
-            mechanism = NNMechanism(num_latent_causes, num_hidden_layers, num_hidden_units,
-                                    non_linearity, output, noise_function, noise_coeff)
+            mechanism = NNMechanism(
+                num_latent_causes,
+                num_hidden_layers,
+                num_hidden_units,
+                non_linearity,
+                output,
+                noise_function,
+                noise_coeff,
+            )
 
             forward_dict[str(idx)] = mechanism
 
-        if self.debug: print('blah')
+        if self.debug:
+            print("blah")
         self.observed = nn.ModuleDict(forward_dict)
 
-        if self.debug: print('blah')
+        if self.debug:
+            print("blah")
 
     def forward(self, x):
 
         output = []
 
-        if self.debug: print('input', x.shape)
+        if self.debug:
+            print("input", x.shape)
         for idx in range(self.num_obs):
 
             if self.debug:
-                print('obs'+str(idx))
-            input_subset_mask = np.argwhere(self.biadj_mat[:,idx])
+                print("obs" + str(idx))
+            input_subset_mask = np.argwhere(self.biadj_mat[:, idx])
 
             if self.debug:
                 print(input_subset_mask.squeeze())
-                print('pre', self.subset_mask[idx])
+                print("pre", self.subset_mask[idx])
             input_subset = x[:, self.subset_mask[idx]]
 
             if self.debug:
-                print('input_subset', input_subset.shape)
+                print("input_subset", input_subset.shape)
                 print(list(self.observed[str(idx)].modules()))
             obs = self.observed[str(idx)](input_subset)
 
-            if self.debug: print('obs', obs.shape)
+            if self.debug:
+                print("obs", obs.shape)
             output.append(obs)
 
         output = torch.cat(output, axis=1)
@@ -248,7 +282,7 @@ class MeasurementModel(nn.Module):
         for latent_idx in range(self.num_latent):
 
             latent_sample = torch.zeros((num_samples, self.num_latent))
-            latent_sample[:, latent_idx] = torch.arange(-10., 10., 20./num_samples)
+            latent_sample[:, latent_idx] = torch.arange(-10.0, 10.0, 20.0 / num_samples)
 
             output_sample = self.forward(latent_sample)
 
@@ -260,8 +294,7 @@ class MeasurementModel(nn.Module):
 
 
 class GAN(LightningModule):
-
-    def __init__(self, data_filepath, decoder, latent_sampler=None, batch_size=256):
+    def __init__(self, decoder, latent_sampler=None, batch_size=256):
         """
 
         :param data_filepath:
@@ -273,17 +306,15 @@ class GAN(LightningModule):
         super().__init__()
 
         self.hparams = decoder.hparams
-        self.hparams['batch_size'] = batch_size
+        self.hparams["batch_size"] = batch_size
         print(self.hparams)
 
-        self.data_filepath = data_filepath
         self.decoder = decoder
         self.latent_sampler = latent_sampler
         self.batch_size = batch_size
 
         self.num_latent = self.decoder.num_latent
         self.num_obs = self.decoder.num_obs
-
 
     def forward(self, z):
 
@@ -293,13 +324,13 @@ class GAN(LightningModule):
 
         return MMDLoss(x_batch.shape[0])(x_hat_batch, x_batch)
 
+    def train_on_dataset(self, dataset):
+        pass  # TODO: figure out/fix training on data file vs dataset in python workspace
 
-    def train_dataloader(self):
-        # TODO, can also take from workspace instead of only filepath
+    def train_dataloader(self, path):
+        data = np.load(path).astype(np.float32)
 
-        dataset = np.load(self.data_filepath).astype(np.float32)
-
-        return DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+        return DataLoader(data, batch_size=self.batch_size, shuffle=True)
 
     # def configure_optimizers(self):
 
@@ -314,14 +345,16 @@ class GAN(LightningModule):
 
         loss = self.mmd_loss(x_hat, batch)
 
-        tqdm_dict = {'loss': loss}
-        output = OrderedDict({
-            'loss': loss,
-            # 'progress_bar': tqdm_dict,
-            'log': tqdm_dict
-        })
+        tqdm_dict = {"loss": loss}
+        output = OrderedDict(
+            {
+                "loss": loss,
+                # 'progress_bar': tqdm_dict,
+                "log": tqdm_dict,
+            }
+        )
 
-        self.logger.log_metrics({'mmd_loss':loss.item()}, batch_idx)
+        self.logger.log_metrics({"mmd_loss": loss.item()}, batch_idx)
 
         return output
 
@@ -332,6 +365,3 @@ class GAN(LightningModule):
 
     # Experiment Functions
     # def on_train_end(self):
-
-
-
