@@ -9,7 +9,7 @@ except ImportError:
     pass
 
 
-def dependencies(null_corr, p_values, iota=0.05, alpha=0.05):
+def dependencies(null_corr, threshold, p_vals, alpha):
     r"""Returns the estimated Undirected Dependency Graph in the form 
     of an adjacency matrix.
 
@@ -20,16 +20,16 @@ def dependencies(null_corr, p_values, iota=0.05, alpha=0.05):
                 measured association value (e.g., correlation) between
                 random variables :math:`R_i` and :math:`R_j`.
 
-    iota : float, optional
-           The threshold on the measure of association below which two
-           random variables are considered indendent.
-
+    threshold : float
+                The threshold on the measure of association below which
+                two random variables are considered indendent.
+    
     p_values : 2d numpy array of floats
                A square matrix `P`, where :math:`P_{i,j}` is the 
                probability of obtaining a result at least as extreme
                as the one given by :math:`N_{i, j}`.
-    
-    alpha : float, optional
+
+    alpha : float
             The threshold on the p-values above which a result is
             considered statistically significant.
 
@@ -91,7 +91,7 @@ def hypothesis_test(data, num_resamples, measure="pearson"):
     )
     for _ in range(num_loops):
         perm_corr = compute_corr(data, perm=True)
-        p_values += np.array(perm_corr >= null_corr, int)
+        p_values += np.array(perm_corr >= null_corr, int)  # TODO: fix bug
 
     # trick for halfing num loops needed for num_resamples because of
     # distcov assymetry; only works if threshold is (nontrivially
@@ -141,7 +141,7 @@ def distance(data, perm=False):
     return corr
 
 
-def pearson(data, num_resamples, measure="pearson", null_corr=None):
+def pearson(data, perm=False):
     r"""Computes Pearson product-moment correlation coefficient on 
     (if ``perm``, permuted) data set.
 
