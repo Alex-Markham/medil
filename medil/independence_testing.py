@@ -9,7 +9,7 @@ except ImportError:
     pass
 
 
-def dependencies(null_corr, threshold, p_vals, alpha):
+def dependencies(null_corr, threshold, p_values, alpha):
     r"""Returns the estimated Undirected Dependency Graph in the form 
     of an adjacency matrix.
 
@@ -41,7 +41,7 @@ def dependencies(null_corr, threshold, p_vals, alpha):
         :math:`R_j` are estimated to be dependent.
 
     """
-    null_indep = null_corr <= iota
+    null_indep = null_corr <= threshold
     accept_null = p_values >= alpha
     independencies = null_indep & accept_null
     return ~independencies  # dependencies
@@ -96,7 +96,7 @@ def hypothesis_test(data, num_resamples, measure="pearson"):
     # trick for halfing num loops needed for num_resamples because of
     # distcov assymetry; only works if threshold is (nontrivially
     # above) 0
-    p_values += p_values.T
+    p_values += p_values.T      # TODO: debug p_vals>1
     p_values /= num_loops if measure != "dcor" else 2 * num_loops
 
     return p_values, null_corr
