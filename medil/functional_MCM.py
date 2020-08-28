@@ -5,6 +5,7 @@ import torch.distributions as dist
 from pytorch_lightning import LightningModule
 from torch.utils.data import DataLoader
 import numpy as np
+from collections import OrderedDict
 
 
 def gaussian_mixture_sampler(
@@ -144,7 +145,7 @@ class NNMechanism(nn.Module):
         return output
 
 
-class MeasurementModel(nn.Module):
+class MeDILCausalModel(nn.Module):
     def __init__(
         self,
         biadj_mat,
@@ -294,7 +295,7 @@ class MeasurementModel(nn.Module):
 
 
 class GAN(LightningModule):
-    def __init__(self, decoder, latent_sampler=None, batch_size=256):
+    def __init__(self, data_filepath, decoder, latent_sampler=None, batch_size=256):
         """
 
         :param data_filepath:
@@ -309,6 +310,7 @@ class GAN(LightningModule):
         self.hparams["batch_size"] = batch_size
         print(self.hparams)
 
+        self.data_filepath = data_filepath
         self.decoder = decoder
         self.latent_sampler = latent_sampler
         self.batch_size = batch_size
@@ -324,15 +326,14 @@ class GAN(LightningModule):
 
         return MMDLoss(x_batch.shape[0])(x_hat_batch, x_batch)
 
-    def train_on_dataset(self, dataset):
-        pass  # TODO: figure out/fix training on data file vs dataset in python workspace
+    def train_dataloader(self):
 
-    def train_dataloader(self, path):
-        data = np.load(path).astype(np.float32)
+        dataset = np.load(self.data_filepath).astype(np.float32)
 
-        return DataLoader(data, batch_size=self.batch_size, shuffle=True)
+        return DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
 
-    # def configure_optimizers(self):
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters())
 
     # Train Functions
     def training_step(self, batch, batch_idx):
@@ -358,10 +359,40 @@ class GAN(LightningModule):
 
         return output
 
-    # def on_epoch_end(self):
 
-    # Validation Functions
-    # def validation_step(self, batch):
+class MMDLoss(nn.Module):
+    def __init__(self, input_size, bandwidths=None):
+        """Init the model."""
+        super(MMDLoss, self).__init__()
+        if bandwidths is None:
+            bandwidths = torch.Tensor([0.01, 0.1, 1, 10, 100])
+        else:
+            bandwidths = bandwidths
+        s = torch.cat(
+            [
+                torch.ones([input_size, 1]) / input_size,
+                torch.ones([input_size, 1]) / -input_size,
+            ],
+            0,
+        )
 
-    # Experiment Functions
-    # def on_train_end(self):
+        self.register_buffer("bandwidths", bandwidths.unsqueeze(0).unsqueeze(0))
+        self.register_buffer("S", (s @ s.t()))
+
+    def forward(self, x, y):
+
+        X = torch.cat([x, y], 0)
+
+        XX = X @ X.t()
+        X2 = (X * X).sum(dim=1).unsqueeze(0)
+
+        exponent = -2 * XX + X2.expand_as(XX) + X2.t().expand_as(XX)
+
+        b = (
+            exponent.unsqueeze(2).expand(-1, -1, self.bandwidths.shape[2])
+            * -self.bandwidths
+        )
+        lossMMD = torch.sum(self.S.unsqueeze(2) * b.exp()).sqrt()
+
+        return lossMMD
+

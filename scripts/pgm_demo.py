@@ -2,7 +2,7 @@
 import numpy as np
 from medil.examples import triangle_MCM
 from medil.functional_MCM import gaussian_mixture_sampler
-from medil.functional_MCM import MeasurementModel  # also used in step 3
+from medil.functional_MCM import MeDILCausalModel  # also used in step 3
 
 # for step 1
 from medil.independence_testing import hypothesis_test, dependencies
@@ -21,12 +21,11 @@ import medil.visualize as vis
 # make sample data
 num_latent, num_observed = triangle_MCM.shape
 
-decoder = MeasurementModel(biadj_mat=triangle_MCM)
+decoder = MeDILCausalModel(biadj_mat=triangle_MCM)
 sampler = gaussian_mixture_sampler(num_latent)
 
 input_sample, output_sample = decoder.sample(sampler, num_samples=1000)
-# output_sample are from measurement variables
-
+np.save('measurement_data', output_sample)
 
 # step 1: estimate UDG
 p_vals, null_corr = hypothesis_test(output_sample.T, num_resamples=10, measure='distance')
@@ -41,19 +40,16 @@ learned_biadj_mat = find_cm(dep_graph)
 # step 3: learn functional MCM
 num_latent, num_observed = learned_biadj_mat.shape
 
-decoder = MeasurementModel(biadj_mat=learned_biadj_mat)
+decoder = MeDILCausalModel(biadj_mat=learned_biadj_mat)
 sampler = uniform_sampler(num_latent)
 
-
-mmd_net = GAN(input_samples, decoder, latent_sampler=sampler, batch_size=100)
-mmd_net.train_on_dataset(output_sample)
-
+minMCM = GAN('measurement_data.npy', decoder, latent_sampler=sampler, batch_size=100)
 trainer = Trainer(min_epochs=1000)
-trainer.fit(mmd_net)
+trainer.fit(minMCM)
 
 
 # confirm given and learned causal structures match
-vis.show_graph(given_biadj_mat)
+vis.show_graph(triangle_MCM)
 vis.show_graph(learned_biadj_mat)
 
 # compare plots of distance correlation values for given and learned MCMs
