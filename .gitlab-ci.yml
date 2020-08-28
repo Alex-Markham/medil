@@ -3,6 +3,8 @@ pytest:
   stage: test
   script:
   - conda update conda
+  - conda create --name py-medil
+  - conda activate py-medil
   - conda install numba pip
   - pip install pytest-cov .[all]
   - python -m pytest --cov-report html --cov-report term --cov=medil
