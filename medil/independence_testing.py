@@ -5,8 +5,9 @@ from multiprocessing import Pool
 
 try:
     from dcor import pairwise, distance_correlation as distcorr
+    default_measure = "distance"
 except ImportError:
-    pass
+    default_measure = "pearson"
 
 
 def dependencies(null_corr, threshold, p_values, alpha):
@@ -47,7 +48,7 @@ def dependencies(null_corr, threshold, p_values, alpha):
     return ~independencies  # dependencies
 
 
-def hypothesis_test(data, num_resamples, measure="pearson"):
+def hypothesis_test(data, num_resamples, measure=default_measure):
     r"""Performs random permutation tests to estimate independence.
 
     Parameters
