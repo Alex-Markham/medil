@@ -20,4 +20,5 @@ There are additional optional requirements for extra features:
 
 In order to use these features, simply append the corresponding comma-separated keys after the package name in brackets (with no spaces), e.g., ``pip install medil[vis,dcor]``.
 
-If you have problems installing ``dcor``, try using a fresh python 3.7 virtual environment, and first installing ``numba``, and then ``scipy`` before installing ``medil`` with the ``dcor`` key.
+You may encounter problems with installation due to ``llvmlite`` which is required by ``numba`` which is required by ``dcor``.
+These can usually be resolved by using a fresh virtual environment and then installing ``medil`` (with the ``all`` or ``dcor`` key) before any other packages.
