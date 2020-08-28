@@ -51,20 +51,19 @@ def show_obs_dcor_mat(dcor_mat, thresh=None, print_val=False):
 
 
 # %%
-def show_graph(incidence_mat):
+def show_dag(biadj_mat):
     """
 
-    :param incidence_mat:
+    :param biadj_mat:
     :return:
     """
 
-    num_latent = incidence_mat.shape[0]
-    num_obs = incidence_mat.shape[1]
+    num_latent, num_obs = biadj_mat.shape
 
     pos_dict = {}
 
-    latent_pos_dict = {idx:(val,1) for idx, val in enumerate(np.linspace(0,1,num_latent))}
-    obs_pos_dict = {idx+num_latent:(val,0) for idx, val in enumerate(np.linspace(0,1,num_obs))}
+    latent_pos_dict = {idx:(val,1) for idx, val in enumerate(np.linspace(0, 1, num_latent))}
+    obs_pos_dict = {idx+num_latent:(val,0) for idx, val in enumerate(np.linspace(0, 1, num_obs))}
 
 
     pos_dict.update(latent_pos_dict)
@@ -75,18 +74,30 @@ def show_graph(incidence_mat):
     node_color.extend(num_latent*[0])
     node_color.extend(num_obs*[1])
 
-    full_adj_mat = get_full_adj_from_incidence(incidence_mat)
+    full_adj_mat = get_dag_from_biadj(biadj_mat)
 
     G = nx.DiGraph(full_adj_mat)
 
-    nx.draw_networkx(G, pos=pos_dict, arrows=True, with_labels=False, node_size=2350)
-    nx.draw_networkx_labels(G, pos=latent_pos_dict, labels={0:'$L_1$', 1:'$L_2$', 2:'$L_3$'}, font_color='w')
-    nx.draw_networkx_labels(G, pos=obs_pos_dict, labels={3:'$M_1$', 4:'$M_2$', 5:'$M_3$', 6:'$M_4$', 7:'$M_5$', 8:'$M_6$'}, font_color='k', arrows=True)
+    nx.draw_networkx(G, pos=pos_dict, with_labels=False, node_size=2350)
+    nx.draw_networkx_labels(G, pos=latent_pos_dict, labels={idx: '$L_{{{}}}$'.format(idx) for idx in range(num_latent)}, font_color='w')
+    nx.draw_networkx_labels(G, pos=obs_pos_dict, labels={idx+num_latent: '$M_{{{}}}$'.format(idx) for idx in range(num_obs)}, font_color='k')
     nx.draw_networkx_nodes(G, node_size=2500, pos=pos_dict, node_color=node_color)
     # nx.draw_networkx(G, pos=pos_dict, arrows=True, with_labels=False)
     plt.xlim(-0.1, 1.1)
     plt.ylim(-0.5, 1.5)
     plt.show()
+
+    
+# %%
+def get_dag_from_biadj(biadj_mat):
+
+    num_latent, num_obs = biadj_mat.shape
+
+    dag_adj_mat = np.zeros((num_latent+num_obs, num_latent+num_obs))
+
+    dag_adj_mat[:num_latent, num_latent:] = biadj_mat
+
+    return dag_adj_mat
 
 
 # %%
