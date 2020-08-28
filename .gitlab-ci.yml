@@ -4,6 +4,7 @@ pytest:
   script:
   - conda update conda
   - conda create --name py-medil
+  - conda init bash
   - conda activate py-medil
   - conda install numba pip
   - pip install pytest-cov .[all]
