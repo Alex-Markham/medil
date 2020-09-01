@@ -81,8 +81,8 @@ def hypothesis_test(data, num_resamples, measure=default_measure):
 
     See Also
     --------
-    pearson_correlation : Used when `measure == 'pearson'`.
-    distance_correlation : Used when `measure == 'dcor'`.
+    pearson_correlation : Used when ``measure == 'pearson'``.
+    distance_correlation : Used when ``measure == 'dcor'``.
 
     Notes
     -----
