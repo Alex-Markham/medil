@@ -4,8 +4,9 @@ import numpy as np
 from multiprocessing import Pool
 
 try:
-    from dcor import pairwise, distance_correlation as distcorr
-    default_measure = "distance"
+    from dcor import pairwise, distance_correlation as dist_corr
+
+    default_measure = "dcor"
 except ImportError:
     default_measure = "pearson"
 
@@ -61,7 +62,10 @@ def hypothesis_test(data, num_resamples, measure=default_measure):
                     Number of permutations used to calculate p-values.
 
     measure : str, optional
-              Measure of association to use as test statistic. 
+              Measure of association to use as test statistic. Either
+              `pearson` (default if `dcor` package is not installed) 
+              for a linear measure or `dcor` (default if installed) for
+              a nonlinear measure.
 
     Returns
     -------
@@ -75,36 +79,50 @@ def hypothesis_test(data, num_resamples, measure=default_measure):
                 the measured association value (e.g., correlation) 
                 between random variables :math:`R_i` and :math:`R_j`.
 
+    See Also
+    --------
+    pearson_correlation : Used when `measure == 'pearson'`.
+    distance_correlation : Used when `measure == 'dcor'`.
+
+    Notes
+    -----
+    The runtime when using ``distance_correlation`` is nearly cut in 
+    halve by first generating two permuted data matrices, ``a`` and
+    ``b`` and then calling ``distance_correlation(a, b)`` and using the
+    upper and lower triangles, as opposed to calling 
+    ``distance_correlation(a)`` and ``distance_correlation(b)`` 
+    separately while using only one triangle from each. A similar trick
+    could be employed in ``pearson_correlation``, but it reduces the
+    runtime by less than 10%. Another (mathematically) similar trick 
+    would be to compute the correlation on ``np.vstack((a, b))``, but
+    this also is less than a 10% improvement.
+
     """
     if measure == "pearson":
-        compute_corr = pearson
-    elif measure == "distance":
-        compute_corr = distance
+        compute_corr = pearson_correlation
+    elif measure == "dcor":
+        compute_corr = distance_correlation
     else:
-        print("{} is not a supported correlation measure".format(measure))
+        raise ValueError("{} is not a supported measure of association".format(measure))
 
     null_corr = compute_corr(data)
 
     # initialize aux vars used in loop
     p_values = np.zeros(null_corr.shape)
-    num_loops = (
-        num_resamples if measure != "distance" else int(np.ceil(num_resamples / 2))
-    )
+    num_loops = num_resamples if measure != "dcor" else int(np.ceil(num_resamples / 2))
     for _ in range(num_loops):
         perm_corr = compute_corr(data, perm=True)
-        p_values += np.array(perm_corr >= null_corr, int)  # TODO: fix bug
+        p_values += np.array(perm_corr >= null_corr, int)
 
-    # trick for halfing num loops needed for num_resamples because of
-    # distcov assymetry; only works if threshold is (nontrivially
-    # above) 0
-    p_values += p_values.T      # TODO: debug p_vals>1
+    p_values += p_values.T
     p_values /= num_loops if measure != "dcor" else 2 * num_loops
 
     return p_values, null_corr
 
 
-def distance(data, perm=False):
-    r"""Compute distance correlation on (if ``perm``, permuted) data set.
+def distance_correlation(data, perm=False):
+    r"""Compute distance correlation on data set (or on permuted data 
+    set, if ``perm`` is ``True).
 
     Parameters
     ----------
@@ -129,11 +147,11 @@ def distance(data, perm=False):
         pairwise
     except NameError:
         raise ImportError(
-            "Please install the dcor package to use this feature: `pip install dcor`."
+            "Install the dcor package to use this feature: `pip install dcor`."
         )
     if not perm:
         with Pool() as pool:
-            corr = pairwise(distcorr, data, pool=pool)
+            corr = pairwise(dist_corr, data, pool=pool)
     else:
         data_permed = permute_within_rows(data)
         data_permed_2 = permute_within_rows(data)
@@ -142,9 +160,9 @@ def distance(data, perm=False):
     return corr
 
 
-def pearson(data, perm=False):
-    r"""Computes Pearson product-moment correlation coefficient on 
-    (if ``perm``, permuted) data set.
+def pearson_correlation(data, perm=False):
+    r"""Computes Pearson product-moment correlation coefficient on data
+    set (or on permuted data set, if ``perm`` is ``True).
 
     Parameters
     ----------
