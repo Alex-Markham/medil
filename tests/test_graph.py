@@ -4,7 +4,7 @@ import medil.examples as ex
 
 
 def test_make_aux_on_triangle():
-    graph = UndirectedDependenceGraph(ex.triangle_UDG())
+    graph = UndirectedDependenceGraph(ex.triangle.UDG)
     graph.make_aux()
 
     # non-edges:
@@ -54,17 +54,11 @@ def test_reduce_rule_2_3cycle():
 
 
 def test_cover_edges():
-    graph_triangle = np.asarray([
-        [1, 1, 1, 0, 0, 0],
-        [1, 1, 1, 1, 1, 0],
-        [1, 1, 1, 0, 1, 1],
-        [0, 1, 0, 1, 1, 0],
-        [0, 1, 1, 1, 1, 1],
-        [0, 0, 1, 0, 1, 1]])
+    triangle_udg = ex.triangle.UDG
 
     clique = np.array([1, 1, 1, 0, 0, 0], int)
 
-    being_tested = UndirectedDependenceGraph(graph_triangle).reducible_copy()
+    being_tested = UndirectedDependenceGraph(triangle_udg).reducible_copy()
     being_tested.the_cover = clique.reshape(1, 6)
     being_tested.cover_edges()
 

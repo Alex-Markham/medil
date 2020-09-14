@@ -4,16 +4,16 @@ import numpy as np
 
 class ExampleUDGAndMCM(object):
     r"""Example consisting of a description, UDG, and MCM"""
-    def __init__(self, discription):
-        self.discription = description
-        self.udg = None
-        self.mcm = None
+    def __init__(self, description):
+        self.description = description
+        self.UDG = None
+        self.MCM = None
 
     def add_udg(self, udg):
-        self.udg = np.array(udg)
+        self.UDG = np.array(udg)
 
     def add_mcm(self, mcm):
-        self.mcm = np.array(mcm)
+        self.MCM = np.array(mcm)
 
 
 simple_M = ExampleUDGAndMCM("M-shaped mcm, with 2 latent- and 3 measurement-variables")
