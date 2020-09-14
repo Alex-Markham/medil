@@ -34,35 +34,33 @@ def test_reduction_rule_1_on_3cycle_plus_isolated():
     assert ~np.any(cover - [0, 1, 1, 1], axis=1)
 
 
+def test_find_cm_on_simple_M():
+    cover = find_cm(ex.simple_M_UDG())
+    correct_cover = ex.simple_M_MCM()
+    assert cover.shape == correct_cover.shape
+    for clique in correct_cover:
+        assert (~np.any(cover - clique, axis=1)).any()
+
+
+def test_find_cm_on_more_latents():
+    cover = find_cm(ex.more_latents_UDG())
+    correct_cover = ex.more_latents_MCM()
+    assert cover.shape == correct_cover.shape
+    for clique in correct_cover:
+        assert (~np.any(cover - clique, axis=1)).any()
+
+
 def test_find_cm_on_triangle():
     cover = find_cm(ex.triangle_UDG())
-    assert cover.shape == (3, 6)
-
     correct_cover = ex.triangle_MCM()
-
-    assert (~np.any(cover - correct_cover[0], axis=1)).any()
-    assert (~np.any(cover - correct_cover[1], axis=1)).any()
-    assert (~np.any(cover - correct_cover[2], axis=1)).any()
+    assert cover.shape == correct_cover.shape
+    for clique in correct_cover:
+        assert (~np.any(cover - clique, axis=1)).any()
 
 
 def test_find_cm_on_clean_am_cm_diff():
     cover = find_cm(ex.am_cm_diff_UDG())
-    assert cover.shape == (5, 8)
-
     correct_cover = ex.am_cm_diff_MCM()
-
-    assert (~np.any(cover - correct_cover[0], axis=1)).any()
-    assert (~np.any(cover - correct_cover[1], axis=1)).any()
-    assert (~np.any(cover - correct_cover[2], axis=1)).any()
-    assert (~np.any(cover - correct_cover[3], axis=1)).any()
-    assert (~np.any(cover - correct_cover[4], axis=1)).any()  # not from rule 2
-
-
-# def test_reduce_rule_1_on_triangle():
-#     graph_triangle = np.asarray([
-#         [1, 1, 1, 0, 0, 0],
-#         [1, 1, 1, 1, 1, 0],
-#         [1, 1, 1, 0, 1, 1],
-#         [0, 1, 0, 1, 1, 0],
-#         [0, 1, 1, 1, 1, 1],
-#         [0, 0, 1, 0, 1, 1]])
+    assert cover.shape == correct_cover.shape
+    for clique in correct_cover:
+        assert (~np.any(cover - clique, axis=1)).any()
