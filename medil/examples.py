@@ -2,107 +2,102 @@
 import numpy as np
 
 
-def simple_M_UDG():
-    return np.array(
-        [
-            [1, 1, 0],
-            [1, 1, 1],
-            [0, 1, 1]
-        ]
-    )
+class ExampleUDGAndMCM(object):
+    r"""Example consisting of a description, UDG, and MCM"""
+    def __init__(self, discription):
+        self.discription = description
+        self.udg = None
+        self.mcm = None
+
+    def add_udg(self, udg):
+        self.udg = np.array(udg)
+
+    def add_mcm(self, mcm):
+        self.mcm = np.array(mcm)
 
 
-# Triangle example, where minECC differs from set of allmaximal cliques
-def triangle_UDG():
-    return np.asarray(
-        [
-            [1, 1, 1, 0, 0, 0],
-            [1, 1, 1, 1, 1, 0],
-            [1, 1, 1, 0, 1, 1],
-            [0, 1, 0, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1],
-            [0, 0, 1, 0, 1, 1],
-        ]
-    )
+simple_M = ExampleUDGAndMCM("M-shaped mcm, with 2 latent- and 3 measurement-variables")
+simple_M.add_udg(
+    [
+        [1, 1, 0],
+        [1, 1, 1],
+        [0, 1, 1]
+    ]
+)
+simple_M.add_mcm(
+    [
+        [0, 1, 1],
+        [1, 1, 0]
+    ]
+)
 
+triangle = ExampleUDGAndMCM("triangle example, where minECC differs from set of all maximal cliques")
+triangle.add_udg(
+    [
+        [1, 1, 1, 0, 0, 0],
+        [1, 1, 1, 1, 1, 0],
+        [1, 1, 1, 0, 1, 1],
+        [0, 1, 0, 1, 1, 0],
+        [0, 1, 1, 1, 1, 1],
+        [0, 0, 1, 0, 1, 1],
+    ]
+)
+triangle.add_mcm(
+    [
+        [0, 0, 1, 0, 1, 1],
+        [0, 1, 0, 1, 1, 0],
+        [1, 1, 1, 0, 0, 0]
+    ]
+)
 
-# Example where number of latent variables is larger than number of measurement variables
-def more_latents_UDG():
-    return np.array(
-        [
-            [1, 1, 0, 1, 0, 1],
-            [1, 1, 1, 0, 1, 0],
-            [0, 1, 1, 1, 0, 0],
-            [1, 0, 1, 1, 1, 0],
-            [0, 1, 0, 1, 1, 1],
-            [1, 0, 0, 0, 1, 1],
-        ]
-    )
+more_latents = ExampleUDGAndMCM("example where number of latent variables is larger than number of measurement variables")
+more_latents.add_udg(
+    [
+        [1, 1, 0, 1, 0, 1],
+        [1, 1, 1, 0, 1, 0],
+        [0, 1, 1, 1, 0, 0],
+        [1, 0, 1, 1, 1, 0],
+        [0, 1, 0, 1, 1, 1],
+        [1, 0, 0, 0, 1, 1],
+    ]
+)
+more_latents.add_mcm(
+    [
+        [1, 1, 0, 0, 0, 0],
+        [0, 1, 1, 0, 0, 0],
+        [0, 0, 1, 1, 0, 0],
+        [0, 0, 0, 1, 1, 0],
+        [0, 0, 0, 0, 1, 1],
+        [1, 0, 0, 0, 0, 1],
+        [1, 0, 0, 1, 0, 0],
+        [0, 1, 0, 0, 1, 0],
+    ]
+)
 
+am_cm_diff = ExampleUDGAndMCM("example where multiple ECCs are possible depending on edge minimal vs vertex minimal")
+am_cm_diff.add_udg(
+    [
+        [1, 1, 1, 1, 1, 0, 1, 0],
+        [1, 1, 1, 0, 1, 1, 1, 1],
+        [1, 1, 1, 0, 1, 1, 1, 1],
+        [1, 0, 0, 1, 0, 1, 1, 1],
+        [1, 1, 1, 0, 1, 1, 0, 1],
+        [0, 1, 1, 1, 1, 1, 0, 1],
+        [1, 1, 1, 1, 0, 0, 1, 1],
+        [0, 1, 1, 1, 1, 1, 1, 1],
+    ]
+)
+am_cm_diff.add_mcm(
+    [
+        [1, 1, 1, 0, 1, 0, 0, 0],
+        [1, 0, 0, 1, 0, 0, 1, 0],
+        [0, 1, 1, 0, 1, 1, 0, 1],
+        [0, 0, 0, 1, 0, 1, 0, 1],
+        [0, 1, 1, 0, 0, 0, 1, 1],
+    ]
+)
 
-# Example where multiple ECCs are possible depending on edge minimal vs vertex minimal
-def am_cm_diff_UDG():
-    return np.array(
-        [
-            [1, 1, 1, 1, 1, 0, 1, 0],
-            [1, 1, 1, 0, 1, 1, 1, 1],
-            [1, 1, 1, 0, 1, 1, 1, 1],
-            [1, 0, 0, 1, 0, 1, 1, 1],
-            [1, 1, 1, 0, 1, 1, 0, 1],
-            [0, 1, 1, 1, 1, 1, 0, 1],
-            [1, 1, 1, 1, 0, 0, 1, 1],
-            [0, 1, 1, 1, 1, 1, 1, 1],
-        ]
-    )
-
-
-## Corresponding example MCMs as biadjacency matriies
-
-
-def simple_M_MCM():
-    return np.array(
-        [
-            [0, 1, 1],
-            [1, 1, 0]
-        ]
-    )
-
-
-def triangle_MCM():
-    return np.array(
-        [
-            [0, 0, 1, 0, 1, 1],
-            [0, 1, 0, 1, 1, 0],
-            [1, 1, 1, 0, 0, 0]
-        ]
-    )
-
-
-def more_latents_MCM():
-    return np.array(
-        [
-            [1, 1, 0, 0, 0, 0],
-            [0, 1, 1, 0, 0, 0],
-            [0, 0, 1, 1, 0, 0],
-            [0, 0, 0, 1, 1, 0],
-            [0, 0, 0, 0, 1, 1],
-            [1, 0, 0, 0, 0, 1],
-            [1, 0, 0, 1, 0, 0],
-            [0, 1, 0, 0, 1, 0],
-        ]
-    )
-
-
-def am_cm_diff_MCM():
-    return np.array(
-        [
-            [1, 1, 1, 0, 1, 0, 0, 0],
-            [1, 0, 0, 1, 0, 0, 1, 0],
-            [0, 1, 1, 0, 1, 1, 0, 1],
-            [0, 0, 0, 1, 0, 1, 0, 1],
-            [0, 1, 1, 0, 0, 0, 1, 1],
-        ]
-    )
+examples = (simple_M, triangle, more_latents, am_cm_diff)
 
 
 ## Data
