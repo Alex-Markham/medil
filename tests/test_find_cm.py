@@ -1,8 +1,5 @@
 import numpy as np
 from medil.ecc_algorithms import find_clique_min_cover as find_cm
-from medil.ecc_algorithms import branch
-from medil.ecc_algorithms import max_cliques
-from medil.graph import UndirectedDependenceGraph
 from medil.examples import examples
 
 
@@ -24,9 +21,9 @@ def test_find_cm_on_3_cycle():
 
 
 def test_reduction_rule_1_on_3cycle_plus_isolated():
-    graph = np.zeros((4, 4), dtype=int)  # init
-    graph[1:4, 1:4] = 1  # add 3cycle
-    graph[0, 0] = 1  # add isolated vert
+    graph = np.zeros((4, 4), dtype=int)
+    graph[1:4, 1:4] = 1
+    graph[0, 0] = 1
 
     cover = find_cm(graph)
 
