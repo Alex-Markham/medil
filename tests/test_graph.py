@@ -1,16 +1,10 @@
 import numpy as np
 from medil.graph import UndirectedDependenceGraph
+import medil.examples as ex
 
 
 def test_make_aux_on_triangle():
-    graph_triangle = np.asarray([
-        [1, 1, 1, 0, 0, 0],
-        [1, 1, 1, 1, 1, 0],
-        [1, 1, 1, 0, 1, 1],
-        [0, 1, 0, 1, 1, 0],
-        [0, 1, 1, 1, 1, 1],
-        [0, 0, 1, 0, 1, 1]])
-    graph = UndirectedDependenceGraph(graph_triangle)
+    graph = UndirectedDependenceGraph(ex.triangle_UDG())
     graph.make_aux()
 
     # non-edges:

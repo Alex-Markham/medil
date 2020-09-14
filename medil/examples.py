@@ -1,96 +1,108 @@
-"""Example graphs and data, for use in tutorials and testing."""
+"""Example graphs and data, for use in testing and tutorials."""
 import numpy as np
 
 
-## Example UDGs
+def simple_M_UDG():
+    return np.array(
+        [
+            [1, 1, 0],
+            [1, 1, 1],
+            [0, 1, 1]
+        ]
+    )
 
-# Simple "M" example
-simple_M_UDG = np.array(
-    [
-        [1, 1, 0],
-        [1, 1, 1],
-        [0, 1, 1]
-    ]
-)
 
 # Triangle example, where minECC differs from set of allmaximal cliques
-triangle_UDG = np.asarray(
-    [
-        [1, 1, 1, 0, 0, 0],
-        [1, 1, 1, 1, 1, 0],
-        [1, 1, 1, 0, 1, 1],
-        [0, 1, 0, 1, 1, 0],
-        [0, 1, 1, 1, 1, 1],
-        [0, 0, 1, 0, 1, 1],
-    ]
-)
+def triangle_UDG():
+    return np.asarray(
+        [
+            [1, 1, 1, 0, 0, 0],
+            [1, 1, 1, 1, 1, 0],
+            [1, 1, 1, 0, 1, 1],
+            [0, 1, 0, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1],
+            [0, 0, 1, 0, 1, 1],
+        ]
+    )
+
 
 # Example where number of latent variables is larger than number of measurement variables
-more_latents_UDG = np.array(
-    [
-        [1, 1, 0, 1, 0, 1],
-        [1, 1, 1, 0, 1, 0],
-        [0, 1, 1, 1, 0, 0],
-        [1, 0, 1, 1, 1, 0],
-        [0, 1, 0, 1, 1, 1],
-        [1, 0, 0, 0, 1, 1],
-    ]
-)
+def more_latents_UDG():
+    return np.array(
+        [
+            [1, 1, 0, 1, 0, 1],
+            [1, 1, 1, 0, 1, 0],
+            [0, 1, 1, 1, 0, 0],
+            [1, 0, 1, 1, 1, 0],
+            [0, 1, 0, 1, 1, 1],
+            [1, 0, 0, 0, 1, 1],
+        ]
+    )
+
 
 # Example where multiple ECCs are possible depending on edge minimal vs vertex minimal
-am_cm_diff_UDG = np.array(
-    [
-        [1, 1, 1, 1, 1, 0, 1, 0],
-        [1, 1, 1, 0, 1, 1, 1, 1],
-        [1, 1, 1, 0, 1, 1, 1, 1],
-        [1, 0, 0, 1, 0, 1, 1, 1],
-        [1, 1, 1, 0, 1, 1, 0, 1],
-        [0, 1, 1, 1, 1, 1, 0, 1],
-        [1, 1, 1, 1, 0, 0, 1, 1],
-        [0, 1, 1, 1, 1, 1, 1, 1],
-    ]
-)
+def am_cm_diff_UDG():
+    return np.array(
+        [
+            [1, 1, 1, 1, 1, 0, 1, 0],
+            [1, 1, 1, 0, 1, 1, 1, 1],
+            [1, 1, 1, 0, 1, 1, 1, 1],
+            [1, 0, 0, 1, 0, 1, 1, 1],
+            [1, 1, 1, 0, 1, 1, 0, 1],
+            [0, 1, 1, 1, 1, 1, 0, 1],
+            [1, 1, 1, 1, 0, 0, 1, 1],
+            [0, 1, 1, 1, 1, 1, 1, 1],
+        ]
+    )
 
 
 ## Corresponding example MCMs as biadjacency matriies
 
-simple_M_MCM = np.array(
-    [
-        [1, 1, 0],
-        [0, 1, 1]
-    ]
-)
 
-triangle_MCM = np.array(
-    [
-        [1, 1, 1, 0, 0, 0],
-        [0, 1, 0, 1, 1, 0],
-        [0, 0, 1, 0, 1, 1]
-    ]
-)
+def simple_M_MCM():
+    return np.array(
+        [
+            [1, 1, 0],
+            [0, 1, 1]
+        ]
+    )
 
-more_latents_MCM = np.array(
-    [
-        [1, 1, 0, 0, 0, 0],
-        [0, 1, 1, 0, 0, 0],
-        [0, 0, 1, 1, 0, 0],
-        [0, 0, 0, 1, 1, 0],
-        [0, 0, 0, 0, 1, 1],
-        [1, 0, 0, 0, 0, 1],
-        [1, 0, 0, 1, 0, 0],
-        [0, 1, 0, 0, 1, 0],
-    ]
-)
 
-am_cm_diff_MCM = np.array(
-    [
-        [1, 1, 1, 0, 1, 0, 0, 0],
-        [1, 0, 0, 1, 0, 0, 1, 0],
-        [0, 1, 1, 0, 1, 1, 0, 1],
-        [0, 0, 0, 1, 0, 1, 0, 1],
-        [0, 1, 1, 0, 0, 0, 1, 1],
-    ]
-)
+def triangle_MCM():
+    return np.array(
+        [
+            [0, 0, 1, 0, 1, 1],
+            [0, 1, 0, 1, 1, 0],
+            [1, 1, 1, 0, 0, 0]
+        ]
+    )
+
+
+def more_latents_MCM():
+    return np.array(
+        [
+            [1, 1, 0, 0, 0, 0],
+            [0, 1, 1, 0, 0, 0],
+            [0, 0, 1, 1, 0, 0],
+            [0, 0, 0, 1, 1, 0],
+            [0, 0, 0, 0, 1, 1],
+            [1, 0, 0, 0, 0, 1],
+            [1, 0, 0, 1, 0, 0],
+            [0, 1, 0, 0, 1, 0],
+        ]
+    )
+
+
+def am_cm_diff_MCM():
+    return np.array(
+        [
+            [1, 1, 1, 0, 1, 0, 0, 0],
+            [1, 0, 0, 1, 0, 0, 1, 0],
+            [0, 1, 1, 0, 1, 1, 0, 1],
+            [0, 0, 0, 1, 0, 1, 0, 1],
+            [0, 1, 1, 0, 0, 0, 1, 1],
+        ]
+    )
 
 
 ## Data
