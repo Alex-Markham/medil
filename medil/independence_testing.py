@@ -11,46 +11,10 @@ except ImportError:
     default_measure = "pearson"
 
 
-def dependencies(null_corr, threshold, p_values, alpha):
-    r"""Returns the estimated Undirected Dependency Graph in the form 
-    of an adjacency matrix.
-
-    Parameters
-    ----------
-    null_corr : 2d numpy array of floats
-                A square matrix `N`, where :math:`N_{i,j}` is the 
-                measured association value (e.g., correlation) between
-                random variables :math:`R_i` and :math:`R_j`.
-
-    threshold : float
-                The threshold on the measure of association below which
-                two random variables are considered indendent.
-    
-    p_values : 2d numpy array of floats
-               A square matrix `P`, where :math:`P_{i,j}` is the 
-               probability of obtaining a result at least as extreme
-               as the one given by :math:`N_{i, j}`.
-
-    alpha : float
-            The threshold on the p-values above which a result is
-            considered statistically significant.
-
-    Returns
-    -------
-    2d numpy array of bools
-        A square matrix `D`, where :math:`D_{i,j}` is true if and only
-        if the corresponding random variables :math:`R_i` and
-        :math:`R_j` are estimated to be dependent.
-
-    """
-    null_indep = null_corr <= threshold
-    accept_null = p_values >= alpha
-    independencies = null_indep & accept_null
-    return ~independencies  # dependencies
-
-
-def hypothesis_test(data, num_resamples, measure=default_measure):
-    r"""Performs random permutation tests to estimate independence.
+def hypothesis_test(samples, num_resamples, measure=default_measure, alpha):
+    r"""Performs random permutation tests to estimate independence and 
+    returns the estimated Undirected Dependency Graph in the form of an
+    adjacency matrix.
 
     Parameters
     ----------
@@ -67,6 +31,10 @@ def hypothesis_test(data, num_resamples, measure=default_measure):
               for a linear measure or `dcor` (default if installed) for
               a nonlinear measure.
 
+    alpha : float
+            The threshold on the p-values above which a result is
+            considered statistically significant.
+
     Returns
     -------
     p_values : 2d numpy array of floats
@@ -74,10 +42,15 @@ def hypothesis_test(data, num_resamples, measure=default_measure):
                probability of obtaining a result at least as extreme
                as the one given by :math:`N_{i, j}`.
 
-    null_corr : 2d numpy array of floats
-                A square matrix :math:`N`, where :math:`N_{i,j}` is 
-                the measured association value (e.g., correlation) 
-                between random variables :math:`R_i` and :math:`R_j`.
+    sample_corr : 2d numpy array of floats
+                  A square matrix :math:`N`, where :math:`N_{i,j}` is 
+                  the measured association value (e.g., correlation) 
+                  between random variables :math:`R_i` and :math:`R_j`.
+        
+    deps : 2d numpy array of bools
+           A square matrix `D`, where :math:`D_{i,j}` is true if and 
+           only if the corresponding random variables :math:`R_i` and
+           :math:`R_j` are not estimated to be independent.
 
     See Also
     --------
@@ -105,19 +78,21 @@ def hypothesis_test(data, num_resamples, measure=default_measure):
     else:
         raise ValueError("{} is not a supported measure of association".format(measure))
 
-    null_corr = compute_corr(data)
+    sample_corr = compute_corr(data)
 
     # initialize aux vars used in loop
-    p_values = np.zeros(null_corr.shape)
+    p_values = np.zeros(sample_corr.shape)
     num_loops = num_resamples if measure != "dcor" else int(np.ceil(num_resamples / 2))
     for _ in range(num_loops):
         perm_corr = compute_corr(data, perm=True)
-        p_values += np.array(perm_corr >= null_corr, int)
+        p_values += np.array(perm_corr >= sample_corr, int)
 
     p_values += p_values.T
     p_values /= num_loops if measure != "dcor" else 2 * num_loops
 
-    return p_values, null_corr
+    deps = p_values > alpha  # not estimated to be independent
+    
+    return p_values, sample_corr, deps
 
 
 def distance_correlation(data, perm=False):
