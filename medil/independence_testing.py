@@ -11,7 +11,7 @@ except ImportError:
     default_measure = "pearson"
 
 
-def hypothesis_test(samples, num_resamples, measure=default_measure, alpha):
+def hypothesis_test(samples, num_resamples, measure=default_measure, alpha=0.05):
     r"""Performs random permutation tests to estimate independence and 
     returns the estimated Undirected Dependency Graph in the form of an
     adjacency matrix.
@@ -31,7 +31,7 @@ def hypothesis_test(samples, num_resamples, measure=default_measure, alpha):
               for a linear measure or `dcor` (default if installed) for
               a nonlinear measure.
 
-    alpha : float
+    alpha : float, optional
             The threshold on the p-values above which a result is
             considered statistically significant.
 
