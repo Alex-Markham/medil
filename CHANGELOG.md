@@ -15,6 +15,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - can now learn functional MCM instead of just structure (using GAN architecture)
 - data simulation (using same GAN architecture)
 - module for visualizing graphs and making various other plots
+- vastly improved documentation site
+- `examples` submodule, with some sample structures and data sets
+
+### Changed ###
+- `independence_testing.dependencies()` subsumed by `independence_testing.hypothesis_test()`
 
 ## [0.4.0] - 2020-07-23 ##
 ### Added ###
