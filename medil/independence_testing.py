@@ -18,9 +18,9 @@ def hypothesis_test(samples, num_resamples, measure=default_measure, alpha=0.05)
 
     Parameters
     ----------
-    data : 2d numpy array of floats or ints
-           A :math:`M \times N` matrix with :math:`N` samples of
-           :math:`M` random variables.
+    samples : 2d numpy array of floats or ints
+              A :math:`M \times N` matrix with :math:`N` samples of
+              :math:`M` random variables.
 
     num_resamples : int, optional
                     Number of permutations used to calculate p-values.
@@ -60,7 +60,7 @@ def hypothesis_test(samples, num_resamples, measure=default_measure, alpha=0.05)
     Notes
     -----
     The runtime when using ``distance_correlation`` is nearly cut in 
-    halve by first generating two permuted data matrices, ``a`` and
+    halve by first generating two permuted samples matrices, ``a`` and
     ``b`` and then calling ``distance_correlation(a, b)`` and using the
     upper and lower triangles, as opposed to calling 
     ``distance_correlation(a)`` and ``distance_correlation(b)`` 
@@ -78,36 +78,36 @@ def hypothesis_test(samples, num_resamples, measure=default_measure, alpha=0.05)
     else:
         raise ValueError("{} is not a supported measure of association".format(measure))
 
-    sample_corr = compute_corr(data)
+    sample_corr = compute_corr(samples)
 
     # initialize aux vars used in loop
     p_values = np.zeros(sample_corr.shape)
     num_loops = num_resamples if measure != "dcor" else int(np.ceil(num_resamples / 2))
     for _ in range(num_loops):
-        perm_corr = compute_corr(data, perm=True)
+        perm_corr = compute_corr(samples, perm=True)
         p_values += np.array(perm_corr >= sample_corr, int)
 
     p_values += p_values.T
     p_values /= num_loops if measure != "dcor" else 2 * num_loops
 
-    deps = p_values > alpha  # not estimated to be independent
-    
+    deps = p_values <= alpha  # reject null hypothesis of independence
+
     return p_values, sample_corr, deps
 
 
-def distance_correlation(data, perm=False):
-    r"""Compute distance correlation on data set (or on permuted data 
+def distance_correlation(samples, perm=False):
+    r"""Compute distance correlation on samples set (or on permuted samples 
     set, if ``perm`` is ``True).
 
     Parameters
     ----------
-    data : 2d numpy array of floats or ints
-           A :math:`M \times N` matrix with :math:`N` samples of
-           :math:`M` random variables.
+    samples : 2d numpy array of floats or ints
+              A :math:`M \times N` matrix with :math:`N` samples of
+              :math:`M` random variables.
 
     perm : bool, optional
            Whether distance correlation is computed on permuted or 
-           original data.
+           original samples.
 
     Returns
     -------
@@ -126,28 +126,28 @@ def distance_correlation(data, perm=False):
         )
     if not perm:
         with Pool() as pool:
-            corr = pairwise(dist_corr, data, pool=pool)
+            corr = pairwise(dist_corr, samples, pool=pool)
     else:
-        data_permed = permute_within_rows(data)
-        data_permed_2 = permute_within_rows(data)
+        samples_permed = permute_within_rows(samples)
+        samples_permed_2 = permute_within_rows(samples)
         with Pool() as pool:
-            corr = pairwise(distcorr, data_permed, data_permed_2, pool=pool)
+            corr = pairwise(dist_corr, samples_permed, samples_permed_2, pool=pool)
     return corr
 
 
-def pearson_correlation(data, perm=False):
-    r"""Computes Pearson product-moment correlation coefficient on data
-    set (or on permuted data set, if ``perm`` is ``True).
+def pearson_correlation(samples, perm=False):
+    r"""Computes Pearson product-moment correlation coefficient on samples
+    set (or on permuted samples set, if ``perm`` is ``True).
 
     Parameters
     ----------
-    data : 2d numpy array of floats or ints
-           A :math:`M \times N` matrix with :math:`N` samples of
-           :math:`M` random variables.
+    samples : 2d numpy array of floats or ints
+              A :math:`M \times N` matrix with :math:`N` samples of
+              :math:`M` random variables.
 
     perm : bool, optional
            Whether Pearson correlation is computed on permuted or 
-           original data.
+           original samples.
 
     Returns
     -------
@@ -159,10 +159,10 @@ def pearson_correlation(data, perm=False):
 
     """
     if not perm:
-        corr = np.corrcoef(data)
+        corr = np.corrcoef(samples)
     else:
-        data_permed = permute_within_rows(data)
-        corr = np.corrcoef(data, data_permed)
+        samples_permed = permute_within_rows(samples)
+        corr = np.corrcoef(samples, samples_permed)
     return corr
 
 
