@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### In progress###
 - causal clustering
 
+## [0.6.0] - 2020-XX-XX ##
+### Changed ###
+- `independence_testing.dependencies()` subsumed by `independence_testing.hypothesis_test()`
+
 ## [0.5.0] - 2020-0X-XX ##
 ### Added ###
 - can now learn functional MCM instead of just structure (using GAN architecture)
@@ -19,7 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `examples` submodule, with some sample structures and data sets
 
 ### Changed ###
-- `independence_testing.dependencies()` subsumed by `independence_testing.hypothesis_test()`
+- various small typo and bug fixes
 
 ## [0.4.0] - 2020-07-23 ##
 ### Added ###
