@@ -1,3 +1,4 @@
+""" Create and display various graphs, plots, and visualizations."""
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns

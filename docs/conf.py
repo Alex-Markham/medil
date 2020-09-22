@@ -46,7 +46,7 @@ pygments_style = 'sphinx'
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 
-autosummary_mock_imports = ['numpy']
+autosummary_mock_imports = ['numpy', 'matplotlib', 'seaborn', 'networkx', 'torch', 'pytorch_lightning']
 autosummary_generate = True
 
 # A list of prefixs that are ignored when creating the module index. (new in Sphinx 0.6)

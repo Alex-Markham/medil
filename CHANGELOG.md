@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## Changed ##
 - `independence_testing.dependencies()` subsumed by `independence_testing.hypothesis_test()`
 - license from GPLv3 to AGPLv3+
+- using [Black](https://black.readthedocs.io/en/stable/?badge=stable) code formatter
 
 ### Fixed ###
 - various small typo and bug fixes
