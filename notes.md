@@ -3,6 +3,14 @@ only:
     changes:
     - docs/*
   - master
+ 
+ -------------------------------------------------------------------------------
+ 
+ for viewing docs site locally:
+ 
+ docs/: make clean; make html
+ 
+ (zook) docs/_build/: python -m http.server
 
 -------------------------------------------------------------------------------
 
@@ -23,9 +31,5 @@ git push origin develop:master
 
 Structuring the Project (in descending order of importance/usefulness/detail):
   * [seems to say everything, but is a lot of reading](https://docs.python-guide.org/writing/structure/)
-  * [extensive---probably useful for a while](https://python-packaging.readthedocs.io/en/latest/minimal.html)
-  * [short---covered in other refs---think i've already done it all]( https://able.bio/SamDev14/how-to-structure-a-python-project--685o1o6)
-  * [pipelines for maintaining code integrity](https://www.patricksoftwareblog.com/setting-up-gitlab-ci-for-a-python-application/)
-  
 [testing in python](https://realpython.com/python-testing/)
 [more testing](https://docs.python-guide.org/writing/tests/)
