@@ -1,5 +1,5 @@
 ## MeDIL
-MeDIL is a Python package for causal inference, focusing on the Measurement Dependence Inducing Latent (MeDIL) Causal Model framework[^fn1].
+MeDIL is a Python package for causal inference, focusing on the Measurement Dependence Inducing Latent (MeDIL) Causal Model framework[<sup>1</sup>](#uai_paper).
 
 More information can be found in the [documentation](https://medil.causal.dev) or on the [project web page](https://causal.dev/project/medil)
 
@@ -14,4 +14,4 @@ See [LICENSE](https://gitlab.com/alex-markham/medil/blob/master/LICENSE.txt), wh
 See [CHANGELOG](https://gitlab.com/alex-markham/medil/blob/master/CHANGELOG.md) for a history of the already implemented features, works in progress, and future feature ideas.
 
 ### References
-[^fn1]: Alex Markham and Moritz Grosse-Wentrup (2019). Measurement Dependence Inducing Latent Causal Models. *Conference on Uncertainty in Artificial Intelligence (UAI)*, 2020. ISSN 2640-3498. URL [http://www.auai.org/uai2020/proceedings/244\_main\_paper.pdf.](http://www.auai.org/uai2020/proceedings/244_main_paper.pdf)
+<a name="uai_paper"> 1.</a> Markham, Alex & Grosse-Wentrup, Moritz. (2020). Measurement Dependence Inducing Latent Causal Models. In *Conference on Uncertainty in Artificial Intelligence (UAI)* PMLR 124:590&ndash;599. URL: [http://proceedings.mlr.press/v124/markham20a/markham20a.pdf](http://proceedings.mlr.press/v124/markham20a/markham20a.pdf)
