@@ -3,7 +3,7 @@ MeDIL is a Python package for causal inference, focusing on the Measurement Depe
 
 More information can be found in the [documentation](https://medil.causal.dev) or on the [project web page](https://causal.dev/project/medil)
 
-### Support, Bugs, and Conttributing
+### Support, Bugs, and Contributing
 If you have any questions, suggestions, feedback, or bugs to report, please [open an issue on Gitlab](https://gitlab.com/alex-markham/medil/issues/new) or [on Github](https://github.com/neuroinfo19/medil/issues/new) or [contact me](https://causal.dev/#contact).
 Additionally, if you would like to use this package or any of its code in your research, or to contribute to this package, feel free (but not obliged) to [contact me](https://causal.dev/#contact).
 
