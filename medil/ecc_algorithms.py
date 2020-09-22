@@ -1,3 +1,4 @@
+"""Implementations of edge clique clover finding algorithms."""
 from .graph import UndirectedDependenceGraph
 import numpy as np
 
@@ -18,9 +19,16 @@ def find_clique_min_cover(graph, verbose=False):
     the_cover : 2d numpy array
                 Biadjacency matrix representing edge clique cover.
 
+    See Also
+    --------
+    graph.UndirectedDependenceGraph : Defines auxilliary data structure 
+                                      and reduction rules used by this
+                                      algorithm.
+
     Notes
     -----
-    need to add citation
+    This is an implementation of the algorithm described in 
+    :cite:`Gramm_2009`.
 
     """
     graph = UndirectedDependenceGraph(graph, verbose)
@@ -70,10 +78,6 @@ def branch(graph, k_num_cliques, the_cover):
     2d numpy array or None
         Biadjacency matrix representing (complete) edge clique cover or None if cover is only partial.
 
-    Notes
-    -----
-    need to add citation
-
     """
     branch_graph = graph.reducible_copy()
     # if the_cover is not None:
@@ -115,7 +119,7 @@ def branch(graph, k_num_cliques, the_cover):
 
 
 def max_cliques(nbrhood):
-    """Returns the clique-minimum edge clique cover.
+    """Adaptation of NetworkX code for finding all maximal cliques.
 
     Parameters
     ----------
@@ -125,12 +129,12 @@ def max_cliques(nbrhood):
     Returns
     -------
     generator
-        
+        set of all maximal cliques
 
     Notes
     -----
-    pieced together from nx.from_numpy_array and nx.find_cliques,
-    which is output sensitive
+    Pieced together from nx.from_numpy_array and nx.find_cliques, which
+    is output sensitive.
 
     """    
     if len(nbrhood) == 0:
