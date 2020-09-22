@@ -29,7 +29,7 @@ author = 'Alex Markham'
 # The full version, including alpha/beta/rc tags.
 with open('../setup.py') as f:
     lines = f.readlines()
-    v_line = lines[4]
+    v_line = lines[9]
     version = v_line[15:-3]
 
 # -- General configuration ---------------------------------------------------
