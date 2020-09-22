@@ -16,7 +16,7 @@ If you make use of the ``MeDIL`` package in connection with MeDIL causal models,
    }
 
 
-Additionally (or alternatively, if you only use the package in ways unrelated to the MeDIL causal modelling framework, e.g., for independence testing or finding edge clique covers), then please cite our PGM software demonstration paper :cite:`Markham_2020_PGM`:
+Additionally (or alternatively, if you only use the package in ways unrelated to the MeDIL causal modelling framework, e.g., for independence testing or finding edge clique covers), please cite our PGM software demonstration paper :cite:`Markham_2020_PGM`:
 
 .. code-block:: bibtex
 

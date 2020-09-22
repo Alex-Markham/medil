@@ -2,7 +2,7 @@
 Installation
 ============
 
-You can install the package using pip by running ``pip install medi`` in a terminal.
+You can install the package using pip by running ``pip install medil`` in a terminal.
 The default only requires NumPy and only allows for limited data simulation, linear Pearson correlation independence testing, and structure learning.
 There are additional optional requirements for extra features:
 
