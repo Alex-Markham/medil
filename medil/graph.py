@@ -19,13 +19,13 @@ class UndirectedDependenceGraph(object):
     Notes
     -----
     The algorithms for finding the minMCM via ECC contain many
-    algebraic operations, so adjacency matrix representation (viaq
+    algebraic operations, so adjacency matrix representation (via
     NumPy) is most covenient.
 
     """
 
     def __init__(self, adj_matrix, verbose=False):
-        # doesn't behave well unless input is nparray;
+        # doesn't behave well unless input is nparray
         self.adj_matrix = adj_matrix
         self.num_vertices = np.trace(adj_matrix)
         self.max_num_verts = len(adj_matrix)
