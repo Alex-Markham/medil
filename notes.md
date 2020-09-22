@@ -1,12 +1,21 @@
-got docs pipline working for docs website, but still need to restrict it to master branch somehow
+TODO:
+
+- got docs pipline working for docs website, but still need to restrict it to master branch somehow:
+```
 only:
     changes:
     - docs/*
   - master
+ ```
+ 
+- clean up setup.py and docs/conf.py (version number)
+- finish documentation
+- docs for different versions of medil
+- put on conda
  
  -------------------------------------------------------------------------------
  
- for viewing docs site locally:
+For viewing docs site locally:
  
  docs/: make clean; make html
  
@@ -15,6 +24,7 @@ only:
 -------------------------------------------------------------------------------
 
 [for conda package](https://stackoverflow.com/questions/49474575/how-to-install-my-own-python-module-package-via-conda-and-watch-its-changes)
+[conda](https://enterprise-docs.anaconda.com/en/latest/data-science-workflows/packages/upload.html)
 [for uploading to pip](https://packaging.python.org/tutorials/packaging-projects/)
 
 -------------------------------------------------------------------------------
