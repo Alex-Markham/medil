@@ -12,7 +12,8 @@ only:
 - finish documentation
 - docs for different versions of medil
 - put on conda
- 
+- [change license again](https://write.pixie.town/licenses-for-freedom/)
+
  -------------------------------------------------------------------------------
  
 For viewing docs site locally:
