@@ -6,8 +6,8 @@ def long_description():
         return readme.read()
 
 
-setup(name='MeDIL',
-      version='0.5.0',
+setup(name='medil',
+      version='0.6.0',
       author='Alex Markham',
       author_email='alex.markham@causal.dev',
       description='This package is for causal inference, focusing on the Measurement Dependence Inducing Latent (MeDIL) Causal Model framework.',

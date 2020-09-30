@@ -10,6 +10,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### In progress###
 - causal clustering
 
+## [0.6.0] - 2020-XX-XX ##
+### Added ###
+
+### Changed ###
+
+### Fixed ###
+- name in `setup.py`
+
+
 ## [0.5.0] - 2020-09-22 ##
 ### Added ###
 - can now learn functional MCM instead of just structure (using GAN architecture)
@@ -33,18 +42,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - package now available on pip
 
 ### Fixed ###
-- bug in max\_intersection\_num calculation
+- bug in `max_intersection_num` calculation
 - exception handling for edgeless graph
-- bug with graph.cover\_edges() use in ecc.find\_cm.branch()
-- bug with using graph copy outside of ecc.find\_cm.branch() rather than within
-- bug where graph.choose\_nbrhood() picked wrong edge (and gave edgeless nbrhood)
+- bug with `graph.cover_edges()` use in `ecc.find_cm.branch()`
+- bug with using graph copy outside of `ecc.find_cm.branch()` rather than within
+- bug where `graph.choose_nbrhood()` picked wrong edge (and gave edgeless nbrhood)
 
 ### Removed ###
-- hack to stop while loop in find\_clique\_min\_cover()
+- hack to stop while loop in `find_clique_min_cover()`
 
 ### Changed ###
 - default verbosity of output
-- reducible\_graph var name to branch\_graph
+- `reducible_graph` var name to `branch_graph`
 - package requirements
 - updated README
 
