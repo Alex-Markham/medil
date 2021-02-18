@@ -5,11 +5,11 @@ import numpy as np
 class UndirectedDependenceGraph(object):
     r"""Adjacency matrix representation using a 2d numpy array.
 
-    Upon initialization, this class is fairly standard implementation 
+    Upon initialization, this class is fairly standard implementation
     of an undirected graph. However, upon calling the :meth:`make_aux`
-    method, an auxilliary data structure in the form of several new 
-    attributes is created, which are used by 
-    :meth:`medil.ecc_algorithms.find_clique_min_cover` according to 
+    method, an auxilliary data structure in the form of several new
+    attributes is created, which are used by
+    :meth:`medil.ecc_algorithms.find_clique_min_cover` according to
     the algorithm in :cite:`Gramm_2009`.
 
     Attributes
@@ -266,7 +266,7 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             exits = np.zeros(self.unreduced.max_num_verts, bool)
             nbrs = np.flatnonzero(nbrhood)
             for nbr in nbrs:
-                if (nbrhood - self.adj_matrix[nbr] == -1).any():
+                if (nbrhood.astype(int) - self.adj_matrix[nbr].astype(int) == -1).any():
                     exits[nbr] = True
             # exits[j] == True iff j is an exit for vert
             # prisoners[j] == True iff j is a prisoner of vert
