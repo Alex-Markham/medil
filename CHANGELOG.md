@@ -7,13 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## Unreleased ##
 - add HSIC test
 - implement AM clique cover
-### In progress###
+### In progress ###
 - causal clustering
-
-## [0.6.0] - 2020-XX-XX ##
-### Added ###
-
+	
+## [0.6.0] - 2021-06-07 ##
 ### Changed ###
+- licences from AGPLv3+ to CNPLv6+	
 
 ### Fixed ###
 - name in `setup.py`

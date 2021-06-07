@@ -11,7 +11,10 @@ Its current features focus on
 all for the class of measurement dependence inducing latent (MeDIL) causal models.
 
 MeDIL causal models and therefore the MeDIL software package are especially suited for analyzing data from fields such as psychometric, epidemiology, etc. that rely on questionnaire or survey data.
-       
+
+The development branch of the repository can be found at `GitLab. <https://gitlab.com/alex-markham/medil/-/tree/develop>`_
+
+
 Documentation
 =============
 ..
