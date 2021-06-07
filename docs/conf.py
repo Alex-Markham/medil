@@ -31,7 +31,7 @@ author = "Alex Markham"
 with open("../setup.py") as f:
     lines = f.readlines()
     v_line = lines[10]
-    version = v_line[13:-2]
+    version = v_line[13:-3]
 
 # -- General configuration ---------------------------------------------------
 
