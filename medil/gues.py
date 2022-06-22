@@ -1,0 +1,224 @@
+"""Implement the Greedy Unconditional Equivalence Search (GUES) algorithm."""
+import numpy as np
+from numpy.linalg import lstsq, norm
+from scipy.stats import chi2, beta
+from scipy.spatial.distance import pdist, squareform
+
+
+class InputData(object):
+    r"""Feed data into GUES to learn its Markov equivalence class.
+
+    Attributes
+    ----------
+    samples : array_like
+        Passes directly to numpy.array to get a :math:`M \times N`
+        matrix with :math:`N` samples of :math:`M` random variables.
+
+    Methods
+    -------
+    gues_MEC(test="gauss", alpha=0.05)
+        Return optimal essential graph (representing a Markov
+        equivalence class of DAGs) within unconditional equivalence
+        class.
+
+    estimate_UEC(test="gauss", alpha=0.05)
+        Return undirected graph resulting from unconditional
+        independence tests.
+
+    initialize_MEC()
+        Return the maximal essential graph in the unconditional
+        equivalence class.
+
+    """
+
+    def __init__(self, samples):
+        self.samples = np.array(samples, dtype=float)
+        self.num_samps, self.num_feats = self.samples.shape
+
+    def gues_MEC(self, test="gauss", alpha=0.01, score_func="GOL0"):
+        r"""Return optimal essential graph (representing a Markov
+        equivalence class of DAGs) within unconditional equivalence
+        class.
+
+        Notes
+        -----
+        Compare to pseudocode in Alg 3 of paper.
+        """
+        self.score_func = score_func
+        self.estimate_uec(test, alpha)
+        self.initialize_MEC()
+        # score initial cpdag
+        while True:
+            # get possible moves
+            # find best scoring move and its score
+            if best_score <= 0:
+                break
+            # take best move
+            # local update to score
+
+    def estimate_UEC(self, test, alpha):
+        r"""Return undirected graph resulting from independence tests."""
+        if test == "gauss":
+            corr = np.corrcoef(self.samples, rowvar=False)
+            dist = beta(self.num_samps / 2 - 1, self.num_samps / 2 - 1, loc=-1, scale=2)
+            crit_val = abs(dist.ppf(alpha / 2))
+            uec = abs(corr) >= crit_val
+
+        if test == "dcov_fast":
+            cov, d_bars = dcov(self.samples)
+            crit_val = chi2(1).ppf(1 - alpha)
+            test_val = self.num_samps * cov / np.outer(d_bars, d_bars)
+            uec = test_val >= crit_val
+
+        if test == "algebraic":
+            # add submodule for this
+            pass
+
+        # if test == "dcov_accurate":
+        #     dcov =
+        #     p_vals =            # perm test
+        #     uec = p_vals[p_vals<=alpha]
+
+        self.uec = uec
+
+    def initialize_MEC(self):
+        r"""Return the maximal essential graph in the unconditional
+        equivalence class."""
+
+        # find all induced 2-paths i--j--k, by implicitly looping
+        # through missing edges
+        i, k = np.logical_not(self.uec).nonzero()
+        i_or_k_idx, j = np.logical_and(self.uec[i], self.uec[k]).nonzero()
+
+        # remove entries (j, i) and (j, k), thus directing essential
+        # edges and removing edges violating implied conditional
+        # independence relations
+        ess_graph = np.copy(self.uec)
+        ess_graph[j, i[i_or_k_idx]] = ess_graph[j, k[i_or_k_idx]] = 0
+
+        # add test to see if num connected components in essential
+        # graph is less than in UEC, indicating data isn't from a DAG?
+
+    def make_best_move(self):
+        r"""Set self.dag to highest scoring DAG within one move."""
+
+    def full_score(self):
+        r"""Return BIC score of given DAG."""
+
+        children = dag.sum(0).nonzero()[0]
+
+        # return residual sum of squared errors (rss) from least squares solution
+        # use the values of parents to predict values of their child
+        # also add 1s column for intercept term
+
+        #
+        # add up rss for every child
+        # rss = sum(map(regress, children))
+
+        if self.score_func == "GOL0":
+            return GaussObsL0Pen(self.samples).full_score(dag)
+
+        elif self.score_func == "OLS":
+            regress = lambda child: lstsq(
+                np.hstack(
+                    (
+                        np.ones((self.num_samps, 1)),
+                        self.samples[:, dag[:, child]],
+                    )
+                ),
+                self.samples[:, child],
+                rcond=None,
+            )[1]
+
+        rss = sum(map(regress, children))
+
+        # num edges + intercept term for each child
+        k = dag.sum()  # + len(children), if noise means can differ
+
+        bic = self.num_samps * np.log(rss / self.num_samps) + k * np.log(self.num_samps)
+
+        return -bic
+
+
+def dcov(samples):
+    r"""Compute sample distance covariance matrix.
+
+    Parameters
+    ----------
+    samples : 2d numpy array of floats
+              A :math:`N \times M` matrix with :math:`N` samples of
+              :math:`M` random variables.
+
+    Returns
+    -------
+    cov : 2d numpy array
+          A square matrix :math:`C`, where :math:`C_{i,j}` is the
+          sample distance covariance between random variables
+          :math:`R_i` and :math:`R_j`.
+    d_bars : 1d numpy array
+             The means of the distance matrixes for each feature, used
+             in independence testing.
+
+    """
+    num_samps, num_feats = samples.shape
+    dists = np.zeros((num_feats, num_samps**2))
+    d_bars = np.zeros(num_feats)
+    # compute doubly centered distance matrix for every feature:
+    for feat_idx in range(num_feats):
+        n = num_samps
+        t = np.tile
+        # raw distance matrix:
+        d = squareform(pdist(samples[:, feat_idx].reshape(-1, 1), "cityblock"))
+        # doubly centered:
+        d_bar = d.mean()
+        d -= t(d.mean(0), (n, 1)) + t(d.mean(1), (n, 1)).T - t(d_bar, (n, n))
+        dd = d.flatten()
+        dists[feat_idx] = dd / n
+        d_bars[feat_idx] = d_bar
+    cov = dists @ dists.T
+    return cov, d_bars
+
+
+def gen_samples(num_nodes, p, num_samples, rng, use_sempler=False):
+    row_idx, col_idx = np.triu_indices(num_nodes, k=1)
+    edge_mask = rng.choice((True, False), size=len(row_idx), p=(p, 1 - p))
+
+    dag = np.zeros((num_nodes, num_nodes), bool)
+    dag[row_idx, col_idx] = edge_mask
+
+    num_edges = edge_mask.sum()
+    weights = np.zeros_like(dag, float)
+    weights[dag] = (rng.random(num_edges) * 2) * (
+        rng.integers(2, size=num_edges) * 2 - 1
+    )
+
+    if use_sempler:
+        means = np.zeros(num_nodes)
+        variances = np.ones(num_nodes)
+        lganm = LGANM(weights, means, variances)
+        samples = lganm.sample(num_samples)
+    else:
+        means = 0  # (rng.random() * 4) - 2
+        st_dvs = 1  # rng.random() * 2
+        samples = rng.normal(means, st_dvs, (num_samples, num_nodes))
+
+        for feature, parents in zip(samples.T, dag.T):
+            feature += samples @ parents
+    order = rng.permutation(num_nodes)
+    samples = samples[:, order]
+
+    return dag, order, samples
+
+
+def norm_hamming_sim(g, h):
+    num_nodes = len(g)
+    num_poss_edges = (num_nodes * (num_nodes - 1)) / 2
+    sim = (g + g.T == h + h.T).sum() - num_nodes
+    return sim / (2 * num_poss_edges)
+
+
+def struct_hamming_sim(g, h):
+    num_nodes = len(g)
+    num_poss_edges = num_nodes**2 - num_nodes
+    sim = (g == h).sum() - num_nodes
+    return sim / (num_poss_edges)
