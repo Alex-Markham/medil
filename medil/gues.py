@@ -46,7 +46,7 @@ class InputData(object):
         """
         self.score_func = score_func
         self.estimate_uec(test, alpha)
-        self.initialize_MEC()
+        self.init_CPDAG()
         # score initial cpdag
         while True:
             # get possible moves
@@ -81,9 +81,8 @@ class InputData(object):
 
         self.uec = uec
 
-    def initialize_MEC(self):
-        r"""Return the maximal essential graph in the unconditional
-        equivalence class."""
+    def init_cpdag(self):
+        r"""Return maximal CPDAG in the UEC."""
 
         # find all induced 2-paths i--j--k, by implicitly looping
         # through missing edges
@@ -93,11 +92,22 @@ class InputData(object):
         # remove entries (j, i) and (j, k), thus directing essential
         # edges and removing edges violating implied conditional
         # independence relations
-        ess_graph = np.copy(self.uec)
-        ess_graph[j, i[i_or_k_idx]] = ess_graph[j, k[i_or_k_idx]] = 0
+        cpdag = np.copy(self.uec)
+        cpdag[j, i[i_or_k_idx]] = cpdag[j, k[i_or_k_idx]] = 0
+        self.cpdag = cpdag
 
         # add test to see if num connected components in essential
         # graph is less than in UEC, indicating data isn't from a DAG?
+
+    def rmable_edges(self):
+        pass
+
+    # maybe it's best to construct mt set in init_cpdag(), and then
+    # update it each time an edge is removed?
+
+    # Also think about if it's possible to score a PDAG and if that
+    # could be used to deduce which PDAG contains the best-scoring
+    # width-1 completion
 
     def make_best_move(self):
         r"""Set self.dag to highest scoring DAG within one move."""
