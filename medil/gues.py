@@ -100,7 +100,39 @@ class InputData(object):
         # graph is less than in UEC, indicating data isn't from a DAG?
 
     def rmable_edges(self):
-        pass
+        # undir_mask[i, j] == 1 if and only if i -- j rmable in cpdag
+        undir_mask = (self.cpdag @ self.cpdag).T * self.cpdag
+        undir_edges = np.argwhere(np.triu(undir_mask))
+
+        # reduce all chain components to one node, cpdag becomes a dag
+        reduction = chain_reduction(np.copy(self.cpdag), np.eye(self.num_feats))
+
+        dir_component = self.cpdag - self.cpdag.T
+        vs = np.flatnonzero(dir_component.sum(0))  # indices of children in cpdag
+
+        # dir_mask[i, j] == 1 if and only if i -> j rmable in cpdag
+
+        return vstack((undir_edges, dir_edges))
+
+    @staticmethod
+    def chain_reduction(cpdag, chain_components):
+        # caution! pdag gets changed in place, so make copy first
+        undir_component = cpdag * cpdag.T
+        if undir_component.any():
+            v, w = np.argwhere(undir_component > 0)[0]
+
+            cpdag[w] += cpdag[v]
+            cpdag[:, w] += cpdag[:, v]
+            cpdag[w, w] = 0
+            r_cpdag = np.delete(cpdag, v, 0)
+            r_cpdag = np.delete(r_cpdag, v, 1)
+
+            chain_components[w] += chain_components[v]
+            r_ccs = np.delete(chain_components, v, 0)
+
+            return InputData.chain_reduction(r_cpdag, r_ccs)
+        else:
+            return cpdag, chain_components
 
     # maybe it's best to construct mt set in init_cpdag(), and then
     # update it each time an edge is removed?
