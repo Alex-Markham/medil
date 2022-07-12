@@ -46,3 +46,13 @@ def test_chain_reduction():
     r_cpdag, r_ccs = obj.chain_reduction(cpdag, np.eye(len(cpdag)))
     assert (correct_cpdag == r_cpdag).all()
     assert (correct_ccs == r_ccs).all()
+
+
+def test_topological_sort():
+    obj = InputData(np.empty((2, 2)))
+
+    inv_order = np.array([4, 0, 2, 1, 3])
+    dag = np.triu(np.ones((5, 5)), 1)[inv_order][:, inv_order]
+
+    correct_idx = np.argsort(inv_order)
+    assert (correct_idx == obj.topological_sort(dag)).all()
