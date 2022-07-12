@@ -2,23 +2,6 @@ from medil.gues import InputData
 import numpy as np
 
 
-def test_rmable_edges():
-    obj = InputData(np.empty((2, 2)))
-    obj.cpdag = np.array(
-        [
-            [0, 0, 1, 0, 0, 0, 0],
-            [0, 0, 1, 1, 0, 0, 0],
-            [1, 1, 0, 1, 1, 0, 0],
-            [0, 1, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 1, 0, 1],
-            [0, 0, 0, 0, 0, 0, 0],
-        ]
-    )
-
-    assert obj.rmable_edges() == np.array([1, 2], [1, 3], [2, 3], [5, 6])
-
-
 def test_chain_reduction():
     obj = InputData(np.empty((2, 2)))
     cpdag = np.array(
@@ -56,3 +39,49 @@ def test_topological_sort():
 
     correct_idx = np.argsort(inv_order)
     assert (correct_idx == obj.topological_sort(dag)).all()
+
+
+def test_get_min_ants():
+    obj = InputData(np.empty((7, 7)))
+    obj.cpdag = np.array(
+        [
+            [0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 1, 1, 0, 0, 0],
+            [1, 1, 0, 1, 1, 0, 0],
+            [0, 1, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 1, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0],
+        ]
+    )
+
+    correct_min_ants = np.array(
+        [
+            [1, 1, 1, 1, 0, 0, 0],
+            [1, 1, 1, 1, 0, 0, 0],
+            [1, 1, 1, 1, 0, 0, 0],
+            [1, 1, 1, 1, 0, 0, 0],
+            [1, 1, 1, 1, 0, 1, 0],
+            [0, 0, 0, 0, 0, 1, 0],
+            [1, 1, 1, 1, 0, 1, 0],
+        ]
+    )
+
+    assert (obj.get_min_ants() == correct_min_ants).all()
+
+
+def test_rmable_edges():
+    obj = InputData(np.empty((7, 7)))
+    obj.cpdag = np.array(
+        [
+            [0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 1, 1, 0, 0, 0],
+            [1, 1, 0, 1, 1, 0, 0],
+            [0, 1, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 1, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0],
+        ]
+    )
+
+    assert (obj.rmable_edges() == np.array([[1, 2], [1, 3], [2, 3], [5, 6]])).all()
