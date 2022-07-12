@@ -104,9 +104,24 @@ class InputData(object):
         undir_mask = (self.cpdag @ self.cpdag).T * self.cpdag
         undir_edges = np.argwhere(np.triu(undir_mask))
 
-        # reduce all chain components to one node, cpdag becomes a dag
+        # reduce all chain components to one node; cpdag becomes a dag
         reduction = chain_reduction(np.copy(self.cpdag), np.eye(self.num_feats))
 
+        # find min anteriors
+        cpdag_eye = self.cpdag + np.eye(self.num_feats)
+        self.trans_closure = (
+            np.linalg.matrix_power(dag_eye, self.num_feats - 1) - np.eye(self.num_feats)
+        ).astype(bool)
+        # instead use (A + I) ** np.ceil(np.log2(self.num_feats)) to
+        # speed up slightly
+
+        source_mask = np.logical_not(self.trans_closure.sum(axis=0))
+        self.max_ancs = np.zeros_like(self.dag)
+        self.max_ancs[source_mask] = (
+            self.trans_closure[source_mask] + np.eye(self.num_feats)[source_mask]
+        )
+
+        # .....
         dir_component = self.cpdag - self.cpdag.T
         vs = np.flatnonzero(dir_component.sum(0))  # indices of children in cpdag
 
@@ -133,6 +148,16 @@ class InputData(object):
             return InputData.chain_reduction(r_cpdag, r_ccs)
         else:
             return cpdag, chain_components
+
+    @staticmethod
+    def topological_sort(dag):
+        dag = np.copy(dag) + np.eye(len(dag))
+        sorted_idx = np.array([], int)
+        while dag.any():
+            sinks = np.flatnonzero(dag.sum(1) == 1)
+            sorted_idx = np.append(sinks, sorted_idx)
+            dag[sinks] = dag[:, sinks] = 0
+        return sorted_idx
 
     # maybe it's best to construct mt set in init_cpdag(), and then
     # update it each time an edge is removed?
