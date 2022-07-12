@@ -101,33 +101,62 @@ class InputData(object):
 
     def rmable_edges(self):
         # undir_mask[i, j] == 1 if and only if i -- j rmable in cpdag
-        undir_mask = (self.cpdag @ self.cpdag).T * self.cpdag
+        # i.e., if and only if they have the same parents or are in a
+        # k>3-clique
+        undir_mask = np.logical_and((self.cpdag @ self.cpdag).T, self.cpdag)
         undir_edges = np.argwhere(np.triu(undir_mask))
 
-        # reduce all chain components to one node; cpdag becomes a dag
-        reduction = chain_reduction(np.copy(self.cpdag), np.eye(self.num_feats))
-
-        # find min anteriors
-        cpdag_eye = self.cpdag + np.eye(self.num_feats)
-        self.trans_closure = (
-            np.linalg.matrix_power(dag_eye, self.num_feats - 1) - np.eye(self.num_feats)
-        ).astype(bool)
-        # instead use (A + I) ** np.ceil(np.log2(self.num_feats)) to
-        # speed up slightly
-
-        source_mask = np.logical_not(self.trans_closure.sum(axis=0))
-        self.max_ancs = np.zeros_like(self.dag)
-        self.max_ancs[source_mask] = (
-            self.trans_closure[source_mask] + np.eye(self.num_feats)[source_mask]
+        ## test rmability:
+        dir_component = np.logical_and(
+            self.cpdag, np.logical_xor(self.cpdag, self.cpdag.T)
         )
 
-        # .....
-        dir_component = self.cpdag - self.cpdag.T
-        vs = np.flatnonzero(dir_component.sum(0))  # indices of children in cpdag
+        min_ants = self.get_min_ants()
+        poss_rmable = np.argwhere(dir_component)
+        other_pars_w = dir_component.T[poss_rmable[:, 1]]
+        other_pars_w[np.arange(len(other_pars_w)), poss_rmable[:, 0]] = 0
+        other_min_ants_w = other_pars_w @ min_ants
+        min_ants_v = min_ants[poss_rmable[:, 0]]
+        rmable = np.logical_or(np.logical_not(min_ants_v), other_min_ants_w).all(1)
+        # dir_edges[a] = v_w == [i, j] if and only if min ants of i are contained in
+        # min ants of pa(j)\{i}
+        dir_edges = poss_rmable[rmable]
 
-        # dir_mask[i, j] == 1 if and only if i -> j rmable in cpdag
+        return np.vstack((undir_edges, dir_edges))
 
-        return vstack((undir_edges, dir_edges))
+    def get_min_ants(self):
+        ## find min anteriors:
+        # reduce all chain components to one node; cpdag becomes a dag
+        reduction, chain_comps = self.chain_reduction(
+            np.copy(self.cpdag), np.eye(self.num_feats)
+        )
+
+        # sort and find transitive closure of reduced dag
+        num_nodes = len(reduction)
+        sorted_idx = self.topological_sort(reduction)
+        sorted_reduction = reduction[sorted_idx][:, sorted_idx]
+        dag_eye = sorted_reduction + np.eye(num_nodes)
+        trans_closure = (
+            np.linalg.matrix_power(dag_eye, np.ceil(np.log2(num_nodes)).astype(int))
+            - np.eye(num_nodes)
+        ).astype(bool)
+
+        # find max ancestors
+        source_mask = np.logical_not(trans_closure.sum(axis=0))
+        sorted_max_ancs = np.zeros_like(reduction)
+        sorted_max_ancs[source_mask] = (
+            trans_closure[source_mask] + np.eye(num_nodes)[source_mask]
+        )
+        inv_order = np.argsort(sorted_idx)
+        # max_ancs[i, j] == 1 if and only if j is a max anc of i
+        max_ancs = sorted_max_ancs[inv_order][:, inv_order].T
+
+        # use chain components and max ancs to get min anteriors
+        # min_ants[i, j] == 1 if and only j is min ant of i
+        min_ants = np.zeros_like(self.cpdag)
+        for idx, comp in enumerate(chain_comps):
+            min_ants[comp] = chain_comps[max_ancs[idx].astype(bool)].sum(0)
+        return min_ants
 
     @staticmethod
     def chain_reduction(cpdag, chain_components):
@@ -147,7 +176,7 @@ class InputData(object):
 
             return InputData.chain_reduction(r_cpdag, r_ccs)
         else:
-            return cpdag, chain_components
+            return cpdag, chain_components.astype(bool)
 
     @staticmethod
     def topological_sort(dag):
