@@ -161,9 +161,7 @@ class InputData(object):
         # caution! pdag gets changed in place, so make copy first
         undir_component = cpdag * cpdag.T
         if undir_component.any():
-            v, w = np.unravel_index(
-                (undir_component > 0).argmax(), undir_component.shape
-            )
+            v, w = np.unravel_index(undir_component.argmax(), undir_component.shape)
 
             cpdag[w] += cpdag[v]
             cpdag[:, w] += cpdag[:, v]
