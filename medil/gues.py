@@ -70,14 +70,14 @@ class InputData(object):
             test_val = self.num_samps * cov / np.outer(d_bars, d_bars)
             uec = test_val >= crit_val
 
-        if test == "algebraic":
-            # add submodule for this
-            pass
-
         # if test == "dcov_accurate":
         #     dcov =
         #     p_vals =            # perm test
         #     uec = p_vals[p_vals<=alpha]
+
+        if test == "algebraic":
+            # add submodule for this
+            pass
 
         self.uec = uec
 
@@ -106,11 +106,9 @@ class InputData(object):
         undir_mask = np.logical_and((self.cpdag @ self.cpdag).T, self.cpdag)
         undir_edges = np.argwhere(np.triu(undir_mask))
 
-        ## test rmability:
         dir_component = np.logical_and(
             self.cpdag, np.logical_xor(self.cpdag, self.cpdag.T)
         )
-
         min_ants = self.get_min_ants()
         poss_rmable = np.argwhere(dir_component)
         other_pars_w = dir_component.T[poss_rmable[:, 1]]
@@ -122,7 +120,7 @@ class InputData(object):
         # min ants of pa(j)\{i}
         dir_edges = poss_rmable[rmable]
 
-        return np.vstack((undir_edges, dir_edges))
+        return undir_edges, dir_edges
 
     def get_min_ants(self):
         ## find min anteriors:
@@ -163,7 +161,9 @@ class InputData(object):
         # caution! pdag gets changed in place, so make copy first
         undir_component = cpdag * cpdag.T
         if undir_component.any():
-            v, w = np.argwhere(undir_component > 0)[0]
+            v, w = np.unravel_index(
+                (undir_component > 0).argmax(), undir_component.shape
+            )
 
             cpdag[w] += cpdag[v]
             cpdag[:, w] += cpdag[:, v]

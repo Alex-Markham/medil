@@ -83,5 +83,6 @@ def test_rmable_edges():
             [0, 0, 0, 0, 0, 0, 0],
         ]
     )
-
-    assert (obj.rmable_edges() == np.array([[1, 2], [1, 3], [2, 3], [5, 6]])).all()
+    undir_rmable, dir_rmable = obj.rmable_edges()
+    assert (undir_rmable == np.array([[1, 2], [1, 3], [2, 3]])).all()
+    assert (dir_rmable == np.array([[5, 6]])).all()
