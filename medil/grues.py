@@ -64,34 +64,40 @@ class InputData(object):
 
     def merge(self):
         r"""Merges cliques corresponding to i, k connected by
-        v-structure i -> j <- k in reduced cpdag."""
+        v-structure i -> j <- k in dag reduction."""
 
+        # uniformaly pick a pair of cliques to merge
         i, k = self.pick_cliques()
 
+        # perform merge and update dag reduction and chain components
         self.chain_comps[k] += chain_components[i]
         self.chain_comps = np.delete(chain_components, i, 0)
-        self.reduced_cpdag = np.delete(self.reduced_cpdag, i, 0)
-        self.reduced_cpdag = np.delete(self.reduced_cpdag, i, 1)
+        to_delete = np.where(self.dag_reduction[:, 0] == i)[0]
+        self.dag_reduction = np.delete(self.dag_reduction, to_delete, 0)
 
     def split(self):
         r"""Splits a clique containing edge v--w, making ne(v) \cap ne(w) into v-structures."""
 
         # uniformly pick a clique to split
-        two_plus_cliques = self.chain_comps.sum(1) > 1  # mask
-        source_cliques = self.reduced_cpdag.sum(1)  # mask
-        splittable_idx = np.argwhere(np.logical_and(two_plus_cliques, source_cliques))
+        two_plus_cliques_idx = np.flatnonzero(self.chain_comps.sum(1) > 1)
+        source_cliques_idx = self.dag_reduction[:, 0]
+        splittable_mask = np.in1d(source_cliques_idx, two_plus_cliques_idx)
+        splittable_idx = source_cliques_idx[splittable_mask]
         chosen_clique_idx = np.random.choice(splittable_idx)
         chosen_clique = self.chain_comps[chosen_clique_idx]
 
-        # uniformly edge v--w in the clique to split on
+        # uniformly pick edge v--w in the clique to split on
         v, w = np.random.choice(np.flatnonzero(chosen_clique), 2)
 
-        # perform split
+        # perform split and update dag reduction and chain components
         v_clique = w_clique = chosen_clique
         v_clique[w] = w_clique[v] = 0
-
-        # note: either also update uec/max cpdag here, or commit to
-        # not using them beyond init
+        self.chain_comps[chosen_clique_idx] = v_clique
+        # dag reduction still correct, since v_clique has same sinks
+        # as chosen clique; now update for w_clique:
+        self.chain_comps = np.vstack((self.chain_comps, w_clique))
+        new_edge = np.array([len(self.chain_comps), self.dag_reduction[, 1]])
+        self.dag_reduction = np.vstack((self.dag_reduction, new_edge))
 
     def within_fiber(self):
         pass
@@ -104,12 +110,12 @@ class InputData(object):
 
         # pick j from uniform distribution over v-structures i -> j <- k
         n_choose_2 = np.vectorize(lambda n: math.comb(n, 2))
-        counts = n_choose_2(self.reduced_cpdag.sum(0))
+        counts = n_choose_2(self.dag_reduction.sum(0))
         p = counts / counts.sum()
         j = np.random.choice(np.arange(len(p)), p)
 
         # pick i and k uniformly
-        pa_j = np.argwhere(self.reduced_cpdag[:, cj])
+        pa_j = np.argwhere(self.dag_reduction[:, cj])
         i, k = np.random.choice(pa_j, 2)
 
         return i, k
@@ -127,12 +133,5 @@ class InputData(object):
             chain_comps[w] += chain_components[v]
             chain_comps = np.delete(chain_components, v, 0)
 
-        self.reduced_cpdag = cpdag
+        self.dag_reduction = np.argwhere(cpdag)
         self.chain_comps = chain_comps
-        # note: for n nodes and k components, reduction used k*k + n*k
-        # space while nonreduced uses n*n; k*k + n*k <= n*n if and
-        # only if k <= n/phi; phi == 1.618
-
-        # note: the dag is bipartite and every source has at most 1
-        # child, so can even reduce it to a k-by-2 array? which is
-        # always more efficient if k<n
