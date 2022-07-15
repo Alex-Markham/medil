@@ -99,11 +99,26 @@ class InputData(object):
         new_edge = np.array([len(self.chain_comps), self.dag_reduction[, 1]])
         self.dag_reduction = np.vstack((self.dag_reduction, new_edge))
 
-    def within_fiber(self):
-        pass
+    def move_within_fiber(self):
+        # uniformly pick a pair of cliques
+        i, k = np.random.choice(self.pick_cliques(), 2, replace=False)
 
-    def without_fiber(self):
-        pass
+        # uniformly pick element t of clique_k
+        t = np.random.choice(np.flatnonzero(self.chain_comps[k]))
+
+        # transfer t to clique_i
+        self.chain_comps[k, t] = 0
+        self.chain_comps[i, t] = 1       
+
+    def move_out_of_fiber(self):
+        # uniformly pick a pair of cliques
+        i, k = np.random.choice(self.pick_cliques(), 2, replace=False)
+
+        # uniformly pick element t of clique_k
+        t = np.random.choice(np.flatnonzero(self.chain_comps[k]))
+
+        # add t to clique_i
+        self.chain_comps[i, t] = 1       
 
     def pick_cliques(self):
         r"""Finds i, k such that there is v-structure i -> j <- k."""
