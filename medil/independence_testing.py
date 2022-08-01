@@ -218,6 +218,6 @@ def dcov(samples):
         d = squareform(pdist(samples[:, feat_idx].reshape(-1, 1), "cityblock"))
         # doubly centered:
         d -= t(d.mean(0), (n, 1)) + t(d.mean(1), (n, 1)).T - t(d.mean(), (n, n))
-        d = squareform(d, checks=False)  # ignore assymmetry do to numerical error
+        d = squareform(d, checks=False)  # ignore assymmetry due to numerical error
         dists[feat_idx] = d
-    return dists @ dists.T / num_samps ** 2
+    return dists @ dists.T / num_samps**2
