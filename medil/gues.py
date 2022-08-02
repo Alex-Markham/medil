@@ -195,8 +195,35 @@ class InputData(object):
     # could be used to deduce which PDAG contains the best-scoring
     # width-1 completion
 
-    def score_undir_rm(self):
-        return
+    def score_undir_rm(self, rmable_edges):
+        # for given edge v -- w, find which t in T has best score for v -- t -- w and v !- w and all other v -> t' <- w
+        score_dict = dict()
+        for edge in rmable_edges:
+            v, w = edge
+            mask_T = get_T(edge)
+            new_pars_v = np.logical_and(self.cpdag[:, v], np.logical_not(mask_T))
+            new_pars_w = np.logical_and(self.cpdag[:, w], np.logical_not(mask_T))
+            new_pars_v[w] = new_pars_w[v] = 0
+            if mask_T.any():
+                sub_dict = {
+                    self.score_obj.local_score(v, np.append(new_pars_v, t))
+                    + self.score_obj.local_score(w, np.append(new_pars_w, t)): t
+                    for t in np.flatnonzero(mask_T)
+                }
+                best_score = max(sub_dict.keys)
+                best_t = sub_dict[best_score]
+                new_pars_v[best_t] = new_pars_w[best_t] = 1
+            else:  # already a CPDAG
+                best_score = self.score_obj.local_score(
+                    v, new_pars_v
+                ) + self.score_obj.local_score(w, new_pars_w)
+            score_dict[best_score] = (
+                v,
+                w,
+                new_pars_v,
+                new_pars_w,
+            )
+        return score_dict
 
     def score_dir_rm(self):
         return
