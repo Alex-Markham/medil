@@ -216,10 +216,12 @@ class InputData(object):
             rmed_cpdag = np.copy(self.cpdag)
             rmed_cpdag[v, w] = rmed_cpdag[w, v] = 0
 
-            # direct edges into v-structures, with a new cpdag for each
+            # for t in T, direct all v -- t' -- w into v-structures, with a new cpdag for each
             T = np.flatnonzero(T_mask)
             cpdags = np.tile(self.rmed_cpdag[np.newaxis], num_T, axis=0)
-            cpdags[:, T, v] = cpdags[:, T, w] = 0
+            for offset in range(1, num_T):
+                offset_T = np.roll(T, offset)
+                cpdags[:, offset_T, v] = cpdags[:, offset_T, w] = 0
             return cpdags
         else:  # then already  a CPDAG
             cpdag = np.copy(self.cpdag)
