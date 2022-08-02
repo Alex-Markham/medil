@@ -201,23 +201,34 @@ class InputData(object):
     def score_dir_rm(self):
         return
 
-    def get_T(rmed_edge):
+    def get_T(self, rmed_edge):
         v, w = rmed_edge
         ne_v = np.logical_or(self.cpdag[v], self.cpdag[:, v])
         ne_cc_w = np.logical_and(self.cpdag[w], self.cpdag[:, w])
         return np.logical_and(ne_v, ne_cc_w)
 
-    def undir_completions(rmed_edge):
+    def undir_completions(self, rmed_edge):
         v, w = rmed_edge
         T_mask = get_T(rmed_edge)
-        if T_mask.sum() > 1:
-            return cpdags
-        else:
-            return ?????
+        num_T = T_mask.sum()
+        if num_T > 1:
+            # remove undirected edge
+            rmed_cpdag = np.copy(self.cpdag)
+            rmed_cpdag[v, w] = rmed_cpdag[w, v] = 0
 
-    def dir_completions(rmed_edge):
+            # direct edges into v-structures, with a new cpdag for each
+            T = np.flatnonzero(T_mask)
+            cpdags = np.tile(self.rmed_cpdag[np.newaxis], num_T, axis=0)
+            cpdags[:, T, v] = cpdags[:, T, w] = 0
+            return cpdags
+        else:  # then already  a CPDAG
+            cpdag = np.copy(self.cpdag)
+            cpdag[v, w] = cpdag[w, v] = 0
+            return np.expand_dims(cpdag, axis=0)
+
+    def dir_completions(self, rmed_edge):
         v, w = rmed_edge
-        T = get_T(rmed_edge)
+        T = self.get_T(rmed_edge)
 
         return cpdags
 
