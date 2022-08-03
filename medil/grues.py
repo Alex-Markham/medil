@@ -132,7 +132,7 @@ class InputData(object):
         j = np.random.choice(np.arange(len(p)), p)
 
         # pick i and k uniformly
-        pa_j = np.argwhere(self.dag_reduction[:, cj])
+        pa_j = np.argwhere(self.dag_reduction[:, j])
         i, k = np.random.choice(pa_j, 2)
 
         return i, k
@@ -147,8 +147,8 @@ class InputData(object):
             cpdag = np.delete(cpdag, v, 1)
             undir = np.delete(undir, v, 0)
             undir = np.delete(undir, v, 1)
-            chain_comps[w] += chain_components[v]
-            chain_comps = np.delete(chain_components, v, 0)
+            chain_comps[w] += self.chain_comps[v]
+            chain_comps = np.delete(self.chain_comps, v, 0)
 
         self.dag_reduction = np.argwhere(cpdag)
         self.chain_comps = chain_comps
