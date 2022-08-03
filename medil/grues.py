@@ -70,8 +70,8 @@ class InputData(object):
         i, k = self.pick_cliques()
 
         # perform merge and update dag reduction and chain components
-        self.chain_comps[k] += chain_components[i]
-        self.chain_comps = np.delete(chain_components, i, 0)
+        self.chain_comps[k] += self.chain_comps[i]
+        self.chain_comps = np.delete(self.chain_comps, i, 0)
         to_delete = np.where(self.dag_reduction[:, 0] == i)[0]
         self.dag_reduction = np.delete(self.dag_reduction, to_delete, 0)
 
@@ -96,7 +96,9 @@ class InputData(object):
         # dag reduction still correct, since v_clique has same sinks
         # as chosen clique; now update for w_clique:
         self.chain_comps = np.vstack((self.chain_comps, w_clique))
-        new_edge = np.array([len(self.chain_comps), self.dag_reduction[, 1]])
+        new_edge = np.array(
+            [len(self.chain_comps), self.dag_reduction[:, 1]]
+        )  # : was missing; could be bug here now
         self.dag_reduction = np.vstack((self.dag_reduction, new_edge))
 
     def move_within_fiber(self):
@@ -108,7 +110,7 @@ class InputData(object):
 
         # transfer t to clique_i
         self.chain_comps[k, t] = 0
-        self.chain_comps[i, t] = 1       
+        self.chain_comps[i, t] = 1
 
     def move_out_of_fiber(self):
         # uniformly pick a pair of cliques
@@ -118,7 +120,7 @@ class InputData(object):
         t = np.random.choice(np.flatnonzero(self.chain_comps[k]))
 
         # add t to clique_i
-        self.chain_comps[i, t] = 1       
+        self.chain_comps[i, t] = 1
 
     def pick_cliques(self):
         r"""Finds i, k such that there is v-structure i -> j <- k."""
