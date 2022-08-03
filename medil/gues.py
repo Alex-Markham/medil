@@ -1,7 +1,8 @@
 """Implement the Greedy Unconditional Equivalence Search (GUES) algorithm."""
 import numpy as np
-from .gauss_obs_l0_pen import GaussObsL0Pen
 from numpy.linalg import lstsq, norm
+from .gauss_obs_l0_pen import GaussObsL0Pen
+from .ecc_algorithms import max_cliques
 from scipy.stats import chi2, beta
 from scipy.spatial.distance import pdist, squareform
 
@@ -226,7 +227,36 @@ class InputData(object):
         return score_dict
 
     def score_dir_rm(self):
-        return
+        score_dict = dict()
+        for edge in rmable_edges:
+            v, w = edge
+            mask_T = get_T(edge)
+            induced_subgraph = self.cpdag[mask_T][:, mask_T]
+            cliques = max_cliques(induced_subgraph)
+
+            new_pars_v = np.logical_and(self.cpdag[:, v], np.logical_not(mask_T))
+            new_pars_w = np.logical_and(self.cpdag[:, w], np.logical_not(mask_T))
+            new_pars_v[w] = new_pars_w[v] = 0
+            if mask_T.any():
+                sub_dict = {
+                    self.score_obj.local_score(v, np.append(new_pars_v, t))
+                    + self.score_obj.local_score(w, np.append(new_pars_w, t)): t
+                    for t in np.flatnonzero(mask_T)
+                }
+                best_score = max(sub_dict.keys)
+                best_t = sub_dict[best_score]
+                new_pars_v[best_t] = new_pars_w[best_t] = 1
+            else:  # already a CPDAG
+                best_score = self.score_obj.local_score(
+                    v, new_pars_v
+                ) + self.score_obj.local_score(w, new_pars_w)
+            score_dict[best_score] = (
+                v,
+                w,
+                new_pars_v,
+                new_pars_w,
+            )
+        return score_dict
 
     def get_T(self, rmed_edge):
         v, w = rmed_edge
