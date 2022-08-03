@@ -31,7 +31,10 @@ class InputData(object):
         stop_condition = False  # note: need to figure out what this should be
         while max_iter or not stop_condition:
             max_iter -= 1
-            pass
+            move = np.random.choice(
+                (self.merge, self.split, self.within_fiber, self.out_of_fiber)
+            )
+            move()
 
     def init_uec(self, init):
         if init == "empty":
@@ -69,6 +72,8 @@ class InputData(object):
         # uniformaly pick a pair of cliques to merge
         i, k = self.pick_cliques()
 
+        ## score possible move here, then either abort or proceed
+
         # perform merge and update dag reduction and chain components
         self.chain_comps[k] += self.chain_comps[i]
         self.chain_comps = np.delete(self.chain_comps, i, 0)
@@ -89,6 +94,8 @@ class InputData(object):
         # uniformly pick edge v--w in the clique to split on
         v, w = np.random.choice(np.flatnonzero(chosen_clique), 2)
 
+        ## score possible move here, then either abort or proceed
+
         # perform split and update dag reduction and chain components
         v_clique = w_clique = chosen_clique
         v_clique[w] = w_clique[v] = 0
@@ -101,23 +108,27 @@ class InputData(object):
         )  # : was missing; could be bug here now
         self.dag_reduction = np.vstack((self.dag_reduction, new_edge))
 
-    def move_within_fiber(self):
+    def within_fiber(self):
         # uniformly pick a pair of cliques
         i, k = np.random.choice(self.pick_cliques(), 2, replace=False)
 
         # uniformly pick element t of clique_k
         t = np.random.choice(np.flatnonzero(self.chain_comps[k]))
+
+        ## score possible move here, then either abort or proceed
 
         # transfer t to clique_i
         self.chain_comps[k, t] = 0
         self.chain_comps[i, t] = 1
 
-    def move_out_of_fiber(self):
+    def out_of_fiber(self):
         # uniformly pick a pair of cliques
         i, k = np.random.choice(self.pick_cliques(), 2, replace=False)
 
         # uniformly pick element t of clique_k
         t = np.random.choice(np.flatnonzero(self.chain_comps[k]))
+
+        ## score possible move here, then either abort or proceed
 
         # add t to clique_i
         self.chain_comps[i, t] = 1
