@@ -85,7 +85,7 @@ class InputData(object):
             for child in children
         ).sum()
         score_change = new - old
-        if score_change <= 0:
+        if score_change <= 0 and not self.debug:
             return
         else:
             self.score += score_change
@@ -165,16 +165,22 @@ class InputData(object):
         r"""Finds i, k such that there is v-structure i -> j <- k."""
 
         # pick j from uniform distribution over v-structures i -> j <- k
-        n_choose_2 = np.vectorize(lambda n: math.comb(n, 2))
-        counts = n_choose_2(self.dag_reduction.sum(0))
+        all_sinks = self.dag_reduction[:, 1]
+        sinks = np.unique(all_sinks)
+        num_pars = np.fromiter(((all_sinks == sink).sum() for sink in sinks), int)
+        counts = self.n_choose_2(num_pars)
         p = counts / counts.sum()
-        j = np.random.choice(np.arange(len(p)), p, replace=False)
+        j = np.random.choice(sinks, replace=False, p=p)
 
         # pick i and k uniformly
-        pa_j = np.argwhere(self.dag_reduction[:, j])
+        pa_j = self.dag_reduction[all_sinks == j, 0]
         i, k = np.random.choice(pa_j, 2, replace=False)
 
         return i, k, j
+
+    @staticmethod
+    def n_choose_2(vec):
+        return np.vectorize(lambda n: math.comb(n, 2))(vec)
 
     def reduce_max_cpdag(self):
         cpdag = np.copy(self.cpdag)
