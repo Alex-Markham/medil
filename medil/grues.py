@@ -126,7 +126,16 @@ class InputData(object):
 
         return v, w, chosen_cc_idx
 
-    def score_of_split(self, v, w, chosen_cc_idx):
+    def score_of_split(self, considered):
+        v, w, chosen_cc_idx = considered
+        children, pa_i, pa_k = np.argwhere(self.chain_comps[j, i, k]).T
+        old = (self.score_obj.local_score(child, pa_i) for child in children).sum()
+        old += (self.score_obj.local_score(child, pa_k) for child in children).sum()
+        new = (
+            self.score_obj.local_score(child, np.append(pa_i, pa_k))
+            for child in children
+        ).sum()
+        score_update = new - old
         return 0
 
     def perform_split(self, v, w, chosen_cc_idx):
