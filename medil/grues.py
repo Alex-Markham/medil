@@ -137,7 +137,7 @@ class InputData(object):
         # dag reduction still correct, since v_clique has same sinks
         # as chosen clique; now update for w_clique:
         self.chain_comps = np.vstack((self.chain_comps, w_clique))
-        new_edge = np.array([len(self.chain_comps), self.dag_reduction[:, 1]])
+        new_edge = np.array([len(self.chain_comps), self.dag_reduction[v, 1]])
         self.dag_reduction = np.vstack((self.dag_reduction, new_edge))
 
     def within_fiber(self):
