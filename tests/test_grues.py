@@ -90,3 +90,15 @@ def test_perform_merge():
 
     assert (obj.dag_reduction == correct_dag_reduction).all()
     assert (obj.chain_comps == correct_chain_comps).all()
+
+
+def test_consider_split():
+    obj = medil.grues.InputData(np.empty((1, len(examp_init))))
+    obj.chain_comps = examp_chain_comps
+    obj.dag_reduction = examp_dag_reduction
+    v, w, chosen_cc_idx = obj.consider_split()
+
+    chosen_cc = examp_chain_comps[chosen_cc_idx]
+    assert chosen_cc[v]
+    assert chosen_cc[w]
+    assert chosen_cc_idx in examp_dag_reduction[:, 0]

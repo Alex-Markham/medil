@@ -113,38 +113,36 @@ class InputData(object):
             return
 
     def consider_split(self):
-        # uniformly pick a clique to split
-        two_plus_cliques_idx = np.flatnonzero(self.chain_comps.sum(1) > 1)
-        source_cliques_idx = self.dag_reduction[:, 0]
-        splittable_mask = np.in1d(source_cliques_idx, two_plus_cliques_idx)
-        splittable_idx = source_cliques_idx[splittable_mask]
-        chosen_clique_idx = np.random.choice(splittable_idx)
-        chosen_clique = self.chain_comps[chosen_clique_idx]
+        # uniformly pick a source chain component to split
+        two_plus_cc_idx = np.flatnonzero(self.chain_comps.sum(1) > 1)
+        source_cc_idx = self.dag_reduction[:, 0]
+        splittable_mask = np.in1d(source_cc_idx, two_plus_cc_idx)
+        splittable_idx = source_cc_idx[splittable_mask]
+        chosen_cc_idx = np.random.choice(splittable_idx)
 
         # uniformly pick edge v--w in the clique to split on
-        v, w = np.random.choice(np.flatnonzero(chosen_clique), 2, replace=False)
-        return v, w, chosen_clique_idx
+        chosen_cc = self.chain_comps[chosen_cc_idx]
+        v, w = np.random.choice(np.flatnonzero(chosen_cc), 2, replace=False)
 
-    def score_of_split(self, v, w, chosen_clique_idx):
+        return v, w, chosen_cc_idx
+
+    def score_of_split(self, v, w, chosen_cc_idx):
         pass
 
-    def perform_split(self, v, w, chosen_clique_idx):
+    def perform_split(self, v, w, chosen_cc_idx):
         # perform split and update dag reduction and chain components
-        v_clique = w_clique = chosen_clique
+        v_clique = w_clique = self.chain_comps[chosen_cc_idx]
         v_clique[w] = w_clique[v] = 0
-        self.chain_comps[chosen_clique_idx] = v_clique
+        self.chain_comps[chosen_cc_idx] = v_clique
         # dag reduction still correct, since v_clique has same sinks
         # as chosen clique; now update for w_clique:
         self.chain_comps = np.vstack((self.chain_comps, w_clique))
-        new_edge = np.array(
-            [len(self.chain_comps), self.dag_reduction[:, 1]]
-        )  # : was missing; could be bug here now
+        new_edge = np.array([len(self.chain_comps), self.dag_reduction[:, 1]])
         self.dag_reduction = np.vstack((self.dag_reduction, new_edge))
 
     def within_fiber(self):
         # uniformly pick a pair of cliques
         i, k, j = self.pick_cliques()
-        i, k = np.random.choice((i, k), 2, replace=False)
 
         # uniformly pick element t of clique_k
         t = np.random.choice(np.flatnonzero(self.chain_comps[k]))
@@ -158,7 +156,6 @@ class InputData(object):
     def out_of_fiber(self):
         # uniformly pick a pair of cliques
         i, k, j = self.pick_cliques()
-        i, k = np.random.choice((i, k), 2, replace=False)
 
         # uniformly pick element t of clique_k
         t = np.random.choice(np.flatnonzero(self.chain_comps[k]))
