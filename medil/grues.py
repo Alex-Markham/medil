@@ -10,7 +10,7 @@ class InputData(object):
     Attributes
     ----------
     samples : array_like
-        Passes directly to numpy.array to get a :math:`M \times N`
+        Passes directly to numpy.array to get a :math:`N \times M`
         matrix with :math:`N` samples of :math:`M` random variables.
 
     Methods
@@ -40,12 +40,13 @@ class InputData(object):
             move()
 
     def init_uec(self, init):
-        if init == "empty":
-            self.uec = np.zeros((self.num_feats, self.num_feats), bool)
-        elif init == "complete":
-            self.uec = np.ones((self.num_feats, self.num_feats), bool)
-        elif init == "dcov_fast":
-            pass  # also add gauss
+        if type(init) is str:
+            if init == "empty":
+                self.uec = np.zeros((self.num_feats, self.num_feats), bool)
+            elif init == "complete":
+                self.uec = np.ones((self.num_feats, self.num_feats), bool)
+            elif init == "dcov_fast":
+                pass  # also add gauss
         else:
             uec = np.array(init, bool)
             is_uec = True  # add actual check of uec-ness
@@ -58,7 +59,7 @@ class InputData(object):
 
         # find all induced 2-paths i--j--k, by implicitly looping
         # through missing edges
-        i, k = np.logical_not(self.uec).nonzero()
+        i, k = np.triu(np.logical_not(self.uec), 1).nonzero()
         i_or_k_idx, j = np.logical_and(self.uec[i], self.uec[k]).nonzero()
 
         # remove entries (j, i) and (j, k), thus directing essential
@@ -185,8 +186,8 @@ class InputData(object):
             cpdag = np.delete(cpdag, v, 1)
             undir = np.delete(undir, v, 0)
             undir = np.delete(undir, v, 1)
-            chain_comps[w] += self.chain_comps[v]
-            chain_comps = np.delete(self.chain_comps, v, 0)
+            chain_comps[w] += chain_comps[v]
+            chain_comps = np.delete(chain_comps, v, 0)
 
         self.dag_reduction = np.argwhere(cpdag)
         self.chain_comps = chain_comps
