@@ -24,6 +24,7 @@ class InputData(object):
     def __init__(self, samples):
         self.samples = np.array(samples, dtype=float)
         self.num_samps, self.num_feats = self.samples.shape
+        self.debug = False
 
     def grues(self, init="empty", max_iter=100):
         self.init_uec(init)
@@ -73,10 +74,16 @@ class InputData(object):
         r"""Merges cliques corresponding to i, k connected by
         v-structure i -> j <- k in dag reduction."""
 
-        # uniformaly pick a pair of cliques to merge
+        # uniformaly pick a pair of cliques to consider for merge
         i, k, j = self.pick_cliques()
 
-        ## score possible move here, then proceed if score improves or abort otherwise
+        if self.score_merge(i, k, j) >= 0:
+            self.score += self.score_change
+            self.perform_merge(i, k)
+        else:
+            return
+
+    def score_merge(self, i, k, j):
         children, pa_i, pa_k = np.argwhere(self.chain_comps[j, i, k]).T
         old = (self.score_obj.local_score(child, pa_i) for child in children).sum()
         old += (self.score_obj.local_score(child, pa_k) for child in children).sum()
@@ -85,15 +92,14 @@ class InputData(object):
             for child in children
         ).sum()
         score_change = new - old
-        if score_change <= 0 and not self.debug:
-            return
-        else:
-            self.score += score_change
-            # perform merge and update dag reduction and chain components
-            self.chain_comps[k] += self.chain_comps[i]
-            self.chain_comps = np.delete(self.chain_comps, i, 0)
-            to_delete = np.where(self.dag_reduction[:, 0] == i)[0]
-            self.dag_reduction = np.delete(self.dag_reduction, to_delete, 0)
+        return score_change
+
+    def perform_merge(self, i, k):
+        # perform merge  of i into k; update dag reduction and chain components
+        self.chain_comps[k] += self.chain_comps[i]
+        self.chain_comps = np.delete(self.chain_comps, i, 0)
+        to_delete = np.where(self.dag_reduction[:, 0] == i)[0]
+        self.dag_reduction = np.delete(self.dag_reduction, to_delete, 0)
 
     def split(self):
         r"""Splits a clique containing edge v--w, making ne(v) \cap ne(w) into v-structures."""

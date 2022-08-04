@@ -64,7 +64,6 @@ def test_reduce_max_cpdag():
 def test_pick_cliques():
     obj = medil.grues.InputData(np.empty((1, len(examp_init))))
     obj.dag_reduction = examp_dag_reduction
-    obj.chain_comps = examp_chain_comps
     i, k, j = obj.pick_cliques()
 
     i_idx = np.flatnonzero(obj.dag_reduction[:, 0] == i)
@@ -74,5 +73,20 @@ def test_pick_cliques():
     assert j not in obj.dag_reduction[:, 0]
 
 
-def test_merge():
-    obj = medil.grues.InputData(np.empty((3, len(examp_init))))
+def test_perform_merge():
+    obj = medil.grues.InputData(np.empty((1, len(examp_init))))
+    obj.chain_comps = examp_chain_comps
+    obj.dag_reduction = examp_dag_reduction
+    obj.perform_merge(0, 3)
+
+    correct_dag_reduction = np.array([[2, 1], [3, 1]])
+    correct_chain_comps = np.array(
+        [
+            [0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 1, 1, 1, 0, 0],
+            [1, 0, 0, 0, 0, 1, 1],
+        ]
+    )
+
+    assert (obj.dag_reduction == correct_dag_reduction).all()
+    assert (obj.chain_comps == correct_chain_comps).all()
