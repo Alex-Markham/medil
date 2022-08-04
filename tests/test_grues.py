@@ -75,7 +75,7 @@ def test_pick_cliques():
 
 def test_perform_merge():
     obj = medil.grues.InputData(np.empty((1, len(examp_init))))
-    obj.chain_comps = examp_chain_comps
+    obj.chain_comps = np.copy(examp_chain_comps)
     obj.dag_reduction = examp_dag_reduction
     obj.perform_merge(0, 3)
 

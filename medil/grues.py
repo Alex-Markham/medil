@@ -77,13 +77,14 @@ class InputData(object):
         # uniformaly pick a pair of cliques to consider for merge
         i, k, j = self.pick_cliques()
 
-        if self.score_merge(i, k, j) >= 0:
-            self.score += self.score_change
+        score_update = self.score_of_merge(i, k, j)
+        if score_update >= 0:
+            self.score += score_update
             self.perform_merge(i, k)
         else:
             return
 
-    def score_merge(self, i, k, j):
+    def score_of_merge(self, i, k, j):
         children, pa_i, pa_k = np.argwhere(self.chain_comps[j, i, k]).T
         old = (self.score_obj.local_score(child, pa_i) for child in children).sum()
         old += (self.score_obj.local_score(child, pa_k) for child in children).sum()
@@ -91,8 +92,8 @@ class InputData(object):
             self.score_obj.local_score(child, np.append(pa_i, pa_k))
             for child in children
         ).sum()
-        score_change = new - old
-        return score_change
+        score_update = new - old
+        return score_update
 
     def perform_merge(self, i, k):
         # perform merge  of i into k; update dag reduction and chain components
@@ -103,7 +104,15 @@ class InputData(object):
 
     def split(self):
         r"""Splits a clique containing edge v--w, making ne(v) \cap ne(w) into v-structures."""
+        considered = self.consider_split()
+        score_update = self.score_of_split(considered)
+        if score_update >= 0:
+            self.score += score_update
+            self.perform_split(considered)
+        else:
+            return
 
+    def consider_split(self):
         # uniformly pick a clique to split
         two_plus_cliques_idx = np.flatnonzero(self.chain_comps.sum(1) > 1)
         source_cliques_idx = self.dag_reduction[:, 0]
@@ -114,31 +123,23 @@ class InputData(object):
 
         # uniformly pick edge v--w in the clique to split on
         v, w = np.random.choice(np.flatnonzero(chosen_clique), 2, replace=False)
+        return v, w, chosen_clique_idx
 
-        ## score possible move here, then proceed if score improves or abort otherwise
-        children_mask = np.flatnonzero(chosen_clique)
-        old = (self.score_obj.local_score(child, pa_i) for child in children).sum()
-        old += (self.score_obj.local_score(child, pa_k) for child in children).sum()
-        new = (
-            self.score_obj.local_score(child, np.append(pa_i, pa_k))
-            for child in children
-        ).sum()
-        score_change = new - old
-        if score_change <= 0:
-            return
-        else:
-            self.score += score_change
-            # perform split and update dag reduction and chain components
-            v_clique = w_clique = chosen_clique
-            v_clique[w] = w_clique[v] = 0
-            self.chain_comps[chosen_clique_idx] = v_clique
-            # dag reduction still correct, since v_clique has same sinks
-            # as chosen clique; now update for w_clique:
-            self.chain_comps = np.vstack((self.chain_comps, w_clique))
-            new_edge = np.array(
-                [len(self.chain_comps), self.dag_reduction[:, 1]]
-            )  # : was missing; could be bug here now
-            self.dag_reduction = np.vstack((self.dag_reduction, new_edge))
+    def score_of_split(self, v, w, chosen_clique_idx):
+        pass
+
+    def perform_split(self, v, w, chosen_clique_idx):
+        # perform split and update dag reduction and chain components
+        v_clique = w_clique = chosen_clique
+        v_clique[w] = w_clique[v] = 0
+        self.chain_comps[chosen_clique_idx] = v_clique
+        # dag reduction still correct, since v_clique has same sinks
+        # as chosen clique; now update for w_clique:
+        self.chain_comps = np.vstack((self.chain_comps, w_clique))
+        new_edge = np.array(
+            [len(self.chain_comps), self.dag_reduction[:, 1]]
+        )  # : was missing; could be bug here now
+        self.dag_reduction = np.vstack((self.dag_reduction, new_edge))
 
     def within_fiber(self):
         # uniformly pick a pair of cliques
