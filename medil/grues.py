@@ -127,7 +127,7 @@ class InputData(object):
         return v, w, chosen_cc_idx
 
     def score_of_split(self, v, w, chosen_cc_idx):
-        pass
+        return 0
 
     def perform_split(self, v, w, chosen_cc_idx):
         # perform split and update dag reduction and chain components
@@ -147,11 +147,14 @@ class InputData(object):
         # uniformly pick element t of clique_k
         t = np.random.choice(np.flatnonzero(self.chain_comps[k]))
 
-        ## score possible move here, then either abort or proceed
-
-        # transfer t to clique_i
-        self.chain_comps[k, t] = 0
-        self.chain_comps[i, t] = 1
+        score_update = 0  ## fill in
+        if score_update >= 0:
+            self.score += score_update
+            # transfer t to clique_i
+            self.chain_comps[k, t] = 0
+            self.chain_comps[i, t] = 1
+        else:
+            return
 
     def out_of_fiber(self):
         # uniformly pick a pair of cliques
@@ -160,10 +163,13 @@ class InputData(object):
         # uniformly pick element t of clique_k
         t = np.random.choice(np.flatnonzero(self.chain_comps[k]))
 
-        ## score possible move here, then either abort or proceed
-
-        # add t to clique_i
-        self.chain_comps[i, t] = 1
+        score_update = 0  ## fill in
+        if score_update >= 0:
+            self.score += score_update
+            # add t to clique_i
+            self.chain_comps[i, t] = 1
+        else:
+            return
 
     def pick_cliques(self):
         r"""Finds i, k such that there is v-structure i -> j <- k."""
