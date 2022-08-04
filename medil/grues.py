@@ -1,6 +1,7 @@
 """Implement the Groebner basis-based UEC search algorithm (GrUES)."""
 import numpy as np
 import math
+from .gauss_obs_l0_pen import GaussObsL0Pen
 
 
 class InputData(object):
@@ -27,6 +28,8 @@ class InputData(object):
     def grues(self, init="empty", max_iter=100):
         self.init_uec(init)
         self.get_max_cpdag()
+        self.score_obj = GaussObsL0Pen(self.samples)
+        self.score = self.score_obj.full_score(self.cpdag)
         self.reduce_max_cpdag()
         stop_condition = False  # note: need to figure out what this should be
         while max_iter or not stop_condition:
@@ -70,15 +73,26 @@ class InputData(object):
         v-structure i -> j <- k in dag reduction."""
 
         # uniformaly pick a pair of cliques to merge
-        i, k = self.pick_cliques()
+        i, k, j = self.pick_cliques()
 
-        ## score possible move here, then either abort or proceed
-
-        # perform merge and update dag reduction and chain components
-        self.chain_comps[k] += self.chain_comps[i]
-        self.chain_comps = np.delete(self.chain_comps, i, 0)
-        to_delete = np.where(self.dag_reduction[:, 0] == i)[0]
-        self.dag_reduction = np.delete(self.dag_reduction, to_delete, 0)
+        ## score possible move here, then proceed if score improves or abort otherwise
+        children, pa_i, pa_k = np.argwhere(self.chain_comps[j, i, k]).T
+        old = (self.score_obj.local_score(child, pa_i) for child in children).sum()
+        old += (self.score_obj.local_score(child, pa_k) for child in children).sum()
+        new = (
+            self.score_obj.local_score(child, np.append(pa_i, pa_k))
+            for child in children
+        ).sum()
+        score_change = new - old
+        if score_change <= 0:
+            return
+        else:
+            self.score += score_change
+            # perform merge and update dag reduction and chain components
+            self.chain_comps[k] += self.chain_comps[i]
+            self.chain_comps = np.delete(self.chain_comps, i, 0)
+            to_delete = np.where(self.dag_reduction[:, 0] == i)[0]
+            self.dag_reduction = np.delete(self.dag_reduction, to_delete, 0)
 
     def split(self):
         r"""Splits a clique containing edge v--w, making ne(v) \cap ne(w) into v-structures."""
@@ -92,25 +106,37 @@ class InputData(object):
         chosen_clique = self.chain_comps[chosen_clique_idx]
 
         # uniformly pick edge v--w in the clique to split on
-        v, w = np.random.choice(np.flatnonzero(chosen_clique), 2)
+        v, w = np.random.choice(np.flatnonzero(chosen_clique), 2, replace=False)
 
-        ## score possible move here, then either abort or proceed
-
-        # perform split and update dag reduction and chain components
-        v_clique = w_clique = chosen_clique
-        v_clique[w] = w_clique[v] = 0
-        self.chain_comps[chosen_clique_idx] = v_clique
-        # dag reduction still correct, since v_clique has same sinks
-        # as chosen clique; now update for w_clique:
-        self.chain_comps = np.vstack((self.chain_comps, w_clique))
-        new_edge = np.array(
-            [len(self.chain_comps), self.dag_reduction[:, 1]]
-        )  # : was missing; could be bug here now
-        self.dag_reduction = np.vstack((self.dag_reduction, new_edge))
+        ## score possible move here, then proceed if score improves or abort otherwise
+        children_mask = np.flatnonzero(chosen_clique)
+        old = (self.score_obj.local_score(child, pa_i) for child in children).sum()
+        old += (self.score_obj.local_score(child, pa_k) for child in children).sum()
+        new = (
+            self.score_obj.local_score(child, np.append(pa_i, pa_k))
+            for child in children
+        ).sum()
+        score_change = new - old
+        if score_change <= 0:
+            return
+        else:
+            self.score += score_change
+            # perform split and update dag reduction and chain components
+            v_clique = w_clique = chosen_clique
+            v_clique[w] = w_clique[v] = 0
+            self.chain_comps[chosen_clique_idx] = v_clique
+            # dag reduction still correct, since v_clique has same sinks
+            # as chosen clique; now update for w_clique:
+            self.chain_comps = np.vstack((self.chain_comps, w_clique))
+            new_edge = np.array(
+                [len(self.chain_comps), self.dag_reduction[:, 1]]
+            )  # : was missing; could be bug here now
+            self.dag_reduction = np.vstack((self.dag_reduction, new_edge))
 
     def within_fiber(self):
         # uniformly pick a pair of cliques
-        i, k = np.random.choice(self.pick_cliques(), 2, replace=False)
+        i, k, j = self.pick_cliques()
+        i, k = np.random.choice((i, k), 2, replace=False)
 
         # uniformly pick element t of clique_k
         t = np.random.choice(np.flatnonzero(self.chain_comps[k]))
@@ -123,7 +149,8 @@ class InputData(object):
 
     def out_of_fiber(self):
         # uniformly pick a pair of cliques
-        i, k = np.random.choice(self.pick_cliques(), 2, replace=False)
+        i, k, j = self.pick_cliques()
+        i, k = np.random.choice((i, k), 2, replace=False)
 
         # uniformly pick element t of clique_k
         t = np.random.choice(np.flatnonzero(self.chain_comps[k]))
@@ -140,13 +167,13 @@ class InputData(object):
         n_choose_2 = np.vectorize(lambda n: math.comb(n, 2))
         counts = n_choose_2(self.dag_reduction.sum(0))
         p = counts / counts.sum()
-        j = np.random.choice(np.arange(len(p)), p)
+        j = np.random.choice(np.arange(len(p)), p, replace=False)
 
         # pick i and k uniformly
         pa_j = np.argwhere(self.dag_reduction[:, j])
-        i, k = np.random.choice(pa_j, 2)
+        i, k = np.random.choice(pa_j, 2, replace=False)
 
-        return i, k
+        return i, k, j
 
     def reduce_max_cpdag(self):
         cpdag = np.copy(self.cpdag)
