@@ -112,7 +112,6 @@ class InputData(object):
     def consider_split(self):
         # uniformly pick a source chain component to split
         two_plus_cc_idx = np.flatnonzero(self.chain_comps.sum(1) > 1)
-        num_ccs = len(self.chain_comps)
         nonsource_cc_idx = self.dag_reduction[:, 1]
         splittable_mask = np.logical_not(np.in1d(two_plus_cc_idx, nonsource_cc_idx))
         splittable_idx = two_plus_cc_idx[splittable_mask]
