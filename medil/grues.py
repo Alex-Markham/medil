@@ -127,8 +127,8 @@ class InputData(object):
         v, w, chosen_cc_idx = considered
         vw_cc = np.flat_nonzero(self.chain_comps[chosen_cc_idx])
         old = (self.score_obj.local_score(vw, vw_cc[vw_cc != vw]) for vw in vw_cc).sum()
-        v_cc = np.delete(chosen_cc, w)
-        w_cc = np.delete(chosen_cc, v)
+        v_cc = np.delete(vw_cc, w)
+        w_cc = np.delete(vw_cc, v)
         new = (self.score_obj.local_score(v, v_cc[v_cc != v]) for v in v_cc).sum()
         new += (self.score_obj.local_score(w, w_cc[w_cc != w]) for w in w_cc).sum()
         return new - old
