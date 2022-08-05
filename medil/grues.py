@@ -86,14 +86,13 @@ class InputData(object):
 
     def score_of_merge(self, i, k, j):
         i_cc, k_cc = np.argwhere(self.chain_comps[i, k]).T
-        old = (self.score_obj.local_score(i, np.delete(i_cc, i)) for i in i_cc).sum()
-        old += (self.score_obj.local_score(k, np.delete(k_cc, k)) for k in k_cc).sum()
+        old = (self.score_obj.local_score(i, i_cc[i_cc != i]) for i in i_cc).sum()
+        old += (self.score_obj.local_score(k, k_cc[k_cc != k)) for k in k_cc).sum()
         ik_cc = np.append(i_cc, k_cc)
         new = (
-            self.score_obj.local_score(ik, np.delete(ik_cc, ik)) for ik in ik_cc
+            self.score_obj.local_score(ik, ik_cc[ik_cc != ik)) for ik in ik_cc
         ).sum()
-        score_update = new - old
-        return score_update
+        return new - old
 
     def perform_merge(self, i, k):
         # perform merge  of i into k; update dag reduction and chain components
@@ -128,15 +127,13 @@ class InputData(object):
 
     def score_of_split(self, considered):
         v, w, chosen_cc_idx = considered
-        children = np.flatnonzero(self.chain_comps[chosen_cc_idx])
-        old = (self.score_obj.local_score(child, pa_i) for child in children).sum()
-        old += (self.score_obj.local_score(child, pa_k) for child in children).sum()
-        new = (
-            self.score_obj.local_score(child, np.append(pa_i, pa_k))
-            for child in children
-        ).sum()
-        score_update = new - old
-        return 0
+        vw_cc = np.flat_nonzero(self.chain_comps[chosen_cc_idx])
+        old = (self.score_obj.local_score(vw, vw_cc[vw_cc != i]) for vw in vw_cc).sum()
+        v_cc = np.delete(chosen_cc, w)
+        w_cc = np.delete(chosen_cc, v)
+        new = (self.score_obj.local_score(v, v_cc[v_cc != v]) for v in v_cc).sum()
+        new += (self.score_obj.local_score(w, w_cc[w_cc != w]) for w in w_cc).sum()
+        return new - old
 
     def perform_split(self, v, w, chosen_cc_idx):
         # perform split and update dag reduction and chain components
