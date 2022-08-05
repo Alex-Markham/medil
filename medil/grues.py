@@ -128,7 +128,7 @@ class InputData(object):
     def score_of_split(self, considered):
         v, w, chosen_cc_idx = considered
         vw_cc = np.flat_nonzero(self.chain_comps[chosen_cc_idx])
-        old = (self.score_obj.local_score(vw, vw_cc[vw_cc != i]) for vw in vw_cc).sum()
+        old = (self.score_obj.local_score(vw, vw_cc[vw_cc != vw]) for vw in vw_cc).sum()
         v_cc = np.delete(chosen_cc, w)
         w_cc = np.delete(chosen_cc, v)
         new = (self.score_obj.local_score(v, v_cc[v_cc != v]) for v in v_cc).sum()
@@ -167,9 +167,15 @@ class InputData(object):
         i, k, j = self.pick_cliques()
 
         # uniformly pick element t of clique_k
-        t = np.random.choice(np.flatnonzero(self.chain_comps[k]))
+        i_cc, k_cc = np.argwhere(self.chain_comps[i, k]).T
+        t = np.random.choice(k_cc)
 
-        score_update = 0  ## fill in
+        # score of move
+        old = self.score_obj.local_score(t, k_cc[k_cc != t])
+        old += (self.score_obj.local_score(i, i_cc[i_cc != i]) for i in i_cc).sum()
+        it_cc = np.append(i_cc, t)
+        new = (self.score_obj.local_score(it, it_cc[it_cc != it]) for it in it_cc).sum()
+        score_update = new - old
         if score_update >= 0:
             self.score += score_update
             # add t to clique_i
