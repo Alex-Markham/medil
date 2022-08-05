@@ -114,9 +114,10 @@ class InputData(object):
     def consider_split(self):
         # uniformly pick a source chain component to split
         two_plus_cc_idx = np.flatnonzero(self.chain_comps.sum(1) > 1)
-        source_cc_idx = self.dag_reduction[:, 0]
-        splittable_mask = np.in1d(source_cc_idx, two_plus_cc_idx)
-        splittable_idx = source_cc_idx[splittable_mask]
+        num_ccs = len(self.chain_comps)
+        nonsource_cc_idx = self.dag_reduction[:, 1]
+        splittable_mask = np.logical_not(np.in1d(two_plus_cc_idx, nonsource_cc_idx))
+        splittable_idx = two_plus_cc_idx[splittable_mask]
         chosen_cc_idx = np.random.choice(splittable_idx)
 
         # uniformly pick edge v--w in the clique to split on
