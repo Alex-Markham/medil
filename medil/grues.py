@@ -151,10 +151,19 @@ class InputData(object):
         i, k, j = self.pick_cliques()
 
         # uniformly pick element t of clique_k
-        t = np.random.choice(np.flatnonzero(self.chain_comps[k]))
+        i_cc, k_cc = np.argwhere(self.chain_comps[i, k]).T
+        t = np.random.choice(k_cc)
 
-        score_update = 0  ## fill in
-        if score_update >= 0:
+       # score of move
+        old = (self.score_obj.local_score(i, i_cc[i_cc != i]) for i in i_cc).sum()
+        old += (self.score_obj.local_score(k, k_cc[k_cc != k]) for k in k_cc).sum()
+        it_cc = np.append(i_cc, t)
+        kt_cc = k_cc[k_cc != t]
+        new = (self.score_obj.local_score(it, it_cc[it_cc != it]) for it in it_cc).sum()
+        new += (self.score_obj.local_score(kt, kt_cc[kt_cc != kt]) for kt in kt_cc).sum()
+        score_update = new - old
+
+        if score_update >= 0:   # then perform move
             self.score += score_update
             # transfer t to clique_i
             self.chain_comps[k, t] = 0
@@ -176,7 +185,8 @@ class InputData(object):
         it_cc = np.append(i_cc, t)
         new = (self.score_obj.local_score(it, it_cc[it_cc != it]) for it in it_cc).sum()
         score_update = new - old
-        if score_update >= 0:
+
+        if score_update >= 0:   # then perform move
             self.score += score_update
             # add t to clique_i
             self.chain_comps[i, t] = 1
