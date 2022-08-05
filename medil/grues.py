@@ -85,12 +85,12 @@ class InputData(object):
             return
 
     def score_of_merge(self, i, k, j):
-        children, pa_i, pa_k = np.argwhere(self.chain_comps[j, i, k]).T
-        old = (self.score_obj.local_score(child, pa_i) for child in children).sum()
-        old += (self.score_obj.local_score(child, pa_k) for child in children).sum()
+        i_cc, k_cc = np.argwhere(self.chain_comps[i, k]).T
+        old = (self.score_obj.local_score(i, np.delete(i_cc, i)) for i in i_cc).sum()
+        old += (self.score_obj.local_score(k, np.delete(k_cc, k)) for k in k_cc).sum()
+        ik_cc = np.append(i_cc, k_cc)
         new = (
-            self.score_obj.local_score(child, np.append(pa_i, pa_k))
-            for child in children
+            self.score_obj.local_score(ik, np.delete(ik_cc, ik)) for ik in ik_cc
         ).sum()
         score_update = new - old
         return score_update
@@ -128,7 +128,7 @@ class InputData(object):
 
     def score_of_split(self, considered):
         v, w, chosen_cc_idx = considered
-        children, pa_i, pa_k = np.argwhere(self.chain_comps[j, i, k]).T
+        children = np.flatnonzero(self.chain_comps[chosen_cc_idx])
         old = (self.score_obj.local_score(child, pa_i) for child in children).sum()
         old += (self.score_obj.local_score(child, pa_k) for child in children).sum()
         new = (
