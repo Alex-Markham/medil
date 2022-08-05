@@ -161,6 +161,17 @@ class InputData(object):
         new += (
             self.score_obj.local_score(kt, kt_cc[kt_cc != kt]) for kt in kt_cc
         ).sum()
+        children = self.dag_reduction[self.dag_reduction[:, 0] == i][:, 1]
+        children = children[children != j]
+        if children.any():
+            childs = np.flatnonzero(children)
+            other_pars = self.dag_reduction[self.dag_reduction[:, 1] == j][:, 0]
+            other_pars = other_pars[other_pars != i]
+            other_pars = np.flatnonzero(self.chain_comps[other_pars].sum(0))
+            pars = np.append(i_cc, other_pars)
+            old += (self.score_obj.local_score(child, pars) for child in childs).sum()
+            pars = np.append(other_pars, it_cc)
+            new += (self.score_obj.local_score(child, pars) for child in childs).sum()
         score_update = new - old
 
         if score_update >= 0:  # then perform move
@@ -184,6 +195,7 @@ class InputData(object):
         old += (self.score_obj.local_score(i, i_cc[i_cc != i]) for i in i_cc).sum()
         it_cc = np.append(i_cc, t)
         new = (self.score_obj.local_score(it, it_cc[it_cc != it]) for it in it_cc).sum()
+
         score_update = new - old
 
         if score_update >= 0:  # then perform move
