@@ -136,13 +136,13 @@ class InputData(object):
 
     def perform_split(self, v, w, chosen_cc_idx):
         # perform split and update dag reduction and chain components
-        v_clique = w_clique = self.chain_comps[chosen_cc_idx]
-        v_clique[w] = w_clique[v] = 0
-        self.chain_comps[chosen_cc_idx] = v_clique
+        w_clique = np.copy(self.chain_comps[chosen_cc_idx])
+        self.chain_comps[chosen_cc_idx, w] = 0
+        w_clique[v] = 0
         # dag reduction still correct, since v_clique has same sinks
         # as chosen clique; now update for w_clique:
         self.chain_comps = np.vstack((self.chain_comps, w_clique))
-        new_edge = np.array([len(self.chain_comps), self.dag_reduction[v, 1]])
+        new_edge = np.array([len(self.chain_comps) - 1, self.dag_reduction[v, 1]])
         self.dag_reduction = np.vstack((self.dag_reduction, new_edge))
 
     def within_fiber(self):
