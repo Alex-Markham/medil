@@ -87,11 +87,9 @@ class InputData(object):
     def score_of_merge(self, i, k, j):
         i_cc, k_cc = np.argwhere(self.chain_comps[i, k]).T
         old = (self.score_obj.local_score(i, i_cc[i_cc != i]) for i in i_cc).sum()
-        old += (self.score_obj.local_score(k, k_cc[k_cc != k)) for k in k_cc).sum()
+        old += (self.score_obj.local_score(k, k_cc[k_cc != k]) for k in k_cc).sum()
         ik_cc = np.append(i_cc, k_cc)
-        new = (
-            self.score_obj.local_score(ik, ik_cc[ik_cc != ik)) for ik in ik_cc
-        ).sum()
+        new = (self.score_obj.local_score(ik, ik_cc[ik_cc != ik]) for ik in ik_cc).sum()
         return new - old
 
     def perform_merge(self, i, k):
@@ -155,16 +153,18 @@ class InputData(object):
         i_cc, k_cc = np.argwhere(self.chain_comps[i, k]).T
         t = np.random.choice(k_cc)
 
-       # score of move
+        # score of move
         old = (self.score_obj.local_score(i, i_cc[i_cc != i]) for i in i_cc).sum()
         old += (self.score_obj.local_score(k, k_cc[k_cc != k]) for k in k_cc).sum()
         it_cc = np.append(i_cc, t)
         kt_cc = k_cc[k_cc != t]
         new = (self.score_obj.local_score(it, it_cc[it_cc != it]) for it in it_cc).sum()
-        new += (self.score_obj.local_score(kt, kt_cc[kt_cc != kt]) for kt in kt_cc).sum()
+        new += (
+            self.score_obj.local_score(kt, kt_cc[kt_cc != kt]) for kt in kt_cc
+        ).sum()
         score_update = new - old
 
-        if score_update >= 0:   # then perform move
+        if score_update >= 0:  # then perform move
             self.score += score_update
             # transfer t to clique_i
             self.chain_comps[k, t] = 0
@@ -187,7 +187,7 @@ class InputData(object):
         new = (self.score_obj.local_score(it, it_cc[it_cc != it]) for it in it_cc).sum()
         score_update = new - old
 
-        if score_update >= 0:   # then perform move
+        if score_update >= 0:  # then perform move
             self.score += score_update
             # add t to clique_i
             self.chain_comps[i, t] = 1
