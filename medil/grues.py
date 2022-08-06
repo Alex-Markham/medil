@@ -90,14 +90,18 @@ class InputData(object):
         i_cc, k_cc = np.argwhere(self.chain_comps[i, k]).T
         old = (self.get_score.local(i, i_cc[i_cc != i]) for i in i_cc).sum()
         old += (self.get_score.local(k, k_cc[k_cc != k]) for k in k_cc).sum()
+        ik_cc = np.append(i_cc, k_cc)
+        if len(other_pa):
+            ik_cc = np.append(ik_cc, np.flatnonzero(self.chain_comps(j)))
+        new = (self.get_score.local(ik, ik_cc[ik_cc != ik]) for ik in ik_cc).sum()
         for pa in (i, k):
             for ch in self.get_other_children(pa, j):
                 ch_cc = np.flatnonzero(self.chain_comps[ch])
                 parents = self.get_other_parents(ch, pa, reduced=False)
                 old += (self.get_score.local(child, parents) for child in ch_cc).sum()
+                parents = np.append(parents, ik_cc)
+                new += (self.get_score.local(child, parents) for child in ch_cc).sum()
 
-        ik_cc = np.append(i_cc, k_cc)
-        new = (self.get_score.local(ik, ik_cc[ik_cc != ik]) for ik in ik_cc).sum()
         return new - old
 
     def perform_merge(self, i, k, j, other_pa):
