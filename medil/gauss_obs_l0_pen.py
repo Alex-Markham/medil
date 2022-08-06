@@ -84,7 +84,7 @@ class GaussObsL0Pen(DecomposableScore):
         else:
             raise ValueError('Unrecognized method "%s"' % method)
 
-    def full_score(self, A):
+    def full(self, A):
         """
         Given a DAG adjacency A, return the l0-penalized log-likelihood of
         a sample from a single environment, by finding the maximum

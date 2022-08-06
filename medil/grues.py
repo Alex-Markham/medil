@@ -29,8 +29,8 @@ class InputData(object):
     def grues(self, init="empty", max_iter=100):
         self.init_uec(init)
         self.get_max_cpdag()
-        self.score_obj = GaussObsL0Pen(self.samples)
-        self.score = self.score_obj.full_score(self.cpdag)
+        self.get_score = GaussObsL0Pen(self.samples)
+        self.score = self.get_score.full(self.cpdag)
         self.reduce_max_cpdag()
         stop_condition = False  # note: need to figure out what this should be
         while max_iter or not stop_condition:
@@ -77,27 +77,43 @@ class InputData(object):
         # uniformaly pick a pair of cliques to consider for merge
         i, k, j = self.pick_cliques()
 
-        score_update = self.score_of_merge(i, k, j)
+        # score and perform merge
+        other_pa = self.get_other_parents(j, i, k)
+        score_update = self.score_of_merge(i, k, j, other_pa)
         if score_update >= 0:
             self.score += score_update
-            self.perform_merge(i, k)
+            self.perform_merge(i, k, j, len(other_pa))
         else:
             return
 
-    def score_of_merge(self, i, k, j):
+    def score_of_merge(self, i, k, j, other_pa):
         i_cc, k_cc = np.argwhere(self.chain_comps[i, k]).T
-        old = (self.score_obj.local_score(i, i_cc[i_cc != i]) for i in i_cc).sum()
-        old += (self.score_obj.local_score(k, k_cc[k_cc != k]) for k in k_cc).sum()
+        old = (self.get_score.local(i, i_cc[i_cc != i]) for i in i_cc).sum()
+        old += (self.get_score.local(k, k_cc[k_cc != k]) for k in k_cc).sum()
+        for pa in (i, k):
+            for ch in self.get_other_children(pa, j):
+                ch_cc = np.flatnonzero(self.chain_comps[ch])
+                parents = self.get_other_parents(ch, pa, reduced=False)
+                old += (self.get_score.local(child, parents) for child in ch_cc).sum()
+
         ik_cc = np.append(i_cc, k_cc)
-        new = (self.score_obj.local_score(ik, ik_cc[ik_cc != ik]) for ik in ik_cc).sum()
+        new = (self.get_score.local(ik, ik_cc[ik_cc != ik]) for ik in ik_cc).sum()
         return new - old
 
-    def perform_merge(self, i, k):
-        # perform merge  of i into k; update dag reduction and chain components
+    def perform_merge(self, i, k, j, other_pa):
+        r"""Merges i into k, updating dag reduction and chain components."""
         self.chain_comps[k] += self.chain_comps[i]
         self.chain_comps = np.delete(self.chain_comps, i, 0)
-        to_delete = np.where(self.dag_reduction[:, 0] == i)[0]
+        to_delete = np.flatnonzero(self.dag_reduction[:, 0] == i)
         self.dag_reduction = np.delete(self.dag_reduction, to_delete, 0)
+        ## test the two following
+        if not other_pa:  # reduce newly formed cc
+            self.chain_comps[k] += self.chain_comps[j]
+            self.chain_comps = np.delete(self.chain_comps, j, 0)
+            to_delete = np.flatnonzero(self.dag_reduction[:, 1] == j)
+            self.dag_reduction = np.delete(self.dag_reduction, to_delete, 0)
+        # add children of k to i
+        self.dag_reduction[self.dag_reduction == k] = i
 
     def split(self):
         r"""Splits a clique containing edge v--w, making ne(v) \cap ne(w) into v-structures."""
@@ -126,11 +142,11 @@ class InputData(object):
     def score_of_split(self, considered):
         v, w, chosen_cc_idx = considered
         vw_cc = np.flat_nonzero(self.chain_comps[chosen_cc_idx])
-        old = (self.score_obj.local_score(vw, vw_cc[vw_cc != vw]) for vw in vw_cc).sum()
+        old = (self.get_score.local(vw, vw_cc[vw_cc != vw]) for vw in vw_cc).sum()
         v_cc = np.delete(vw_cc, w)
         w_cc = np.delete(vw_cc, v)
-        new = (self.score_obj.local_score(v, v_cc[v_cc != v]) for v in v_cc).sum()
-        new += (self.score_obj.local_score(w, w_cc[w_cc != w]) for w in w_cc).sum()
+        new = (self.get_score.local(v, v_cc[v_cc != v]) for v in v_cc).sum()
+        new += (self.get_score.local(w, w_cc[w_cc != w]) for w in w_cc).sum()
         return new - old
 
     def perform_split(self, v, w, chosen_cc_idx):
@@ -153,14 +169,12 @@ class InputData(object):
         t = np.random.choice(k_cc)
 
         # score of move
-        old = (self.score_obj.local_score(i, i_cc[i_cc != i]) for i in i_cc).sum()
-        old += (self.score_obj.local_score(k, k_cc[k_cc != k]) for k in k_cc).sum()
+        old = (self.get_score.local(i, i_cc[i_cc != i]) for i in i_cc).sum()
+        old += (self.get_score.local(k, k_cc[k_cc != k]) for k in k_cc).sum()
         it_cc = np.append(i_cc, t)
         kt_cc = k_cc[k_cc != t]
-        new = (self.score_obj.local_score(it, it_cc[it_cc != it]) for it in it_cc).sum()
-        new += (
-            self.score_obj.local_score(kt, kt_cc[kt_cc != kt]) for kt in kt_cc
-        ).sum()
+        new = (self.get_score.local(it, it_cc[it_cc != it]) for it in it_cc).sum()
+        new += (self.get_score.local(kt, kt_cc[kt_cc != kt]) for kt in kt_cc).sum()
         children = self.dag_reduction[self.dag_reduction[:, 0] == i][:, 1]
         children = children[children != j]
         if children.any():
@@ -169,9 +183,9 @@ class InputData(object):
             other_pars = other_pars[other_pars != i]
             other_pars = np.flatnonzero(self.chain_comps[other_pars].sum(0))
             pars = np.append(i_cc, other_pars)
-            old += (self.score_obj.local_score(child, pars) for child in childs).sum()
+            old += (self.get_score.local(child, pars) for child in childs).sum()
             pars = np.append(other_pars, it_cc)
-            new += (self.score_obj.local_score(child, pars) for child in childs).sum()
+            new += (self.get_score.local(child, pars) for child in childs).sum()
         score_update = new - old
 
         if score_update >= 0:  # then perform move
@@ -191,10 +205,10 @@ class InputData(object):
         t = np.random.choice(k_cc)
 
         # score of move
-        old = self.score_obj.local_score(t, k_cc[k_cc != t])
-        old += (self.score_obj.local_score(i, i_cc[i_cc != i]) for i in i_cc).sum()
+        old = self.get_score.local(t, k_cc[k_cc != t])
+        old += (self.get_score.local(i, i_cc[i_cc != i]) for i in i_cc).sum()
         it_cc = np.append(i_cc, t)
-        new = (self.score_obj.local_score(it, it_cc[it_cc != it]) for it in it_cc).sum()
+        new = (self.get_score.local(it, it_cc[it_cc != it]) for it in it_cc).sum()
 
         score_update = new - old
 
@@ -241,3 +255,23 @@ class InputData(object):
 
         self.dag_reduction = np.argwhere(cpdag)
         self.chain_comps = chain_comps
+
+    def get_other_children(self, parent, child, reduced=True):
+        children_mask = self.dag_reduction[:, 0] == parent
+        children = self.dag_reduction[children_mask, 1]
+        children = children[children != child]
+        if reduced:
+            return children
+        else:
+            return np.where(self.chain_comps[children])[1]
+
+    def get_other_parents(self, child, pa_1, pa_2=None, reduced=True):
+        parents_mask = self.dag_reduction[:, 1] == child
+        parents = self.dag_reduction[parent_mask, 0]
+        parents = parents[parents != pa_1]
+        if pa_2 is not None:
+            parents = parents[parents != pa_2]
+        if reduced:
+            return parents
+        else:
+            return np.where(self.chain_comps[parents])[1]
