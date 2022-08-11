@@ -157,8 +157,8 @@ class InputData(object):
         w_clique = np.copy(self.chain_comps[chosen_cc_idx])
         self.chain_comps[chosen_cc_idx, w] = 0
         w_clique[v] = 0
-        # dag reduction still correct, since v_clique has same sinks
-        # as chosen clique; now update for w_clique:
+        # dag reduction for v_clique still correct, since it has same
+        # sinks as chosen clique; now update for w_clique:
         self.chain_comps = np.vstack((self.chain_comps, w_clique))
         ch_v_idx = np.flatnonzero(dag_reduction[:, 0] == v)
         ch_w = np.copy(self.dag_reduction[ch_v_idx])
