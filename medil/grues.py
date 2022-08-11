@@ -163,7 +163,7 @@ class InputData(object):
         self.dag_reduction = np.vstack((self.dag_reduction, ch_w))
 
     def within_fiber(self):
-        i_cc_idx, j_cc_idx = self.pick_source_ccs(fiber)
+        i_cc_idx, j_cc_idx, child_cc_idx = self.pick_source_ccs(fiber)
         i, j, t = self.pick_nodes(i_cc_idx, j_cc_idx)
 
         # score of move
@@ -195,7 +195,7 @@ class InputData(object):
             return
 
     def out_of_fiber(self):
-        i_cc_idx, j_cc_idx = self.pick_source_ccs(fiber)
+        i_cc_idx, j_cc_idx, child_cc_idx = self.pick_source_ccs(fiber)
         i, j, t = self.pick_nodes(i_cc_idx, j_cc_idx)
 
         # score of move
@@ -236,7 +236,12 @@ class InputData(object):
                 source_ccs_idx = np.logical_not(np.in1d(all_cc_idx, all_sinks))
                 source_ccs_idx = source_ccs_idx[source_ccs_idx != j_cc_idx]
                 i_cc_idx = np.random.choice(source_ccs_idx)
-                chosen_ccs_idx = i_cc_idx, j_cc_idx
+
+                ch_i = self.get_other_children(i_cc_idx, None)
+                ch_j = self.get_other_children(j_cc_idx, None)
+                child_cc_idx = ch_i[np.in1d(ch_i, ch_j)]
+
+                chosen_ccs_idx = i_cc_idx, j_cc_idx, child_cc_idx
         return chosen_ccs_idx
 
     def pick_nodes(self, i_cc_idx, j_cc_idx):
