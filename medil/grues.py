@@ -101,7 +101,6 @@ class InputData(object):
                 old += (self.get_score.local(child, parents) for child in ch_cc).sum()
                 parents = np.append(parents, ik_cc)
                 new += (self.get_score.local(child, parents) for child in ch_cc).sum()
-
         return new - old
 
     def perform_merge(self, i, k, j, other_pa):
@@ -161,8 +160,11 @@ class InputData(object):
         # dag reduction still correct, since v_clique has same sinks
         # as chosen clique; now update for w_clique:
         self.chain_comps = np.vstack((self.chain_comps, w_clique))
-        new_edge = np.array([len(self.chain_comps) - 1, self.dag_reduction[v, 1]])
-        self.dag_reduction = np.vstack((self.dag_reduction, new_edge))
+        ch_v_idx = np.flatnonzero(dag_reduction[:, 0] == v)
+        ch_w = np.copy(self.dag_reduction[ch_v_idx])
+        w_idx = len(self.chain_comps) - 1
+        ch_w[:, 0] = w_idx
+        self.dag_reduction = np.vstack((self.dag_reduction, ch_w))
 
     def within_fiber(self):
         # uniformly pick a pair of cliques
