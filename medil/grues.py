@@ -75,7 +75,7 @@ class InputData(object):
         v-structure i -> j <- k in dag reduction."""
 
         # uniformaly pick a pair of cliques to consider for merge
-        i, k, j = self.pick_cliques()
+        i, k, j = self.pick_source_ccs(merge)
 
         # score and perform merge
         other_pa = self.get_other_parents(j, i, k)
@@ -164,19 +164,19 @@ class InputData(object):
 
     def within_fiber(self):
         # uniformly pick a pair of cliques
-        i, k, j = self.pick_cliques()
+        i, j = self.pick_source_ccs(fiber)
 
         # uniformly pick element t of clique_k
-        i_cc, k_cc = np.argwhere(self.chain_comps[i, k]).T
-        t = np.random.choice(k_cc)
+        i_cc, j_cc = np.argwhere(self.chain_comps[i, j]).T
+        t = np.random.choice(j_cc)
 
         # score of move
         old = (self.get_score.local(i, i_cc[i_cc != i]) for i in i_cc).sum()
-        old += (self.get_score.local(k, k_cc[k_cc != k]) for k in k_cc).sum()
+        old += (self.get_score.local(j, j_cc[j_cc != j]) for j in j_cc).sum()
         it_cc = np.append(i_cc, t)
-        kt_cc = k_cc[k_cc != t]
+        jt_cc = j_cc[j_cc != t]
         new = (self.get_score.local(it, it_cc[it_cc != it]) for it in it_cc).sum()
-        new += (self.get_score.local(kt, kt_cc[kt_cc != kt]) for kt in kt_cc).sum()
+        new += (self.get_score.local(jt, jt_cc[jt_cc != jt]) for jt in jt_cc).sum()
         children = self.dag_reduction[self.dag_reduction[:, 0] == i][:, 1]
         children = children[children != j]
         if children.any():
