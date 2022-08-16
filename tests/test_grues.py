@@ -83,13 +83,11 @@ def test_reduce_max_cpdag():
 def test_pick_source_nodes():
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
     obj.dag_reduction = examp_dag_reduction()
-    i, k, j = obj.pick_source_nodes()
+    src_1, src_2, sink = obj.pick_source_nodes("merge")
 
-    i_idx = np.flatnonzero(obj.dag_reduction[:, 0] == i)
-    k_idx = np.flatnonzero(obj.dag_reduction[:, 0] == k)
-    assert obj.dag_reduction[i_idx, 1] == j
-    assert obj.dag_reduction[k_idx, 1] == j
-    assert j not in obj.dag_reduction[:, 0]
+    assert obj.dag_reduction[(src_1, src_2), sink].all()
+    assert (obj.dag_reduction[:, (src_1, src_2)] == 0).all()
+    assert obj.dag_reduction[sink].sum() == 0
 
 
 def test_perform_merge():

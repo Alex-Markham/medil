@@ -222,19 +222,19 @@ class InputData(object):
     def pick_source_nodes(self, move):
         # sources have no parents; sinks have parents and no children
         non_srcs_mask = self.dag_reduction.sum(0).astype(bool)
-        childless_mask = self.dag_reduction.sum(1).astype(bool)
-        sinks = np.logical_and(non_srcs_mask, childless_mask).flatnonzero()
+        sources = np.flatnonzero(np.logical_not(non_srcs_mask))
+        childless_mask = np.logical_not(self.dag_reduction.sum(1).astype(bool))
+        sinks = np.flatnonzero(np.logical_and(non_srcs_mask, childless_mask))
         if move == "merge":
-            num_sources = self.dag_reduction[non_srcs_mask, sinks].sum(0)
+            num_sources = self.dag_reduction[sources, sinks].sum(0)
             counts = self.n_choose_2(num_sources)
-            p = counts / counts.sum()
+            p = np.array(counts / counts.sum())
             sink = np.random.choice(sinks, p=p)
-            srcs_of_sink = self.dag_reduction[non_srcs_mask, sink].flatnonzero()
+            srcs_of_sink = sources[self.dag_reduction[sources, sink]]
             src_1, src_2 = np.random.choice(srcs_of_sink, 2, replace=False)
             chosen_nodes = src_1, src_2, sink
         else:  # then move == "split" or "fiber"
-            non_singleton_nodes = (self.chain_comps.sum(1) > 1).flatnonzero()
-            sources = np.logical_not(non_srcs_mask).flatnonzero()
+            non_singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) > 1)
             ns_sources = sources[np.in1d(sources, non_singleton_nodes)]
             chosen_nodes = np.random.choice(ns_sources)
             if move == "fiber":
@@ -246,7 +246,7 @@ class InputData(object):
                 srcs_mask[ns_sources] = 1
                 chosen_idx = np.random.choice(range(srcs_mask.sum()))
                 chosen_nodes = np.argwhere(srcs_mask)[chosen_idx]
-            return chosen_nodes
+        return chosen_nodes
 
     def old_pick_nodes(self, i_cc_idx, j_cc_idx):
         # uniformly pick elements i, j from the ccs
@@ -268,7 +268,7 @@ class InputData(object):
 
     @staticmethod
     def n_choose_2(vec):
-        return np.vectorize(lambda n: math.comb(n, 2))(vec)
+        return np.vectorize(lambda n: math.comb(n, 2))(np.array(vec, ndmin=1))
 
     def reduce_max_cpdag(self):
         cpdag = np.copy(self.cpdag)
