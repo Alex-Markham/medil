@@ -242,10 +242,11 @@ class InputData(object):
                 # i is nonsingleton or
                 # i has children other than j's children
                 other_children_mask = self.dag_reduction @ self.dag_reduction.T
-                srcs_mask = other_children_mask[sources, sources]
-                srcs_mask[ns_sources] = 1
+                other_children_mask[ns_sources] = 1
+                srcs_mask = other_children_mask[np.ix_(sources, sources)]
+                np.fill_diagonal(srcs_mask, 0)
                 chosen_idx = np.random.choice(range(srcs_mask.sum()))
-                chosen_nodes = np.argwhere(srcs_mask)[chosen_idx]
+                chosen_nodes = sources[np.argwhere(srcs_mask)[chosen_idx]]
         return chosen_nodes
 
     def old_pick_nodes(self, i_cc_idx, j_cc_idx):

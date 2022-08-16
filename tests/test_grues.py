@@ -89,6 +89,18 @@ def test_pick_source_nodes():
     assert (obj.dag_reduction[:, (src_1, src_2)] == 0).all()
     assert obj.dag_reduction[sink].sum() == 0
 
+    obj.chain_comps = examp_chain_comps()
+    source = obj.pick_source_nodes("split")
+
+    assert obj.dag_reduction[:, source].sum() == 0
+    assert obj.chain_comps[source].sum() > 1
+
+    src_1, src_2 = obj.pick_source_nodes("fiber")
+    ch_1_mask, ch_2_mask = obj.dag_reduction[(src_1, src_2), :]
+
+    assert ch_1_mask.sum() and ch_2_mask.sum()
+    assert (obj.chain_comps[src_1].sum() > 1) or (ch_1_mask @ ~ch_2_mask)
+
 
 # def test_perform_merge():
 #     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
