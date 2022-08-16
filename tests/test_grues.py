@@ -33,7 +33,15 @@ def examp_cpdag():
 
 
 def examp_dag_reduction():
-    return np.array([[0, 1], [2, 1], [3, 1]])
+    return np.array(
+        [
+            [0, 1, 0, 0],
+            [0, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 1, 0, 0],
+        ],
+        bool,
+    )
 
 
 def examp_chain_comps():
@@ -72,10 +80,10 @@ def test_reduce_max_cpdag():
     assert (obj.chain_comps == correct_chain_comps).all()
 
 
-def test_pick_cliques():
+def test_pick_source_nodes():
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
     obj.dag_reduction = examp_dag_reduction()
-    i, k, j = obj.pick_cliques()
+    i, k, j = obj.pick_source_nodes()
 
     i_idx = np.flatnonzero(obj.dag_reduction[:, 0] == i)
     k_idx = np.flatnonzero(obj.dag_reduction[:, 0] == k)
