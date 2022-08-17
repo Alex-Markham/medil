@@ -34,14 +34,26 @@ class InputData(object):
         self.reduce_max_cpdag()
         self.repeated = 0
         while self.repeated < max_repeats:
-            max_iter -= 1
-            move = np.random.choice(
-                (self.merge, self.split, self.within_fiber, self.out_of_fiber)
-            )
+            move = np.random.choice((self.merge, self.split, self.fiber))
             move()
             if self.debug:
+                # each vertex is a chain component
                 assert len(self.chain_comps) == len(self.dag_reduction)
-                assert (self.dag_reduction.sum(0) != 1).all()
+                assert (self.chain_comps.sum(0) == 1).all()
+
+                # every child has a unique parent set with at least two parents
+                num_pars = self.dag_reduction.sum(0)
+                children = self.dag_reduction(:, num_pars.astype(bool))
+                assert (np.unique(children, axis=1) == children).all()
+                assert (num_pars != 1).all()
+
+                # indeed a DAG and trasitively closed
+                num_nodes = len(self.dag_reduction)
+                graph = np.copy(self.dag_reduction, int)
+                for n in range(2, num_nodes):
+                    graph += np.linalg.matrix_power(self.dag_reduction, n)
+                assert np.diag(graph).sum() == 0
+                assert (graph.astype(bool) == self.dag_reduction).all()
 
     def init_uec(self, init):
         if type(init) is str:
