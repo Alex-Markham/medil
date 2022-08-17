@@ -87,11 +87,10 @@ class InputData(object):
 
     def merge(self):
         # uniformaly pick a pair of cliques to consider for merge
-        src_1, src_2, sink = self.pick_source_nodes("merge")
+        src_1, src_2 = self.pick_source_nodes("merge")
 
         # score and perform merge
-        other_pa = self.get_other_parents(j, i, k)
-        score_update = self.score_of_merge(i, k, j, other_pa)
+        score_update = self.score_of_merge(src_1, src_2)
         if score_update >= 0:
             self.score += score_update
             self.perform_merge(src_1, src_2)
@@ -177,26 +176,6 @@ class InputData(object):
         i_cc_idx, j_cc_idx, child_cc_idx = self.pick_source_ccs(fiber)
         i, j, t, t_cc_idx = self.pick_nodes(i_cc_idx, j_cc_idx)
 
-        # score of move
-        old = (self.get_score.local(i, i_cc[i_cc != i]) for i in i_cc).sum()
-        old += (self.get_score.local(j, j_cc[j_cc != j]) for j in j_cc).sum()
-        it_cc = np.append(i_cc, t)
-        jt_cc = j_cc[j_cc != t]
-        new = (self.get_score.local(it, it_cc[it_cc != it]) for it in it_cc).sum()
-        new += (self.get_score.local(jt, jt_cc[jt_cc != jt]) for jt in jt_cc).sum()
-        children = self.dag_reduction[self.dag_reduction[:, 0] == i][:, 1]
-        children = children[children != j]
-        if children.any():
-            childs = np.flatnonzero(children)
-            other_pars = self.dag_reduction[self.dag_reduction[:, 1] == j][:, 0]
-            other_pars = other_pars[other_pars != i]
-            other_pars = np.flatnonzero(self.chain_comps[other_pars].sum(0))
-            pars = np.append(i_cc, other_pars)
-            old += (self.get_score.local(child, pars) for child in childs).sum()
-            pars = np.append(other_pars, it_cc)
-            new += (self.get_score.local(child, pars) for child in childs).sum()
-        score_update = new - old
-
         if score_update >= 0:  # then perform move
             self.score += score_update
             # transfer t to clique_i
@@ -205,31 +184,6 @@ class InputData(object):
              self.repeated = 0
         else:
             self.repeated += 1
-
-    def out_of_fiber(self):
-        i_cc_idx, j_cc_idx, child_cc_idx = self.pick_source_ccs(fiber)
-        i, j, t, t_cc_idx = self.pick_nodes(i_cc_idx, j_cc_idx)
-
-        # score of move
-        old = self.get_score.local(t, j_cc[j_cc != t])
-        old += (self.get_score.local(i, i_cc[i_cc != i]) for i in i_cc).sum()
-        it_cc = np.append(i_cc, t)
-        new = (self.get_score.local(it, it_cc[it_cc != it]) for it in it_cc).sum()
-
-        score_update = new - old
-
-        if score_update >= 0:  # then perform move
-            self.score += score_update
-            self.chain_comps[j_cc_idx, t] = 0  # need to get t_cc_idx
-            if len(child_cc_idx):
-                self.chain_comps[child_cc_idx, t] = 1
-            else:
-                t_cc = np.zeros(self.num_feats, bool)
-                t_cc[t] = 1
-                self.chain_comps = np.vstack(self.chain_comps, t_cc)
-
-        else:
-            return
 
     def pick_source_nodes(self, move):
         # sources have no parents; sinks have parents and no children
@@ -244,7 +198,7 @@ class InputData(object):
             sink = np.random.choice(sinks, p=p)
             srcs_of_sink = sources[self.dag_reduction[sources, sink]]
             src_1, src_2 = np.random.choice(srcs_of_sink, 2, replace=False)
-            chosen_nodes = src_1, src_2, sink
+            chosen_nodes = src_1, src_2
         else:  # then move == "split" or "fiber"
             non_singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) > 1)
             ns_sources = sources[np.in1d(sources, non_singleton_nodes)]
@@ -260,24 +214,6 @@ class InputData(object):
                 chosen_idx = np.random.choice(range(srcs_mask.sum()))
                 chosen_nodes = sources[np.argwhere(srcs_mask)[chosen_idx]]
         return chosen_nodes
-
-    def old_pick_nodes(self, i_cc_idx, j_cc_idx):
-        # uniformly pick elements i, j from the ccs
-        i_cc, j_cc = np.argwhere(self.chain_comps[i_cc_idx, j_cc_idx]).T
-        i, j = np.random.choice(i_cc), np.random.choice(j_cc)
-
-        # uniformly pick element t != j from
-        # a uniformly chosen cc in (clique of j \ clique of i)
-        ch_j_mask = np.flatnonzero(self.dag_reduction[:, 0] == j)
-        ch_j_idcs = self.dag_reduction[ch_j_mask, 1]
-        ch_j_idcs = ch_j_idcs[ch_j_idcs != j]
-        ch_i_mask = np.flatnonzero(self.dag_reduction[:, 0] == i)
-        ch_i_idcs = self.dag_reduction[ch_i_mask, 1]
-        cc_idcs = np.logical_not(np.in1d(ch_i_idcs, ch_j_idcs))
-        t_cc_idx = np.random.choice(np.append(cc_idcs, j_cc))
-        t = np.random.choice(np.flat_nonzero(self.chain_comps[chosen_cc_idx]))
-
-        return i, j, t, t_cc_idx
 
     @staticmethod
     def n_choose_2(vec):
@@ -298,23 +234,3 @@ class InputData(object):
 
         self.dag_reduction = cpdag
         self.chain_comps = chain_comps
-
-    def get_other_children(self, parent, child, reduced=True):
-        children_mask = self.dag_reduction[:, 0] == parent
-        children = self.dag_reduction[children_mask, 1]
-        children = children[children != child]
-        if reduced:
-            return children
-        else:
-            return np.where(self.chain_comps[children])[1]
-
-    def get_other_parents(self, child, pa_1, pa_2=None, reduced=True):
-        parents_mask = self.dag_reduction[:, 1] == child
-        parents = self.dag_reduction[parent_mask, 0]
-        parents = parents[parents != pa_1]
-        if pa_2 is not None:
-            parents = parents[parents != pa_2]
-        if reduced:
-            return parents
-        else:
-            return np.where(self.chain_comps[parents])[1]
