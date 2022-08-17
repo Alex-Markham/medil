@@ -39,6 +39,7 @@ class InputData(object):
                 (self.merge, self.split, self.within_fiber, self.out_of_fiber)
             )
             move()
+            # add debug flag to check at each step that it's still a UEC
 
     def init_uec(self, init):
         if type(init) is str:
@@ -71,18 +72,15 @@ class InputData(object):
         self.cpdag = cpdag
 
     def merge(self):
-        r"""Merges cliques corresponding to i, k connected by
-        v-structure i -> j <- k in dag reduction."""
-
         # uniformaly pick a pair of cliques to consider for merge
-        i, k, j = self.pick_source_ccs(merge)
+        src_1, src_2, sink = self.pick_source_nodes("merge")
 
         # score and perform merge
         other_pa = self.get_other_parents(j, i, k)
         score_update = self.score_of_merge(i, k, j, other_pa)
         if score_update >= 0:
             self.score += score_update
-            self.perform_merge(i, k, j, len(other_pa))
+            self.perform_merge(src_1, src_2)
         else:
             return
 
@@ -103,20 +101,17 @@ class InputData(object):
                 new += (self.get_score.local(child, parents) for child in ch_cc).sum()
         return new - old
 
-    def perform_merge(self, i, k, j, other_pa):
-        r"""Merges i into k, updating dag reduction and chain components."""
-        self.chain_comps[k] += self.chain_comps[i]
-        self.chain_comps = np.delete(self.chain_comps, i, 0)
-        to_delete = np.flatnonzero(self.dag_reduction[:, 0] == i)
-        self.dag_reduction = np.delete(self.dag_reduction, to_delete, 0)
-        ## test the two following
-        if not other_pa:  # reduce newly formed cc
-            self.chain_comps[k] += self.chain_comps[j]
-            self.chain_comps = np.delete(self.chain_comps, j, 0)
-            to_delete = np.flatnonzero(self.dag_reduction[:, 1] == j)
-            self.dag_reduction = np.delete(self.dag_reduction, to_delete, 0)
-        # add children of k to i
-        self.dag_reduction[self.dag_reduction == k] = i
+    def perform_merge(self, src_1, src_2, recurse=True):
+        self.chain_comps[src_1] += self.chain_comps[src_2]
+        self.dag_reduction[src_1] += self.dag_reduction[src_2]
+
+        self.chain_comps = np.delete(self.chain_comps, src_2, 0)
+        self.dag_reduction = np.delete(self.dag_reduction, src_2, 0)
+
+        if recurse:
+            parentless = np.flatnonzero(self.dag_reduction.sum(0) == 1)
+            if len(parentless == 1):
+                self.perform_merge(src_1, parentless[0], False)
 
     def split(self):
         r"""Splits a clique containing edge v--w, making ne(v) \cap ne(w) into v-structures."""
@@ -241,7 +236,7 @@ class InputData(object):
                 # srcs_mask has entry i,j = 1 if and only if
                 # i is nonsingleton or
                 # i has children other than j's children
-                other_children_mask = self.dag_reduction @ self.dag_reduction.T
+                other_children_mask = self.dag_reduction @ ~self.dag_reduction.T
                 other_children_mask[ns_sources] = 1
                 srcs_mask = other_children_mask[np.ix_(sources, sources)]
                 np.fill_diagonal(srcs_mask, 0)

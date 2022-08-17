@@ -102,23 +102,31 @@ def test_pick_source_nodes():
     assert (obj.chain_comps[src_1].sum() > 1) or (ch_1_mask @ ~ch_2_mask)
 
 
-# def test_perform_merge():
-#     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
-#     obj.chain_comps = examp_chain_comps()
-#     obj.dag_reduction = examp_dag_reduction()
-#     obj.perform_merge(0, 3)
+def test_perform_merge():
+    obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
+    obj.chain_comps = examp_chain_comps()
+    obj.dag_reduction = examp_dag_reduction()
+    obj.perform_merge(0, 3)
 
-#     correct_dag_reduction = np.array([[2, 1], [3, 1]])
-#     correct_chain_comps = np.array(
-#         [
-#             [0, 1, 0, 0, 0, 0, 0],
-#             [0, 0, 1, 1, 1, 0, 0],
-#             [1, 0, 0, 0, 0, 1, 1],
-#         ]
-#     )
+    correct_dag_reduction = np.array(
+        [
+            [0, 1, 0, 0],
+            [0, 0, 0, 0],
+            [0, 1, 0, 0],
+        ],
+        bool,
+    )
+    correct_chain_comps = np.array(
+        [
+            [1, 0, 0, 0, 0, 1, 1],
+            [0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 1, 1, 1, 0, 0],
+        ],
+        bool,
+    )
 
-#     assert (obj.dag_reduction == correct_dag_reduction).all()
-#     assert (obj.chain_comps == correct_chain_comps).all()
+    assert (obj.dag_reduction == correct_dag_reduction).all()
+    assert (obj.chain_comps == correct_chain_comps).all()
 
 
 # def test_consider_split():
