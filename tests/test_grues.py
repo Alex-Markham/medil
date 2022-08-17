@@ -173,3 +173,15 @@ def test_perform_split():
 
     assert (obj.dag_reduction == correct_dag_reduction).all()
     assert (obj.chain_comps == correct_chain_comps).all()
+
+
+def test_consider_fiber():
+    obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
+    obj.chain_comps = ex_cc = examp_chain_comps()
+    obj.dag_reduction = ex_d_r = examp_dag_reduction()
+    within, src_1, src_2, t, v = obj.consider_fiber()
+
+    assert (t == src_1 and ex_cc[t].sum() > 1) or (
+        ex_d_r[src_2, t] and ~ex_d_r[src_1, t]
+    )
+    assert ex_cc[t, v]

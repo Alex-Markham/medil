@@ -43,7 +43,7 @@ class InputData(object):
 
                 # every child has a unique parent set with at least two parents
                 num_pars = self.dag_reduction.sum(0)
-                children = self.dag_reduction(:, num_pars.astype(bool))
+                children = self.dag_reduction[:, num_pars.astype(bool)]
                 assert (np.unique(children, axis=1) == children).all()
                 assert (num_pars != 1).all()
 
@@ -173,17 +173,31 @@ class InputData(object):
             self.dag_reduction[-2:, source] = 1
 
     def fiber(self):
-        i_cc_idx, j_cc_idx, child_cc_idx = self.pick_source_ccs(fiber)
-        i, j, t, t_cc_idx = self.pick_nodes(i_cc_idx, j_cc_idx)
+        within, src_1, src_2, t, v = self.consider_fiber()
 
         if score_update >= 0:  # then perform move
             self.score += score_update
-            # transfer t to clique_i
-            self.chain_comps[k, t] = 0
-            self.chain_comps[i, t] = 1
-             self.repeated = 0
+            self.perform_fiber(within, src_1, src_2, t, v)
+            self.repeated = 0
         else:
             self.repeated += 1
+
+    def consider_fiber(self):
+        within = np.random.choice((True, False))
+
+        src_1, src_2 = self.pick_source_nodes("fiber")
+
+        ch_src_1, ch_src_2 = self.dag_reduction[[src_1, src_2], :]
+        poss_t_mask = np.logical_and(ch_src_2, ~ch_src_1)
+        poss_t_mask[src_1] = self.chain_comps[src_1].sum() > 1
+        t = np.random.choice(np.flatnonzero(poss_t_mask))
+
+        v = np.random.choice(np.flatnonzero(self.chain_comps[t]))
+
+        return within, src_1, src_2, t, v
+
+    def perform_fiber(self, within, src_1, src_2, t, v):
+        ch_intersection = np.flatnonzero(np.logical_and(ch_src_1, ch_src_2))
 
     def pick_source_nodes(self, move):
         # sources have no parents; sinks have parents and no children
