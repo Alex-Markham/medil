@@ -21,25 +21,27 @@ class InputData(object):
 
     """
 
-    def __init__(self, samples):
+    def __init__(self, samples, debug=False):
         self.samples = np.array(samples, dtype=float)
         self.num_samps, self.num_feats = self.samples.shape
-        self.debug = False
+        self.debug = debug
 
-    def grues(self, init="empty", max_iter=100):
+    def grues(self, init="empty", max_repeats=5):
         self.init_uec(init)
         self.get_max_cpdag()
         self.get_score = GaussObsL0Pen(self.samples)
         self.score = self.get_score.full(self.cpdag)
         self.reduce_max_cpdag()
-        stop_condition = False  # note: need to figure out what this should be
-        while max_iter or not stop_condition:
+        self.repeated = 0
+        while self.repeated < max_repeats:
             max_iter -= 1
             move = np.random.choice(
                 (self.merge, self.split, self.within_fiber, self.out_of_fiber)
             )
             move()
-            # add debug flag to check at each step that it's still a UEC
+            if self.debug:
+                assert len(self.chain_comps) == len(self.dag_reduction)
+                assert (self.dag_reduction.sum(0) != 1).all()
 
     def init_uec(self, init):
         if type(init) is str:
@@ -81,8 +83,9 @@ class InputData(object):
         if score_update >= 0:
             self.score += score_update
             self.perform_merge(src_1, src_2)
+            self.repeated = 0
         else:
-            return
+            self.repeated += 1
 
     def score_of_merge(self, i, k, j, other_pa):
         i_cc, k_cc = np.argwhere(self.chain_comps[i, k]).T
@@ -119,8 +122,9 @@ class InputData(object):
         if score_update >= 0:
             self.score += score_update
             self.perform_split(considered)
+            self.repeated = 0
         else:
-            return
+            self.repeated += 1
 
     def consider_split(self):
         # uniformly pick a source chain component to split
@@ -157,7 +161,7 @@ class InputData(object):
             self.perform_split(w, None, source, False)
             self.dag_reduction[-2:, source] = 1
 
-    def within_fiber(self):
+    def fiber(self):
         i_cc_idx, j_cc_idx, child_cc_idx = self.pick_source_ccs(fiber)
         i, j, t, t_cc_idx = self.pick_nodes(i_cc_idx, j_cc_idx)
 
@@ -186,8 +190,9 @@ class InputData(object):
             # transfer t to clique_i
             self.chain_comps[k, t] = 0
             self.chain_comps[i, t] = 1
+             self.repeated = 0
         else:
-            return
+            self.repeated += 1
 
     def out_of_fiber(self):
         i_cc_idx, j_cc_idx, child_cc_idx = self.pick_source_ccs(fiber)
