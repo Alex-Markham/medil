@@ -142,19 +142,20 @@ class InputData(object):
         new += (self.get_score.local(w, w_cc[w_cc != w]) for w in w_cc).sum()
         return new - old
 
-    def perform_split(self, v, w, chosen_cc_idx):
-        # perform split and update dag reduction and chain components
-        w_clique = np.copy(self.chain_comps[chosen_cc_idx])
-        self.chain_comps[chosen_cc_idx, w] = 0
-        w_clique[v] = 0
-        # dag reduction for v_clique still correct, since it has same
-        # sinks as chosen clique; now update for w_clique:
-        self.chain_comps = np.vstack((self.chain_comps, w_clique))
-        ch_v_idx = np.flatnonzero(dag_reduction[:, 0] == v)
-        ch_w = np.copy(self.dag_reduction[ch_v_idx])
-        w_idx = len(self.chain_comps) - 1
-        ch_w[:, 0] = w_idx
-        self.dag_reduction = np.vstack((self.dag_reduction, ch_w))
+    def perform_split(self, v, w, source, recurse=True):
+        # add node to dag reduction and corresponding cc to chain comps
+        v_cc_mask = np.zeros(self.num_feats, bool)
+        v_cc_mask[v] = 1
+        self.chain_comps[source, v] = 0
+        self.chain_comps = np.vstack((self.chain_comps, v_cc_mask))
+        col = np.zeros((len(self.dag_reduction), 1), bool)
+        self.dag_reduction = np.hstack((self.dag_reduction, col))
+        # add edges from v_node to children of source node
+        self.dag_reduction = np.vstack((self.dag_reduction, self.dag_reduction[source]))
+
+        if self.chain_comps[source].sum() != 1 and recurse:
+            self.perform_split(w, None, source, False)
+            self.dag_reduction[-2:, source] = 1
 
     def within_fiber(self):
         i_cc_idx, j_cc_idx, child_cc_idx = self.pick_source_ccs(fiber)
