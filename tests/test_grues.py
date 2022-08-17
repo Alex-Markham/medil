@@ -5,13 +5,13 @@ import medil.grues
 def examp_init():
     return np.array(
         [
-            [0, 1, 0, 0, 0, 0, 0],
-            [1, 0, 1, 1, 1, 1, 1],
-            [0, 1, 0, 1, 1, 0, 0],
-            [0, 1, 1, 0, 1, 0, 0],
-            [0, 1, 1, 1, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0, 1],
+            [0, 1, 0, 1, 0, 0, 1],
+            [1, 0, 1, 1, 0, 1, 1],
             [0, 1, 0, 0, 0, 1, 0],
+            [1, 1, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 1, 0],
+            [0, 1, 1, 0, 1, 0, 0],
+            [1, 1, 0, 1, 0, 0, 0],
         ],
         bool,
     )
@@ -20,13 +20,13 @@ def examp_init():
 def examp_cpdag():
     return np.array(
         [
-            [0, 1, 0, 0, 0, 0, 0],
+            [0, 1, 0, 1, 0, 0, 1],
             [0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 0, 1, 1, 0, 0],
-            [0, 1, 1, 0, 1, 0, 0],
-            [0, 1, 1, 1, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0, 1],
             [0, 1, 0, 0, 0, 1, 0],
+            [1, 1, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [1, 1, 0, 1, 0, 0, 0],
         ],
         bool,
     )
@@ -35,10 +35,11 @@ def examp_cpdag():
 def examp_dag_reduction():
     return np.array(
         [
-            [0, 1, 0, 0],
-            [0, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 1, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 1, 0, 0, 1],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0],
         ],
         bool,
     )
@@ -47,10 +48,11 @@ def examp_dag_reduction():
 def examp_chain_comps():
     return np.array(
         [
-            [1, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 1, 0, 0, 1],
             [0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 1, 1, 1, 0, 0],
-            [0, 0, 0, 0, 0, 1, 1],
+            [0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0],
         ],
         bool,
     )
@@ -179,9 +181,16 @@ def test_consider_fiber():
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
     obj.chain_comps = ex_cc = examp_chain_comps()
     obj.dag_reduction = ex_d_r = examp_dag_reduction()
-    within, src_1, src_2, t, v = obj.consider_fiber()
+    _, src_1, src_2, t, v = obj.consider_fiber()
 
     assert (t == src_1 and ex_cc[t].sum() > 1) or (
         ex_d_r[src_2, t] and ~ex_d_r[src_1, t]
     )
     assert ex_cc[t, v]
+
+
+def test_perform_fiber():
+    obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
+    obj.chain_comps = ex_cc = examp_chain_comps()
+    obj.dag_reduction = ex_d_r = examp_dag_reduction()
+    # within, src_1, src_2, t, v =
