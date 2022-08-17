@@ -129,16 +129,16 @@ def test_perform_merge():
     assert (obj.chain_comps == correct_chain_comps).all()
 
 
-# def test_consider_split():
-#     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
-#     obj.chain_comps = examp_chain_comps()
-#     obj.dag_reduction = examp_dag_reduction()
-#     v, w, chosen_cc_idx = obj.consider_split()
+def test_consider_split():
+    obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
+    obj.chain_comps = examp_chain_comps()
+    obj.dag_reduction = examp_dag_reduction()
+    v, w, source = obj.consider_split()
 
-#     chosen_cc = examp_chain_comps()[chosen_cc_idx]
-#     assert chosen_cc[v]
-#     assert chosen_cc[w]
-#     assert chosen_cc_idx not in examp_dag_reduction()[:, 1]
+    chain_comp_mask = examp_chain_comps()[source]
+    assert chain_comp_mask[v]
+    assert chain_comp_mask[w]
+    assert examp_dag_reduction()[:, source].sum() == 0
 
 
 # def test_perform_split():

@@ -114,7 +114,6 @@ class InputData(object):
                 self.perform_merge(src_1, parentless[0], False)
 
     def split(self):
-        r"""Splits a clique containing edge v--w, making ne(v) \cap ne(w) into v-structures."""
         considered = self.consider_split()
         score_update = self.score_of_split(considered)
         if score_update >= 0:
@@ -125,13 +124,13 @@ class InputData(object):
 
     def consider_split(self):
         # uniformly pick a source chain component to split
-        chosen_cc_idx = self.pick_source_cc("split")
+        source = self.pick_source_nodes("split")
 
-        # uniformly pick edge v--w in the clique to split on
-        chosen_cc = self.chain_comps[chosen_cc_idx]
-        v, w = np.random.choice(np.flatnonzero(chosen_cc), 2, replace=False)
+        # uniformly pick edge v--w in the chain component to split on
+        chain_comp_mask = self.chain_comps[source]
+        v, w = np.random.choice(np.flatnonzero(chain_comp_mask), 2, replace=False)
 
-        return v, w, chosen_cc_idx
+        return v, w, source
 
     def score_of_split(self, considered):
         v, w, chosen_cc_idx = considered
