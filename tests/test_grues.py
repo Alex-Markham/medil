@@ -36,10 +36,10 @@ def examp_dag_reduction():
     return np.array(
         [
             [0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0],
-            [0, 1, 0, 0, 1],
-            [0, 0, 0, 0, 1],
+            [1, 0, 0, 1, 0],
+            [0, 0, 0, 1, 0],
             [0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0],
         ],
         bool,
     )
@@ -108,7 +108,7 @@ def test_perform_merge():
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
     obj.chain_comps = examp_chain_comps()
     obj.dag_reduction = examp_dag_reduction()
-    obj.perform_merge(0, 3)
+    obj.perform_merge(4, 1)
 
     correct_dag_reduction = np.array(
         [
