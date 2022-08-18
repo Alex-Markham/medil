@@ -121,11 +121,13 @@ class InputData(object):
 
         self.chain_comps = np.delete(self.chain_comps, src_2, 0)
         self.dag_reduction = np.delete(self.dag_reduction, src_2, 0)
+        self.dag_reduction = np.delete(self.dag_reduction, src_2, 1)
 
         if recurse:
+            src_1 -= 1 if src_1 > src_2 else 0
             parentless = np.flatnonzero(self.dag_reduction.sum(0) == 1)
-            if len(parentless == 1):
-                self.perform_merge(src_1, parentless[0], False)
+            for child in parentless:
+                self.perform_merge(src_1, child, False)
 
     def split(self):
         considered = self.consider_split()
