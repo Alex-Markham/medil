@@ -85,11 +85,10 @@ def test_reduce_max_cpdag():
 def test_pick_source_nodes():
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
     obj.dag_reduction = examp_dag_reduction()
-    src_1, src_2, sink = obj.pick_source_nodes("merge")
+    src_1, src_2 = obj.pick_source_nodes("merge")
 
-    assert obj.dag_reduction[(src_1, src_2), sink].all()
-    assert (obj.dag_reduction[:, (src_1, src_2)] == 0).all()
-    assert obj.dag_reduction[sink].sum() == 0
+    assert (obj.dag_reduction[:, [src_1, src_2]] == 0).all()
+    assert obj.dag_reduction[src_1] @ obj.dag_reduction[src_2]
 
     obj.chain_comps = examp_chain_comps()
     source = obj.pick_source_nodes("split")

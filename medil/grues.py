@@ -235,7 +235,7 @@ class InputData(object):
         childless_mask = np.logical_not(self.dag_reduction.sum(1).astype(bool))
         sinks = np.flatnonzero(np.logical_and(non_srcs_mask, childless_mask))
         if move == "merge":
-            num_sources = self.dag_reduction[sources, sinks].sum(0)
+            num_sources = self.dag_reduction[np.ix_(sources, sinks)].sum(0)
             counts = self.n_choose_2(num_sources)
             p = np.array(counts / counts.sum())
             sink = np.random.choice(sinks, p=p)
