@@ -193,7 +193,7 @@ class InputData(object):
         src_1, src_2 = self.pick_source_nodes("fiber")
 
         ch_src_1, ch_src_2 = self.dag_reduction[[src_1, src_2], :]
-        poss_t_mask = np.logical_and(ch_src_2, ~ch_src_1)
+        poss_t_mask = np.logical_and(ch_src_1, ~ch_src_2)
         poss_t_mask[src_1] = self.chain_comps[src_1].sum() > 1
         t = np.random.choice(np.flatnonzero(poss_t_mask))
 

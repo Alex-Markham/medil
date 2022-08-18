@@ -185,7 +185,7 @@ def test_consider_fiber():
     _, src_1, src_2, t, v = obj.consider_fiber()
 
     assert (t == src_1 and ex_cc[t].sum() > 1) or (
-        ex_d_r[src_2, t] and ~ex_d_r[src_1, t]
+        ex_d_r[src_1, t] and ~ex_d_r[src_2, t]
     )
     assert ex_cc[t, v]
 
