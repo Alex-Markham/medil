@@ -190,8 +190,29 @@ def test_consider_fiber():
     assert ex_cc[t, v]
 
 
-def test_perform_fiber():
+def test_perform_fiber_F414():
+    within, src_1, src_2, t, v = False, 4, 1, 4, 0
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
     obj.chain_comps = ex_cc = examp_chain_comps()
     obj.dag_reduction = ex_d_r = examp_dag_reduction()
-    # within, src_1, src_2, t, v =
+
+
+def test_perform_fiber_T414():
+    within, src_1, src_2, t, v = True, 4, 1, 4, 0
+    obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
+    obj.chain_comps = ex_cc = examp_chain_comps()
+    obj.dag_reduction = ex_d_r = examp_dag_reduction()
+
+
+def test_perform_fiber_T424():
+    within, src_1, src_2, t, v = True, 4, 2, 4, 0
+    obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
+    obj.chain_comps = ex_cc = examp_chain_comps()
+    obj.dag_reduction = ex_d_r = examp_dag_reduction()
+
+
+def test_perform_fiber_T120():
+    within, src_1, src_2, t, v = True, 1, 2, 0, 1
+    obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
+    obj.chain_comps = ex_cc = examp_chain_comps()
+    obj.dag_reduction = ex_d_r = examp_dag_reduction()
