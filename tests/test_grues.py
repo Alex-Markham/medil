@@ -32,19 +32,6 @@ def examp_cpdag():
     )
 
 
-def examp_dag_reduction():
-    return np.array(
-        [
-            [0, 0, 0, 0, 0],
-            [1, 0, 0, 1, 0],
-            [0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0],
-        ],
-        bool,
-    )
-
-
 def examp_chain_comps():
     return np.array(
         [
@@ -53,6 +40,19 @@ def examp_chain_comps():
             [0, 0, 0, 0, 1, 0, 0],
             [0, 0, 0, 0, 0, 1, 0],
             [1, 0, 0, 1, 0, 0, 1],
+        ],
+        bool,
+    )
+
+
+def examp_dag_reduction():
+    return np.array(
+        [
+            [0, 0, 0, 0, 0],
+            [1, 0, 0, 1, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0],
         ],
         bool,
     )
@@ -75,8 +75,8 @@ def test_reduce_max_cpdag():
     obj.cpdag = examp_cpdag()
     obj.reduce_max_cpdag()
 
-    correct_dag_reduction = examp_dag_reduction()
     correct_chain_comps = examp_chain_comps()
+    correct_dag_reduction = examp_dag_reduction()
 
     assert (obj.dag_reduction == correct_dag_reduction).all()
     assert (obj.chain_comps == correct_chain_comps).all()
@@ -109,19 +109,19 @@ def test_perform_merge():
     obj.dag_reduction = examp_dag_reduction()
     obj.perform_merge(4, 1)
 
-    correct_dag_reduction = np.array(
-        [
-            [0, 1, 0],
-            [0, 0, 0],
-            [0, 1, 0],
-        ],
-        bool,
-    )
     correct_chain_comps = np.array(
         [
             [0, 0, 0, 0, 1, 0, 0],
             [0, 0, 0, 0, 0, 1, 0],
             [1, 1, 1, 1, 0, 0, 1],
+        ],
+        bool,
+    )
+    correct_dag_reduction = np.array(
+        [
+            [0, 1, 0],
+            [0, 0, 0],
+            [0, 1, 0],
         ],
         bool,
     )
@@ -146,34 +146,36 @@ def test_perform_split():
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
     obj.chain_comps = examp_chain_comps()
     obj.dag_reduction = examp_dag_reduction()
-    v, w, source = 2, 4, 2
+    v, w, source = 6, 0, 4
     obj.perform_split(v, w, source)
 
-    correct_dag_reduction = np.array(
+    correct_chain_comps = np.array(
         [
-            [0, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0],
-            [0, 1, 1, 0, 0, 0],
-            [0, 1, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0],
         ],
         bool,
     )
-    correct_chain_comps = np.array(
+    correct_dag_reduction = np.array(
         [
-            [1, 0, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 1, 0, 0, 0],
             [0, 0, 0, 1, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 1],
-            [0, 0, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 1, 0, 0],
+            [1, 0, 0, 0, 1, 0, 0],
         ],
         bool,
     )
 
-    assert (obj.dag_reduction == correct_dag_reduction).all()
     assert (obj.chain_comps == correct_chain_comps).all()
+    assert (obj.dag_reduction == correct_dag_reduction).all()
 
 
 def test_consider_fiber():
