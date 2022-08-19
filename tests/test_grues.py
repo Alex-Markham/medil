@@ -180,10 +180,12 @@ def test_perform_split():
 
 def test_consider_fiber():
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
-    obj.chain_comps = ex_cc = examp_chain_comps()
-    obj.dag_reduction = ex_d_r = examp_dag_reduction()
+    obj.chain_comps = examp_chain_comps()
+    obj.dag_reduction = examp_dag_reduction()
     _, src_1, src_2, t, v = obj.consider_fiber()
 
+    ex_cc = examp_chain_comps()
+    ex_d_r = examp_dag_reduction()
     assert (t == src_1 and ex_cc[t].sum() > 1) or (
         ex_d_r[src_1, t] and ~ex_d_r[src_2, t]
     )
@@ -193,26 +195,102 @@ def test_consider_fiber():
 def test_perform_fiber_F414():
     within, src_1, src_2, t, v = False, 4, 1, 4, 0
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
-    obj.chain_comps = ex_cc = examp_chain_comps()
-    obj.dag_reduction = ex_d_r = examp_dag_reduction()
+    obj.chain_comps = examp_chain_comps()
+    obj.dag_reduction = examp_dag_reduction()
+    obj.perform_fiber(within, src_1, src_2, t, v)
+
+    correct_chain_comps = np.array(
+        [
+            [0, 1, 0, 0, 0, 0, 0],
+            [1, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 1, 0, 0, 1],
+        ],
+        bool,
+    )
+    correct_dag_reduction = examp_dag_reduction()
+
+    assert (obj.chain_comps == correct_chain_comps).all()
+    assert (obj.dag_reduction == correct_dag_reduction).all()
 
 
 def test_perform_fiber_T414():
     within, src_1, src_2, t, v = True, 4, 1, 4, 0
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
-    obj.chain_comps = ex_cc = examp_chain_comps()
-    obj.dag_reduction = ex_d_r = examp_dag_reduction()
+    obj.chain_comps = examp_chain_comps()
+    obj.dag_reduction = examp_dag_reduction()
+    obj.perform_fiber(within, src_1, src_2, t, v)
+
+    correct_chain_comps = np.array(
+        [
+            [1, 1, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 1, 0, 0, 1],
+        ],
+        bool,
+    )
+    correct_dag_reduction = examp_dag_reduction()
+
+    assert (obj.chain_comps == correct_chain_comps).all()
+    assert (obj.dag_reduction == correct_dag_reduction).all()
 
 
 def test_perform_fiber_T424():
     within, src_1, src_2, t, v = True, 4, 2, 4, 0
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
-    obj.chain_comps = ex_cc = examp_chain_comps()
-    obj.dag_reduction = ex_d_r = examp_dag_reduction()
+    obj.chain_comps = examp_chain_comps()
+    obj.dag_reduction = examp_dag_reduction()
+    obj.perform_fiber(within, src_1, src_2, t, v)
+
+    correct_chain_comps = examp_chain_comps()
+    correct_chain_comps[4, 0] = False
+    v_cc_mask = np.zeros(len(examp_init()), bool)
+    v_cc_mask[v] = True
+    correct_chain_comps = np.vstack((correct_chain_comps, v_cc_mask))
+
+    correct_dag_reduction = examp_dag_reduction()
+    col = np.zeros((len(correct_dag_reduction), 1), bool)
+    col[[src_1, src_2], 0] = True
+    correct_dag_reduction = np.hstack((correct_dag_reduction, col))
+    row = np.zeros((1, len(correct_dag_reduction) + 1), bool)
+    correct_dag_reduction = np.vstack((correct_dag_reduction, row))
+
+    assert (obj.chain_comps == correct_chain_comps).all()
+    assert (obj.dag_reduction == correct_dag_reduction).all()
 
 
 def test_perform_fiber_T120():
     within, src_1, src_2, t, v = True, 1, 2, 0, 1
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
-    obj.chain_comps = ex_cc = examp_chain_comps()
-    obj.dag_reduction = ex_d_r = examp_dag_reduction()
+    obj.chain_comps = examp_chain_comps()
+    obj.dag_reduction = examp_dag_reduction()
+    obj.perform_fiber(within, src_1, src_2, t, v)
+
+    correct_chain_comps = np.array(
+        [
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0],
+            [1, 0, 0, 1, 0, 0, 1],
+        ],
+        bool,
+    )
+    examp_chain_comps()
+    correct_chain_comps[0, 1] = False
+    v_cc_mask = np.zeros(len(examp_init()), bool)
+    v_cc_mask[v] = True
+    correct_chain_comps = np.vstack((correct_chain_comps, v_cc_mask))
+
+    correct_dag_reduction = examp_dag_reduction()
+    col = np.zeros((len(correct_dag_reduction), 1), bool)
+    col[[t, 4, src_1, 3], 0] = True
+    correct_dag_reduction = np.hstack((correct_dag_reduction, col))
+    row = np.zeros((1, len(correct_dag_reduction) + 1), bool)
+    correct_dag_reduction = np.vstack((correct_dag_reduction, row))
+
+    assert (obj.chain_comps == correct_chain_comps).all()
+    assert (obj.dag_reduction == correct_dag_reduction).all()
