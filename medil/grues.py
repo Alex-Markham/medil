@@ -98,7 +98,16 @@ class InputData(object):
         else:
             self.repeated += 1
 
-    def score_of_merge(self, i, k, j, other_pa):
+    def score_of_merge(self, src_1, src_2):
+        ch_1_mask, ch_2_mask = self.dag_reduction[[src_1, src_2]]
+        ch_only_1_mask = np.logical_and(ch_1_mask, ~ch_2_mask)
+        ch_only_1_mask = np.logical_and(~ch_1_mask, ch_2_mask)
+
+        unreduced_ch_1 = np.where(self.chain_comps[ch_only_1_mask, :])
+        unreduced_ch_2 = np.where(self.chain_comps[ch_only_2_mask, :])
+
+        uncommon_ch_mask = np.logical_xor(ch_1_mask, ch_2_mask)
+
         i_cc, k_cc = np.argwhere(self.chain_comps[i, k]).T
         old = (self.get_score.local(i, i_cc[i_cc != i]) for i in i_cc).sum()
         old += (self.get_score.local(k, k_cc[k_cc != k]) for k in k_cc).sum()
@@ -287,3 +296,8 @@ class InputData(object):
 
         self.dag_reduction = cpdag
         self.chain_comps = chain_comps
+
+    def expand(self):
+        pass
+
+    # for scoring, just save the old reduction and chain comps and expansion, make the move, expand self.cpdag, and compare scores of old and new expansion
