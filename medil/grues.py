@@ -205,7 +205,7 @@ class InputData(object):
         ch_src_1, ch_src_2 = self.dag_reduction[[src_1, src_2], :]
         ch_intrx_mask = np.logical_and(ch_src_1, ch_src_2)
         num_pars = self.dag_reduction[:, ch_intrx_mask].sum(0)
-        exclusive_ch = np.flatnonzero(num_pars == 2)
+        exclusive_ch = np.flatnonzero(ch_intrx_mask)[np.flatnonzero(num_pars == 2)]
         if t == src_1:
             if len(exclusive_ch) == 1:
                 if within:
@@ -220,7 +220,7 @@ class InputData(object):
                 self.dag_reduction = np.vstack((self.dag_reduction, ch_intrx_mask))
                 if within:
                     self.dag_reduction[src_1, -1] = True
-        else:
+        elif self.chain_comps[t].sum() > 1:
             self.perform_split(v, None, t, False, True)
             v_ch_mask = np.zeros((1, len(self.chain_comps)), bool)
             self.dag_reduction = np.vstack((self.dag_reduction, v_ch_mask))
@@ -230,7 +230,13 @@ class InputData(object):
                 t_pars = t_pars[t_pars != src_1]
             self.dag_reduction[t_pars, -1] = True
             if len(exclusive_ch) == 1:
-                self.dag_reduction[exclusive_ch, v] = True
+                self.dag_reduction[exclusive_ch, -1] = True
+        else:
+            self.dag_reduction[src_2, t] = True
+            if within:
+                self.dag_reduction[src_1, t] = False
+            elif len(exclusive_ch) == 1:
+                self.dag_reduction[exclusive_ch[0], t] = True
 
     def pick_source_nodes(self, move):
         # sources have no parents; sinks have parents and no children
