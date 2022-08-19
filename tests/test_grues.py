@@ -1,3 +1,4 @@
+# python -m pytest --cov-report html --cov-report term --cov=medil.grues -v tests/test_grues.py
 import numpy as np
 import medil.grues
 
