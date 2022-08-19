@@ -161,8 +161,8 @@ class InputData(object):
 
     def perform_split(self, v, w, source, recurse=True, fiber=False):
         # add node to dag reduction and corresponding cc to chain comps
-        v_cc_mask = np.zeros(self.num_feats, bool)
-        v_cc_mask[v] = 1
+        v_cc_mask = np.zeros((1, self.num_feats), bool)
+        v_cc_mask[0, v] = 1
         self.chain_comps[source, v] = 0
         self.chain_comps = np.vstack((self.chain_comps, v_cc_mask))
         col = np.zeros((len(self.dag_reduction), 1), bool)
@@ -225,7 +225,7 @@ class InputData(object):
             v_ch_mask = np.zeros((1, len(self.chain_comps)), bool)
             self.dag_reduction = np.vstack((self.dag_reduction, v_ch_mask))
             self.dag_reduction[t, -1] = True
-            t_pars = np.flatnonzero(self.dag_reduction[t, :])
+            t_pars = np.flatnonzero(self.dag_reduction[:, t])
             if not within:
                 t_pars = t_pars[t_pars != src_1]
             self.dag_reduction[t_pars, -1] = True

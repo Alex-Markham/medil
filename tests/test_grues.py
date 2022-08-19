@@ -262,7 +262,7 @@ def test_perform_fiber_T424():
     assert (obj.dag_reduction == correct_dag_reduction).all()
 
 
-def test_perform_fiber_T120():
+def test_perform_fiber_T120_t1():
     within, src_1, src_2, t, v = True, 1, 2, 0, 1
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
     obj.chain_comps = examp_chain_comps()
@@ -285,7 +285,7 @@ def test_perform_fiber_T120():
     assert (obj.dag_reduction == correct_dag_reduction).all()
 
 
-def test_perform_fiber_F120():
+def test_perform_fiber_F120_t1():
     within, src_1, src_2, t, v = False, 1, 2, 0, 1
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
     obj.chain_comps = examp_chain_comps()
@@ -308,4 +308,39 @@ def test_perform_fiber_F120():
     assert (obj.dag_reduction == correct_dag_reduction).all()
 
 
-# need one more fiber test, like T120, but with chain_comps[t].sum() >1
+def test_perform_fiber_T120_t1():
+    within, src_1, src_2, t, v = True, 1, 2, 0, 7
+    obj = medil.grues.InputData(np.empty((1, len(examp_init()) + 1)))
+
+    obj.chain_comps = examp_chain_comps()
+    col = np.zeros((len(obj.chain_comps), 1), bool)
+    col[0, 0] = True
+    obj.chain_comps = np.hstack((obj.chain_comps, col))
+    obj.dag_reduction = examp_dag_reduction()
+    obj.perform_fiber(within, src_1, src_2, t, v)
+
+    correct_chain_comps = np.array(
+        [
+            [0, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0],
+            [1, 0, 0, 1, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0, 1],
+        ],
+        bool,
+    )
+    correct_dag_reduction = np.array(
+        [
+            [0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 1, 0, 1],
+            [0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0],
+        ],
+        bool,
+    )
+
+    assert (obj.chain_comps == correct_chain_comps).all()
+    assert (obj.dag_reduction == correct_dag_reduction).all()
