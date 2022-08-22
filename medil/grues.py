@@ -39,9 +39,10 @@ class InputData(object):
             self.old_dag = np.copy(self.dag_reduction)
             self.old_cc = np.copy(self.chain_comps)
 
-            move = np.random.choice((self.merge, self.split, self.fiber))
+            move_dict = {"merge": self.merge, "split": self.split, "fiber": self.fiber}
+            move = np.random.choice(list(move_dict.keys()), p=[0.25, 0.25, 0.5])
             try:
-                move()
+                move_dict[move]()
             except ValueError:
                 self.repeated += 1
                 continue
@@ -68,11 +69,12 @@ class InputData(object):
                 # check interesection number
                 old_intersection_num = np.logical_not(self.old_dag.sum(0)).sum()
                 new_intresection_num = np.logical_not(self.dag_reduction.sum(0)).sum()
-                if move is self.merge:
+                if move == "merge":
                     assert old_intersection_num - 1 == new_intresection_num
-                elif move is self.split:
+                elif move == "split":
                     assert old_intersection_num + 1 == new_intresection_num
                 else:
+                    print(move)
                     assert old_intersection_num == new_intresection_num
 
                 self.expand()
@@ -281,7 +283,7 @@ class InputData(object):
     def expand(self):
         self.cpdag = np.zeros_like(self.cpdag)
         for (pa, ch) in np.argwhere(self.dag_reduction):
-            pa_mask, ch_mask = self.chain_comps([pa, cha])
+            pa_mask, ch_mask = self.chain_comps([pa, ch])
             self.cpdag[pa_mask, ch_mask] = True
 
     # for scoring, just save the old reduction and chain comps and expansion, make the move, expand self.cpdag, and compare scores of old and new expansion
