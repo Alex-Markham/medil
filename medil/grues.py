@@ -297,4 +297,8 @@ class InputData(object):
                 ch = nodes[nodes != node]
                 self.cpdag[node, ch] = True
 
-    # for scoring, just save the old reduction and chain comps and expansion, make the move, expand self.cpdag, and compare scores of old and new expansion
+    def get_uec(self):
+        two_paths = self.cpdag.T @ self.cpdag
+        self.uec = two_paths.astype(bool) + self.cpdag
+        np.fill_diagonal(self.uec, False)
+        return self.uec
