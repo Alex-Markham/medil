@@ -26,7 +26,7 @@ class InputData(object):
         self.num_samps, self.num_feats = self.samples.shape
         self.debug = debug
 
-    def grues(self, init="empty", max_repeats=5):
+    def grues(self, init="empty", max_repeats=10):
         self.init_uec(init)
         self.get_max_cpdag()
         self.get_score = GaussObsL0Pen(self.samples)
@@ -34,12 +34,17 @@ class InputData(object):
         self.reduce_max_cpdag()
         self.repeated = 0
         while self.repeated < max_repeats:
+            print(str(max_repeats - self.repeated) + " repeats left")
             self.old_cpdag = np.copy(self.cpdag)
             self.old_dag = np.copy(self.dag_reduction)
             self.old_cc = np.copy(self.chain_comps)
 
             move = np.random.choice((self.merge, self.split, self.fiber))
-            move()
+            try:
+                move()
+            except ValueError:
+                self.repeated += 1
+                continue
 
             if self.debug:
                 # each vertex is a chain component
@@ -72,7 +77,7 @@ class InputData(object):
 
                 self.expand()
                 new_score = self.get_score.full(self.cpdag)
-                if new_score > self.score:
+                if new_score < self.score:
                     self.score = new_score
                     self.repeated = 0
                 else:
@@ -248,13 +253,15 @@ class InputData(object):
 
     @staticmethod
     def n_choose_2(vec):
-        return np.vectorize(lambda n: math.comb(n, 2))(np.array(vec, ndmin=1))
+        return np.vectorize(lambda n: math.comb(n, 2), otypes=[int])(
+            np.array(vec, ndmin=1)
+        )
 
     def reduce_max_cpdag(self):
         cpdag = np.copy(self.cpdag)
         undir = np.logical_and(cpdag, cpdag.T)
         chain_comps = np.eye(self.num_feats).astype(bool)
-        while undir.any():
+        while undir.any() and len(undir) > 1:
             v, w = np.unravel_index(undir.argmax(), undir.shape)
             cpdag = np.delete(cpdag, v, 0)
             cpdag = np.delete(cpdag, v, 1)
