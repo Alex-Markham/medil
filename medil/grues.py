@@ -2,6 +2,9 @@
 import numpy as np
 import math
 from .gauss_obs_l0_pen import GaussObsL0Pen
+from .independence_testing import dcov
+from scipy.stats import chi2, beta
+from numpy.linalg import lstsq
 
 
 class InputData(object):
@@ -26,13 +29,16 @@ class InputData(object):
         self.num_samps, self.num_feats = self.samples.shape
         self.debug = debug
 
-    def grues(self, init="empty", max_repeats=10):
+    def grues(self, init="empty", max_repeats=10, alpha=0.05):
+        self.alpha = alpha
         self.init_uec(init)
         self.get_max_cpdag()
         self.get_score = GaussObsL0Pen(self.samples)
-        self.score = self.get_score.full(self.cpdag)
+        # self.score = self.get_score.full(self.cpdag)
+        self.score = self.my_score()
         self.reduce_max_cpdag()
         self.repeated = 0
+        self.moves = 0
         while self.repeated < max_repeats:
             print(str(max_repeats - self.repeated) + " repeats left")
             self.old_cpdag = np.copy(self.cpdag)
@@ -79,7 +85,8 @@ class InputData(object):
                     assert old_intersection_num == new_intresection_num
 
                 self.expand()
-                new_score = self.get_score.full(self.cpdag)
+                # new_score = self.get_score.full(self.cpdag)
+                new_score = self.my_score()
                 if self.debug:
                     print(
                         "current score: "
@@ -91,6 +98,7 @@ class InputData(object):
                 if new_score > self.score:
                     self.score = new_score
                     self.repeated = 0
+                    self.moves += 1
                 else:
                     self.cpdag = self.old_cpdag
                     self.dag_reduction = self.old_dag
@@ -103,9 +111,21 @@ class InputData(object):
                 self.uec = np.zeros((self.num_feats, self.num_feats), bool)
             elif init == "complete":
                 self.uec = np.ones((self.num_feats, self.num_feats), bool)
-                np.fill_diagonal(self.uec, 0)
+                np.fill_diagonal(self.uec, False)
+            elif init == "gauss":
+                corr = np.corrcoef(self.samples, rowvar=False)
+                dist = beta(
+                    self.num_samps / 2 - 1, self.num_samps / 2 - 1, loc=-1, scale=2
+                )
+                crit_val = abs(dist.ppf(self.alpha / 2))
+                self.uec = abs(corr) >= crit_val
+                np.fill_diagonal(self.uec, False)
             elif init == "dcov_fast":
-                pass  # also add gauss
+                cov, d_bars = dcov(self.samples)
+                crit_val = chi2(1).ppf(1 - self.alpha)
+                test_val = self.num_samps * cov / np.outer(d_bars, d_bars)
+                self.uec = test_val >= crit_val
+                np.fill_diagonal(self.uec, False)
         else:
             uec = np.array(init, bool)
             is_uec = True  # add actual check of uec-ness
@@ -289,16 +309,40 @@ class InputData(object):
         self.cpdag = np.zeros_like(self.cpdag)
         for pa in np.flatnonzero(self.dag_reduction.sum(1)):
             pas = self.chain_comps[pa]
-            chs = self.dag_reduction[pa, :].sum(0).astype(bool)
+            ch = self.dag_reduction[pa]
+            chs = self.chain_comps[ch].sum(0).astype(bool)
             self.cpdag[np.ix_(pas, chs)] = True
         for cc in self.chain_comps:
             nodes = np.flatnonzero(cc)
             for node in nodes:
                 ch = nodes[nodes != node]
                 self.cpdag[node, ch] = True
+        np.fill_diagonal(self.cpdag, False)
 
     def get_uec(self):
         two_paths = self.cpdag.T @ self.cpdag
         self.uec = two_paths.astype(bool) + self.cpdag
+        self.uec += self.uec.T
         np.fill_diagonal(self.uec, False)
         return self.uec
+
+    def my_score(self):
+        children = self.cpdag.sum(0).nonzero()[0]
+        regress = lambda child: lstsq(
+            np.hstack(
+                (
+                    np.ones((self.num_samps, 1)),
+                    self.samples[:, self.cpdag[:, child]],
+                )
+            ),
+            self.samples[:, child],
+            rcond=None,
+        )[1]
+        rss = sum(map(regress, children))
+
+        # num edges + intercept term for each child
+        k = self.cpdag.sum()  # + len(children), if noise means can differ
+
+        bic = self.num_samps * np.log(rss / self.num_samps) + k * np.log(self.num_samps)
+
+        return -bic
