@@ -88,7 +88,7 @@ class InputData(object):
                         + str(new_score)
                         + "\n\n"
                     )
-                if new_score < self.score:
+                if new_score > self.score:
                     self.score = new_score
                     self.repeated = 0
                 else:
@@ -288,8 +288,9 @@ class InputData(object):
     def expand(self):
         self.cpdag = np.zeros_like(self.cpdag)
         for pa in np.flatnonzero(self.dag_reduction.sum(1)):
-            for ch in np.flatnonzero(self.dag_reduction[pa, :]):
-                self.cpdag[pa, ch] = True
+            pas = self.chain_comps[pa]
+            chs = self.dag_reduction[pa, :].sum(0).astype(bool)
+            self.cpdag[np.ix_(pas, chs)] = True
         for cc in self.chain_comps:
             nodes = np.flatnonzero(cc)
             for node in nodes:
