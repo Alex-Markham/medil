@@ -92,6 +92,7 @@ class InputData(object):
                 self.uec = np.zeros((self.num_feats, self.num_feats), bool)
             elif init == "complete":
                 self.uec = np.ones((self.num_feats, self.num_feats), bool)
+                np.fill_diagonal(self.uec, 0)
             elif init == "dcov_fast":
                 pass  # also add gauss
         else:
@@ -261,7 +262,10 @@ class InputData(object):
         cpdag = np.copy(self.cpdag)
         undir = np.logical_and(cpdag, cpdag.T)
         chain_comps = np.eye(self.num_feats).astype(bool)
-        while undir.any() and len(undir) > 1:
+        while undir.any():
+            if len(undir) == 1:
+                cpdag[0, 0] = True
+                break
             v, w = np.unravel_index(undir.argmax(), undir.shape)
             cpdag = np.delete(cpdag, v, 0)
             cpdag = np.delete(cpdag, v, 1)
