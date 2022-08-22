@@ -42,6 +42,7 @@ class InputData(object):
             move_dict = {"merge": self.merge, "split": self.split, "fiber": self.fiber}
             move = np.random.choice(list(move_dict.keys()), p=[0.25, 0.25, 0.5])
             try:
+                print(move)
                 move_dict[move]()
             except ValueError:
                 self.repeated += 1
@@ -79,7 +80,14 @@ class InputData(object):
 
                 self.expand()
                 new_score = self.get_score.full(self.cpdag)
-                print(new_score)
+                if self.debug:
+                    print(
+                        "current score: "
+                        + str(self.score)
+                        + "\nconsidered new score: "
+                        + str(new_score)
+                        + "\n\n"
+                    )
                 if new_score < self.score:
                     self.score = new_score
                     self.repeated = 0
@@ -265,10 +273,7 @@ class InputData(object):
         cpdag = np.copy(self.cpdag)
         undir = np.logical_and(cpdag, cpdag.T)
         chain_comps = np.eye(self.num_feats).astype(bool)
-        while undir.any():
-            if len(undir) == 1:
-                cpdag[0, 0] = True
-                break
+        while undir.any() and len(undir) > 1:
             v, w = np.unravel_index(undir.argmax(), undir.shape)
             cpdag = np.delete(cpdag, v, 0)
             cpdag = np.delete(cpdag, v, 1)
@@ -282,8 +287,13 @@ class InputData(object):
 
     def expand(self):
         self.cpdag = np.zeros_like(self.cpdag)
-        for (pa, ch) in np.argwhere(self.dag_reduction):
-            pa_mask, ch_mask = self.chain_comps([pa, ch])
-            self.cpdag[pa_mask, ch_mask] = True
+        for pa in np.flatnonzero(self.dag_reduction.sum(1)):
+            for ch in np.flatnonzero(self.dag_reduction[pa, :]):
+                self.cpdag[pa, ch] = True
+        for cc in self.chain_comps:
+            nodes = np.flatnonzero(cc)
+            for node in nodes:
+                ch = nodes[nodes != node]
+                self.cpdag[node, ch] = True
 
     # for scoring, just save the old reduction and chain comps and expansion, make the move, expand self.cpdag, and compare scores of old and new expansion
