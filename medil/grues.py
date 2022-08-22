@@ -34,8 +34,13 @@ class InputData(object):
         self.reduce_max_cpdag()
         self.repeated = 0
         while self.repeated < max_repeats:
+            self.old_cpdag = np.copy(self.cpdag)
+            self.old_dag = np.copy(self.dag_reduction)
+            self.old_cc = np.copy(self.chain_comps)
+
             move = np.random.choice((self.merge, self.split, self.fiber))
             move()
+
             if self.debug:
                 # each vertex is a chain component
                 assert len(self.chain_comps) == len(self.dag_reduction)
@@ -54,6 +59,27 @@ class InputData(object):
                     graph += np.linalg.matrix_power(self.dag_reduction, n)
                 assert np.diag(graph).sum() == 0
                 assert (graph.astype(bool) == self.dag_reduction).all()
+
+                # check interesection number
+                old_intersection_num = np.logical_not(obj.old_dag.sum(0)).sum()
+                new_intresection_num = np.logical_not(obj.dag_reduction.sum(0)).sum()
+                if move is self.merge:
+                    assert old_intersection_num - 1 == new_intresection_num
+                elif move is self.split:
+                    assert old_intersection_num + 1 == new_intresection_num
+                else:
+                    assert old_intersection_num == new_intresection_num
+
+                self.expand()
+                new_score = self.get_score.full(self.cpdag)
+                if new_score > self.score:
+                    self.score = new_score
+                    self.repeated = 0
+                else:
+                    self.cpdag = self.old_cpdag
+                    self.dag_reduction = self.old_dag
+                    self.chain_comps = self.old_cc
+                    self.repeated += 1
 
     def init_uec(self, init):
         if type(init) is str:
@@ -86,43 +112,8 @@ class InputData(object):
         self.cpdag = cpdag
 
     def merge(self):
-        # uniformaly pick a pair of cliques to consider for merge
         src_1, src_2 = self.pick_source_nodes("merge")
-
-        # score and perform merge
-        score_update = self.score_of_merge(src_1, src_2)
-        if score_update >= 0:
-            self.score += score_update
-            self.perform_merge(src_1, src_2)
-            self.repeated = 0
-        else:
-            self.repeated += 1
-
-    def score_of_merge(self, src_1, src_2):
-        ch_1_mask, ch_2_mask = self.dag_reduction[[src_1, src_2]]
-        ch_only_1_mask = np.logical_and(ch_1_mask, ~ch_2_mask)
-        ch_only_1_mask = np.logical_and(~ch_1_mask, ch_2_mask)
-
-        unreduced_ch_1 = np.where(self.chain_comps[ch_only_1_mask, :])
-        unreduced_ch_2 = np.where(self.chain_comps[ch_only_2_mask, :])
-
-        uncommon_ch_mask = np.logical_xor(ch_1_mask, ch_2_mask)
-
-        i_cc, k_cc = np.argwhere(self.chain_comps[i, k]).T
-        old = (self.get_score.local(i, i_cc[i_cc != i]) for i in i_cc).sum()
-        old += (self.get_score.local(k, k_cc[k_cc != k]) for k in k_cc).sum()
-        ik_cc = np.append(i_cc, k_cc)
-        if len(other_pa):
-            ik_cc = np.append(ik_cc, np.flatnonzero(self.chain_comps(j)))
-        new = (self.get_score.local(ik, ik_cc[ik_cc != ik]) for ik in ik_cc).sum()
-        for pa in (i, k):
-            for ch in self.get_other_children(pa, j):
-                ch_cc = np.flatnonzero(self.chain_comps[ch])
-                parents = self.get_other_parents(ch, pa, reduced=False)
-                old += (self.get_score.local(child, parents) for child in ch_cc).sum()
-                parents = np.append(parents, ik_cc)
-                new += (self.get_score.local(child, parents) for child in ch_cc).sum()
-        return new - old
+        self.perform_merge(src_1, src_2)
 
     def perform_merge(self, src_1, src_2, recurse=True):
         self.chain_comps[src_1] += self.chain_comps[src_2]
@@ -139,14 +130,8 @@ class InputData(object):
                 self.perform_merge(src_1, child, False)
 
     def split(self):
-        considered = self.consider_split()
-        score_update = self.score_of_split(considered)
-        if score_update >= 0:
-            self.score += score_update
-            self.perform_split(considered)
-            self.repeated = 0
-        else:
-            self.repeated += 1
+        v, w, source = self.consider_split()
+        self.perform_split(v, w, source)
 
     def consider_split(self):
         # uniformly pick a source chain component to split
@@ -157,16 +142,6 @@ class InputData(object):
         v, w = np.random.choice(np.flatnonzero(chain_comp_mask), 2, replace=False)
 
         return v, w, source
-
-    def score_of_split(self, considered):
-        v, w, chosen_cc_idx = considered
-        vw_cc = np.flat_nonzero(self.chain_comps[chosen_cc_idx])
-        old = (self.get_score.local(vw, vw_cc[vw_cc != vw]) for vw in vw_cc).sum()
-        v_cc = np.delete(vw_cc, w)
-        w_cc = np.delete(vw_cc, v)
-        new = (self.get_score.local(v, v_cc[v_cc != v]) for v in v_cc).sum()
-        new += (self.get_score.local(w, w_cc[w_cc != w]) for w in w_cc).sum()
-        return new - old
 
     def perform_split(self, v, w, source, recurse=True, fiber=False):
         # add node to dag reduction and corresponding cc to chain comps
@@ -188,13 +163,7 @@ class InputData(object):
 
     def fiber(self):
         within, src_1, src_2, t, v = self.consider_fiber()
-
-        if score_update >= 0:  # then perform move
-            self.score += score_update
-            self.perform_fiber(within, src_1, src_2, t, v)
-            self.repeated = 0
-        else:
-            self.repeated += 1
+        self.perform_fiber(within, src_1, src_2, t, v)
 
     def consider_fiber(self):
         within = np.random.choice((True, False))
@@ -298,6 +267,9 @@ class InputData(object):
         self.chain_comps = chain_comps
 
     def expand(self):
-        pass
+        self.cpdag = np.zeros_like(self.cpdag)
+        for (pa, ch) in np.argwhere(self.dag_reduction):
+            pa_mask, ch_mask = self.chain_comps([pa, cha])
+            self.cpdag[pa_mask, ch_mask] = True
 
     # for scoring, just save the old reduction and chain comps and expansion, make the move, expand self.cpdag, and compare scores of old and new expansion
