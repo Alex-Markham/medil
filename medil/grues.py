@@ -59,15 +59,15 @@ class InputData(object):
 
                 # indeed a DAG and trasitively closed
                 num_nodes = len(self.dag_reduction)
-                graph = np.copy(self.dag_reduction, int)
+                graph = np.copy(self.dag_reduction).astype(int)
                 for n in range(2, num_nodes):
                     graph += np.linalg.matrix_power(self.dag_reduction, n)
                 assert np.diag(graph).sum() == 0
                 assert (graph.astype(bool) == self.dag_reduction).all()
 
                 # check interesection number
-                old_intersection_num = np.logical_not(obj.old_dag.sum(0)).sum()
-                new_intresection_num = np.logical_not(obj.dag_reduction.sum(0)).sum()
+                old_intersection_num = np.logical_not(self.old_dag.sum(0)).sum()
+                new_intresection_num = np.logical_not(self.dag_reduction.sum(0)).sum()
                 if move is self.merge:
                     assert old_intersection_num - 1 == new_intresection_num
                 elif move is self.split:
@@ -77,6 +77,7 @@ class InputData(object):
 
                 self.expand()
                 new_score = self.get_score.full(self.cpdag)
+                print(new_score)
                 if new_score < self.score:
                     self.score = new_score
                     self.repeated = 0
