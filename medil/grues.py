@@ -40,7 +40,8 @@ class InputData(object):
         self.repeated = 0
         self.moves = 0
         while self.repeated < max_repeats:
-            print(str(max_repeats - self.repeated) + " repeats left")
+            if self.debug:
+                print(str(max_repeats - self.repeated) + " repeats left")
             self.old_cpdag = np.copy(self.cpdag)
             self.old_dag = np.copy(self.dag_reduction)
             self.old_cc = np.copy(self.chain_comps)
@@ -48,7 +49,8 @@ class InputData(object):
             move_dict = {"merge": self.merge, "split": self.split, "fiber": self.fiber}
             move = np.random.choice(list(move_dict.keys()), p=[0.25, 0.25, 0.5])
             try:
-                print(move)
+                if self.debug:
+                    print(move)
                 move_dict[move]()
             except ValueError:
                 self.repeated += 1
@@ -81,29 +83,30 @@ class InputData(object):
                 elif move == "split":
                     assert old_intersection_num + 1 == new_intresection_num
                 else:
-                    print(move)
+
                     assert old_intersection_num == new_intresection_num
 
-                self.expand()
-                # new_score = self.get_score.full(self.cpdag)
-                new_score = self.my_score()
-                if self.debug:
-                    print(
-                        "current score: "
-                        + str(self.score)
-                        + "\nconsidered new score: "
-                        + str(new_score)
-                        + "\n\n"
-                    )
-                if new_score > self.score:
-                    self.score = new_score
-                    self.repeated = 0
-                    self.moves += 1
-                else:
-                    self.cpdag = self.old_cpdag
-                    self.dag_reduction = self.old_dag
-                    self.chain_comps = self.old_cc
-                    self.repeated += 1
+            self.expand()
+            # new_score = self.get_score.full(self.cpdag)
+            new_score = self.my_score()
+            if self.debug:
+                print(
+                    "current score: "
+                    + str(self.score)
+                    + "\nconsidered new score: "
+                    + str(new_score)
+                    + "\n\n"
+                )
+            if True:  # new_score > self.score:
+                self.score = new_score
+                # self.repeated = 0
+                self.repeated += 1
+                self.moves += 1
+            else:
+                self.cpdag = self.old_cpdag
+                self.dag_reduction = self.old_dag
+                self.chain_comps = self.old_cc
+                self.repeated += 1
 
     def init_uec(self, init):
         if type(init) is str:
@@ -320,8 +323,8 @@ class InputData(object):
         np.fill_diagonal(self.cpdag, False)
 
     def get_uec(self):
-        two_paths = self.cpdag.T @ self.cpdag
-        self.uec = two_paths.astype(bool) + self.cpdag
+        d_connected = self.cpdag.T @ self.cpdag
+        self.uec = d_connected.astype(bool) + self.cpdag
         self.uec += self.uec.T
         np.fill_diagonal(self.uec, False)
         return self.uec
