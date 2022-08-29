@@ -97,10 +97,9 @@ class InputData(object):
                     + str(new_score)
                     + "\n\n"
                 )
-            if True:  # new_score > self.score:
+            if new_score > self.score:
                 self.score = new_score
-                # self.repeated = 0
-                self.repeated += 1
+                self.repeated = 0
                 self.moves += 1
             else:
                 self.cpdag = self.old_cpdag
@@ -263,12 +262,9 @@ class InputData(object):
         childless_mask = np.logical_not(self.dag_reduction.sum(1).astype(bool))
         sinks = np.flatnonzero(np.logical_and(non_srcs_mask, childless_mask))
         if move == "merge":
-            num_sources = self.dag_reduction[np.ix_(sources, sinks)].sum(0)
-            counts = self.n_choose_2(num_sources)
-            p = np.array(counts / counts.sum())
-            sink = np.random.choice(sinks, p=p)
-            srcs_of_sink = sources[self.dag_reduction[sources, sink]]
-            src_1, src_2 = np.random.choice(srcs_of_sink, 2, replace=False)
+            singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) > 1)
+            singleton_sources = sources[np.in1d(sources, singleton_nodes)]
+            src_1, src_2 = np.random.choice(singleton_sources, 2, replace=False)
             chosen_nodes = src_1, src_2
         else:  # then move == "split" or "fiber"
             non_singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) > 1)
