@@ -86,12 +86,12 @@ def test_reduce_max_cpdag():
 def test_pick_source_nodes():
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
     obj.dag_reduction = examp_dag_reduction()
+    obj.chain_comps = examp_chain_comps()
     src_1, src_2 = obj.pick_source_nodes("merge")
 
     assert (obj.dag_reduction[:, [src_1, src_2]] == 0).all()
-    assert obj.dag_reduction[src_1] @ obj.dag_reduction[src_2]
+    assert (obj.chain_comps[[src_1, src_2]].sum(1) == 1).all()
 
-    obj.chain_comps = examp_chain_comps()
     source = obj.pick_source_nodes("split")
 
     assert obj.dag_reduction[:, source].sum() == 0
@@ -106,26 +106,34 @@ def test_pick_source_nodes():
 
 def test_perform_merge():
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
-    obj.chain_comps = examp_chain_comps()
-    obj.dag_reduction = examp_dag_reduction()
-    obj.perform_merge(4, 1)
-
-    correct_chain_comps = np.array(
+    obj.chain_comps = np.array(
         [
+            [0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0],
             [0, 0, 0, 0, 1, 0, 0],
             [0, 0, 0, 0, 0, 1, 0],
-            [1, 1, 1, 1, 0, 0, 1],
+            [0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0],
         ],
         bool,
     )
-    correct_dag_reduction = np.array(
+    obj.dag_reduction = np.array(
         [
-            [0, 1, 0],
-            [0, 0, 0],
-            [0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 1, 0, 0],
+            [1, 0, 0, 0, 1, 0, 0],
         ],
         bool,
     )
+    obj.perform_merge(5, 6)
+
+    correct_chain_comps = examp_chain_comps()
+    correct_dag_reduction = examp_dag_reduction()
 
     assert (obj.dag_reduction == correct_dag_reduction).all()
     assert (obj.chain_comps == correct_chain_comps).all()

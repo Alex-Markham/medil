@@ -262,10 +262,12 @@ class InputData(object):
         childless_mask = np.logical_not(self.dag_reduction.sum(1).astype(bool))
         sinks = np.flatnonzero(np.logical_and(non_srcs_mask, childless_mask))
         if move == "merge":
-            singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) > 1)
+            singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) == 1)
             sngl_srcs = sources[np.in1d(sources, singleton_nodes)]
             ch_subgraph = self.dag_reduction[sngl_srcs]
-            same_ch_mask = ch_subgraph @ self.ch_subgraph.T
+            non_empty_same_ch_mask = ch_subgraph @ ch_subgraph.T
+            empty_ch_mask = ~ch_subgraph @ ~ch_subgraph.T
+            same_ch_mask = non_empty_same_ch_mask + empty_ch_mask
             same_ch_idx = np.argwhere(same_ch_mask)
             idx = np.random.choice(range(len(same_ch_idx)))
             src_1, src_2 = sngl_srcs[same_ch_idx[idx]]
