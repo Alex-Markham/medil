@@ -263,8 +263,12 @@ class InputData(object):
         sinks = np.flatnonzero(np.logical_and(non_srcs_mask, childless_mask))
         if move == "merge":
             singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) > 1)
-            singleton_sources = sources[np.in1d(sources, singleton_nodes)]
-            src_1, src_2 = np.random.choice(singleton_sources, 2, replace=False)
+            sngl_srcs = sources[np.in1d(sources, singleton_nodes)]
+            ch_subgraph = self.dag_reduction[sngl_srcs]
+            same_ch_mask = ch_subgraph @ self.ch_subgraph.T
+            same_ch_idx = np.argwhere(same_ch_mask)
+            idx = np.random.choice(range(len(same_ch_idx)))
+            src_1, src_2 = sngl_srcs[same_ch_idx[idx]]
             chosen_nodes = src_1, src_2
         else:  # then move == "split" or "fiber"
             non_singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) > 1)
