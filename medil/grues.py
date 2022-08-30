@@ -226,9 +226,9 @@ class InputData(object):
         if t == src_1:
             if len(exclusive_ch) == 1:
                 if within:
-                    self.chain_comps[exclusive_ch, v] = True
-                else:
                     self.chain_comps[src_2, v] = True
+                else:
+                    self.chain_comps[exclusive_ch, v] = True
                 self.chain_comps[t, v] = False  # perform_split does this elsewhere
             else:
                 self.perform_split(v, None, t, False, True)
