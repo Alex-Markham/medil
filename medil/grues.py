@@ -182,78 +182,83 @@ class InputData(object):
 
         return v, w, source
 
-    def perform_split(self, v, w, source, recurse=True, fiber=False):
+    def perform_split(self, v, w, source, recurse=True, algebraic=False):
         # add node to dag reduction and corresponding cc to chain comps
         v_cc_mask = np.zeros((1, self.num_feats), bool)
-        v_cc_mask[0, v] = 1
-        self.chain_comps[source, v] = 0
+        v_cc_mask[0, v] = True
+        self.chain_comps[source, v] = False
         self.chain_comps = np.vstack((self.chain_comps, v_cc_mask))
         col = np.zeros((len(self.dag_reduction), 1), bool)
         self.dag_reduction = np.hstack((self.dag_reduction, col))
         # add edges from v_node to children of source node
-        if not fiber:
+        if not algebraic:
             self.dag_reduction = np.vstack(
                 (self.dag_reduction, self.dag_reduction[source])
             )
 
         if recurse and self.chain_comps[source].sum() != 1:
             self.perform_split(w, None, source, False)
-            self.dag_reduction[-2:, source] = 1
+            self.dag_reduction[-2:, source] = True
 
-    def fiber(self):
-        within, src_1, src_2, t, v = self.consider_fiber()
-        self.perform_fiber(within, src_1, src_2, t, v)
+    def algebraic(self, p=np.array((0.5, 0.5))):
+        fiber = np.random.choice(("within", "out_of"), p=p)
+        if fiber == "out_of":
+            fiber = np.random.choice(("add", "del"))
+        src_1, src_2, t, v = self.consider_fiber()
 
-    def consider_fiber(self):
-        within = np.random.choice((True, False))
-
-        src_1, src_2 = self.pick_source_nodes("fiber")
-
-        ch_src_1, ch_src_2 = self.dag_reduction[[src_1, src_2], :]
-        poss_t_mask = np.logical_and(ch_src_1, ~ch_src_2)
-        poss_t_mask[src_1] = self.chain_comps[src_1].sum() > 1
-        t = np.random.choice(np.flatnonzero(poss_t_mask))
-
-        v = np.random.choice(np.flatnonzero(self.chain_comps[t]))
-
-        return within, src_1, src_2, t, v
-
-    def perform_fiber(self, within, src_1, src_2, t, v):
-        ch_src_1, ch_src_2 = self.dag_reduction[[src_1, src_2], :]
-        ch_intrx_mask = np.logical_and(ch_src_1, ch_src_2)
-        num_pars = self.dag_reduction[:, ch_intrx_mask].sum(0)
-        exclusive_ch = np.flatnonzero(ch_intrx_mask)[np.flatnonzero(num_pars == 2)]
-        if t == src_1:
-            if len(exclusive_ch) == 1:
-                if within:
-                    self.chain_comps[src_2, v] = True
-                else:
-                    self.chain_comps[exclusive_ch, v] = True
-                self.chain_comps[t, v] = False  # perform_split does this elsewhere
-            else:
-                self.perform_split(v, None, t, False, True)
-                self.dag_reduction[src_2, -1] = True
-                ch_intrx_mask = np.append(ch_intrx_mask, False)
-                self.dag_reduction = np.vstack((self.dag_reduction, ch_intrx_mask))
-                if within:
-                    self.dag_reduction[src_1, -1] = True
-        elif self.chain_comps[t].sum() > 1:
-            self.perform_split(v, None, t, False, True)
-            v_ch_mask = np.zeros((1, len(self.chain_comps)), bool)
-            self.dag_reduction = np.vstack((self.dag_reduction, v_ch_mask))
-            self.dag_reduction[t, -1] = True
-            t_pars = np.flatnonzero(self.dag_reduction[:, t])
-            if not within:
-                t_pars = t_pars[t_pars != src_1]
-            self.dag_reduction[t_pars, -1] = True
-            if len(exclusive_ch) == 1:
-                self.dag_reduction[exclusive_ch, -1] = True
+        if src_1 == t:
+            T_mask = np.zeros(len(self.dag_reduction), bool)
+            T_mask[t] = True
         else:
-            self.dag_reduction[src_2, t] = True
-            if within:
-                self.dag_reduction[src_1, t] = False
-            elif len(exclusive_ch) == 1:
-                self.dag_reduction[exclusive_ch[0], t] = True
+            max_anc_mask = self.dag_reduction.sum(0)
+            par_t_mask = self.dag_reduction[:, t]
+            T_mask = np.logical_and(max_anc_mask, par_t_mask)
+
+        if fiber == "del":
+            T_mask[src_1] = False
+        elif fiber == "add":
+            T_mask[src_2] = True
+        else:  # fiber == "within"
+            T_mask[src_1, src_2] = False, True
+
+        self.perform_algebraic(src_1, src_2, t, v, T_mask)
+
+    def consider_algebraic(self, fiber):
+        if fiber == "del":
+            src_1, src_2, t = self.pick_source_nodes("del")
+        else:
+            src_1, src_2 = self.pick_source_nodes(fiber)
+            ch_src_1, ch_src_2 = self.dag_reduction[[src_1, src_2], :]
+            poss_t_mask = np.logical_and(ch_src_1, ~ch_src_2)
+            poss_t_mask[src_1] = self.chain_comps[src_1].sum() > 1
+            t = np.random.choice(np.flatnonzero(poss_t_mask))
+        v = np.random.choice(np.flatnonzero(self.chain_comps[t]))
+        return src_1, src_2, t, v
+
+    def perform_algebraic(self, src_1, src_2, t, v, T_mask):
+        nonsources_mask = self.dag_reduction.sum(0).astype(bool)
+        max_anc_dag = np.copy(self.dag_reduction)
+        max_anc_dag[nonsources_mask] = False
+        sources = np.flatnonzero(np.logical_not(nonsources_mask))
+        max_anc_dag[np.ix_(sources, sources)] = True
+
+        num_common = T_mask.astype(int) @ max_anc_dag
+        other_ancs = ~T_mask @ ~max_anc_dag
+        P_mask = np.logical_and(num_common.astype(bool), ~other_ancs)
+        C_mask = num_common == T_mask.sum()
+        exact = np.flatnonzero(np.logical_and(P_mask, C_mask))
+        if len(exact) == 1:
+            self.chain_comps[[exact, t], v] = True, False
+        else:
+            self.perform_split(v, None, t, recurse=False, algebraic=True)
+            C_mask = np.append(C_mask, False)
+            self.dag_reduction = np.vstack((self.dag_reduction, C_mask))
+            self.dag_reduction[P_mask, -1] = True
+
+        if self.chain_comps[t].sum() == 0:
+            self.chain_comps = np.delete(self.chain_comps, t, 0)
+            self.dag_reduction = np.delete(self.dag_reduction, t, 0)
+            self.dag_reduction = np.delete(self.dag_reduction, t, 1)
 
     def pick_source_nodes(self, move):
         # sources have no parents; sinks have parents and no children
@@ -272,11 +277,19 @@ class InputData(object):
             idx = np.random.choice(range(len(same_ch_idx)))
             src_1, src_2 = sngl_srcs[same_ch_idx[idx]]
             chosen_nodes = src_1, src_2
-        else:  # then move == "split" or "fiber"
+        elif move == "del":
+            num_max_ancs = self.dag_reduction[sources].sum(0)
+            num_pairs = self.n_choose_2(num_max_ancs)
+            p = num_pairs / num_pairs.sum()
+            t = np.random.choice(len(p), p=p)
+            t_max_ancs = np.flatnonzero(self.dag_reduction[sources, t])
+            src_1, src_2 = sources[np.choice(t_max_ancs, size=2, replace=False)]
+            chosen_nodes = src_1, src_2, t
+        else:  # then move in ("split", "within", "add")
             non_singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) > 1)
             ns_sources = sources[np.in1d(sources, non_singleton_nodes)]
             chosen_nodes = np.random.choice(ns_sources)
-            if move == "fiber":
+            if move in ("within", "add"):
                 # srcs_mask has entry i,j = 1 if and only if
                 # i is nonsingleton or
                 # i has children other than j's children
