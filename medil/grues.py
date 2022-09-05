@@ -46,8 +46,12 @@ class InputData(object):
             self.old_dag = np.copy(self.dag_reduction)
             self.old_cc = np.copy(self.chain_comps)
 
-            move_dict = {"merge": self.merge, "split": self.split, "fiber": self.fiber}
-            move = np.random.choice(list(move_dict.keys()), p=[0.25, 0.25, 0.5])
+            move_dict = {
+                "merge": self.merge,
+                "split": self.split,
+                "algebraic": self.algebraic,
+            }
+            move = np.random.choice(list(move_dict.keys()), p=[0.17, 0.17, 0.66])
             try:
                 if self.debug:
                     print(move)
@@ -204,7 +208,7 @@ class InputData(object):
         fiber = np.random.choice(("within", "out_of"), p=p)
         if fiber == "out_of":
             fiber = np.random.choice(("add", "del"))
-        src_1, src_2, t, v = self.consider_fiber()
+        src_1, src_2, t, v = self.consider_algebraic(fiber)
 
         if src_1 == t:
             T_mask = np.zeros(len(self.dag_reduction), bool)
@@ -283,7 +287,7 @@ class InputData(object):
             p = num_pairs / num_pairs.sum()
             t = np.random.choice(len(p), p=p)
             t_max_ancs = np.flatnonzero(self.dag_reduction[sources, t])
-            src_1, src_2 = sources[np.choice(t_max_ancs, size=2, replace=False)]
+            src_1, src_2 = sources[np.random.choice(t_max_ancs, size=2, replace=False)]
             chosen_nodes = src_1, src_2, t
         else:  # then move in ("split", "within", "add")
             non_singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) > 1)
