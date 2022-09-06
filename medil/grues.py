@@ -34,8 +34,8 @@ class InputData(object):
         self.init_uec(init)
         self.get_max_cpdag()
         self.get_score = GaussObsL0Pen(self.samples)
-        # self.score = self.get_score.full(self.cpdag)
-        self.score = self.my_score()
+        self.score = self.get_score.full(self.cpdag)
+        # self.score = self.my_score()
         self.reduce_max_cpdag()
         self.repeated = 0
         self.moves = 0
@@ -91,8 +91,8 @@ class InputData(object):
                     assert old_intersection_num == new_intresection_num
 
             self.expand()
-            # new_score = self.get_score.full(self.cpdag)
-            new_score = self.my_score()
+            new_score = self.get_score.full(self.cpdag)
+            # new_score = self.my_score()
             if self.debug:
                 print(
                     "current score: "
@@ -288,8 +288,9 @@ class InputData(object):
         elif move == "del":
             num_max_ancs = self.dag_reduction[sources].sum(0)
             num_pairs = self.n_choose_2(num_max_ancs)
-            p = num_pairs / num_pairs.sum()
-            t = np.random.choice(len(p), p=p)
+            poss_t = np.flatnonzero(num_pairs)
+            p = num_pairs[poss_t] / num_pairs[poss_t].sum()
+            t = np.random.choice(poss_t, p=p)
             t_max_ancs = np.flatnonzero(self.dag_reduction[sources, t])
             src_1 = sources[np.random.choice(t_max_ancs)]
             chosen_nodes = src_1, t
