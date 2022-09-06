@@ -228,7 +228,7 @@ class InputData(object):
             T_mask = np.zeros(len(self.dag_reduction), bool)
             T_mask[t] = True
         else:
-            max_anc_mask = self.dag_reduction.sum(0)
+            max_anc_mask = self.dag_reduction.sum(0) == 0
             par_t_mask = self.dag_reduction[:, t]
             T_mask = np.logical_and(max_anc_mask, par_t_mask)
 
@@ -236,7 +236,6 @@ class InputData(object):
             T_mask[src_1] = False
         elif fiber == "add":
             T_mask[src_2] = True
-            print(src_1, t, src_2, T_mask)
         else:  # fiber == "within"
             T_mask[[src_1, src_2]] = False, True
 
