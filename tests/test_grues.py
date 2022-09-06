@@ -87,8 +87,10 @@ def test_pick_source_nodes():
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
     obj.dag_reduction = examp_dag_reduction()
     obj.chain_comps = examp_chain_comps()
+
     src_1, src_2 = obj.pick_source_nodes("merge")
 
+    assert src_1 != src_2
     assert (obj.dag_reduction[:, [src_1, src_2]] == 0).all()
     assert (obj.chain_comps[[src_1, src_2]].sum(1) == 1).all()
 
@@ -100,13 +102,14 @@ def test_pick_source_nodes():
     src_1, src_2 = obj.pick_source_nodes("within")
     ch_1_mask, ch_2_mask = obj.dag_reduction[(src_1, src_2), :]
 
+    assert src_1 != src_2
     assert ch_1_mask.sum() and ch_2_mask.sum()
     assert (obj.chain_comps[src_1].sum() > 1) or (ch_1_mask @ ~ch_2_mask)
 
-    src_1, t = obj.pick_source_nodes("del")
+    source, t = obj.pick_source_nodes("del")
 
-    assert obj.dag_reduction[src_1, t].all()
-    assert obj.dag_reduction[:, src_1].sum() == 0
+    assert obj.dag_reduction[source, t].all()
+    assert obj.dag_reduction[:, source].sum() == 0
 
 
 def test_perform_merge():
@@ -219,7 +222,7 @@ def test_consider_algebraic():
     assert T_mask[src_2]
     assert (obj.dag_reduction[:, T_mask] == False).all()
     T_mask[src_2] = False
-    assert obj.dag_reduction[T_mask, t].all()
+    assert t == src_1 or obj.dag_reduction[T_mask, t].all()
 
 
 def test_perform_algebraic_add():
@@ -237,8 +240,8 @@ def test_perform_algebraic_add():
             [0, 0, 0, 0, 1],
             [1, 0, 0, 0, 1],
             [0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0],
         ],
         bool,
     )
@@ -258,15 +261,16 @@ def test_perform_algebraic_del():
             [0, 0, 0, 1, 0],
             [1, 0, 0, 1, 0],
             [0, 0, 0, 1, 0],
-            [0, 0, 0, 1, 0],
-            [1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [1, 0, 0, 1, 0],
         ],
         bool,
     )
     obj.perform_algebraic(src_1, src_2, t, v, T_mask)
 
-    correct_chain_comps = examp_chain_comps()
-    correct_dag_reduction = examp_dag_reduction()
+    order = np.array([0, 1, 2, 4, 3])
+    correct_chain_comps = examp_chain_comps()[order]
+    correct_dag_reduction = examp_dag_reduction()[np.ix_(order, order)]
 
     assert (obj.chain_comps == correct_chain_comps).all()
     assert (obj.dag_reduction == correct_dag_reduction).all()
@@ -292,10 +296,10 @@ def test_perform_algebraic_within():
     )
     correct_dag_reduction = np.array(
         [
-            [0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [1, 0, 0, 0],
+            [0, 0, 0, 0],
+            [1, 0, 0, 0],
         ],
         bool,
     )
@@ -306,7 +310,7 @@ def test_perform_algebraic_within():
 
 def test_perform_algebraic_inv_with():
     src_1, src_2, t, v = 3, 2, 0, 5
-    T_mask = np.array([0, 1, 1, 0, 0], bool)
+    T_mask = np.array([0, 1, 1, 0], bool)
 
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
     obj.chain_comps = np.array(
@@ -320,17 +324,18 @@ def test_perform_algebraic_inv_with():
     )
     obj.dag_reduction = np.array(
         [
-            [0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [1, 0, 0, 0],
+            [0, 0, 0, 0],
+            [1, 0, 0, 0],
         ],
         bool,
     )
     obj.perform_algebraic(src_1, src_2, t, v, T_mask)
 
-    correct_chain_comps = examp_chain_comps()
-    correct_dag_reduction = examp_dag_reduction()
+    order = np.array([0, 1, 2, 4, 3])
+    correct_chain_comps = examp_chain_comps()[order]
+    correct_dag_reduction = examp_dag_reduction()[np.ix_(order, order)]
 
     assert (obj.chain_comps == correct_chain_comps).all()
     assert (obj.dag_reduction == correct_dag_reduction).all()

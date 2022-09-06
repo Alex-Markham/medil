@@ -236,15 +236,13 @@ class InputData(object):
             T_mask[src_1] = False
         elif fiber == "add":
             T_mask[src_2] = True
+            print(src_1, t, src_2, T_mask)
         else:  # fiber == "within"
             T_mask[[src_1, src_2]] = False, True
 
         return src_1, src_2, t, v, T_mask
 
     def perform_algebraic(self, src_1, src_2, t, v, T_mask):
-        # import pdb
-
-        # pdb.set_trace()
         nonsources_mask = self.dag_reduction.sum(0).astype(bool)
         max_anc_dag = np.copy(self.dag_reduction)
         max_anc_dag[nonsources_mask] = False
@@ -252,12 +250,12 @@ class InputData(object):
         max_anc_dag[sources, sources] = True
 
         num_common = T_mask.astype(int) @ max_anc_dag
-        other_ancs = ~T_mask @ ~max_anc_dag
-        P_mask = np.logical_and(num_common.astype(bool), ~other_ancs)
+        has_other_ancs = ~T_mask @ max_anc_dag
+        P_mask = np.logical_and(num_common.astype(bool), ~has_other_ancs)
         C_mask = num_common == T_mask.sum()
         exact = np.flatnonzero(np.logical_and(P_mask, C_mask))
         if len(exact) == 1:
-            self.chain_comps[[exact, t], v] = True, False
+            self.chain_comps[[exact[0], t], v] = True, False
         else:
             self.perform_split(v, None, t, recurse=False, algebraic=True)
             C_mask = np.append(C_mask, False)
@@ -265,7 +263,7 @@ class InputData(object):
             P_mask = np.append(P_mask, False)
             self.dag_reduction[P_mask, -1] = True
 
-        if self.chain_comps[t].sum() == 0:
+        if not self.chain_comps[t].any():
             self.chain_comps = np.delete(self.chain_comps, t, 0)
             self.dag_reduction = np.delete(self.dag_reduction, t, 0)
             self.dag_reduction = np.delete(self.dag_reduction, t, 1)
@@ -283,6 +281,7 @@ class InputData(object):
             non_empty_same_ch_mask = ch_subgraph @ ch_subgraph.T
             empty_ch_mask = ~ch_subgraph @ ~ch_subgraph.T
             same_ch_mask = non_empty_same_ch_mask + empty_ch_mask
+            np.fill_diagonal(same_ch_mask, False)
             same_ch_idx = np.argwhere(same_ch_mask)
             idx = np.random.choice(range(len(same_ch_idx)))
             src_1, src_2 = sngl_srcs[same_ch_idx[idx]]
