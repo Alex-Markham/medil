@@ -214,7 +214,8 @@ class InputData(object):
 
     def consider_algebraic(self, fiber):
         if fiber == "del":
-            src_1, src_2, t = self.pick_source_nodes("del")
+            src_1, t = self.pick_source_nodes("del")
+            src_2 = None
         else:
             src_1, src_2 = self.pick_source_nodes(fiber)
             ch_src_1, ch_src_2 = self.dag_reduction[[src_1, src_2], :]
@@ -241,11 +242,14 @@ class InputData(object):
         return src_1, src_2, t, v, T_mask
 
     def perform_algebraic(self, src_1, src_2, t, v, T_mask):
+        # import pdb
+
+        # pdb.set_trace()
         nonsources_mask = self.dag_reduction.sum(0).astype(bool)
         max_anc_dag = np.copy(self.dag_reduction)
         max_anc_dag[nonsources_mask] = False
         sources = np.flatnonzero(np.logical_not(nonsources_mask))
-        max_anc_dag[np.ix_(sources, sources)] = True
+        max_anc_dag[sources, sources] = True
 
         num_common = T_mask.astype(int) @ max_anc_dag
         other_ancs = ~T_mask @ ~max_anc_dag
@@ -258,6 +262,7 @@ class InputData(object):
             self.perform_split(v, None, t, recurse=False, algebraic=True)
             C_mask = np.append(C_mask, False)
             self.dag_reduction = np.vstack((self.dag_reduction, C_mask))
+            P_mask = np.append(P_mask, False)
             self.dag_reduction[P_mask, -1] = True
 
         if self.chain_comps[t].sum() == 0:
@@ -288,8 +293,8 @@ class InputData(object):
             p = num_pairs / num_pairs.sum()
             t = np.random.choice(len(p), p=p)
             t_max_ancs = np.flatnonzero(self.dag_reduction[sources, t])
-            src_1, src_2 = sources[np.random.choice(t_max_ancs, size=2, replace=False)]
-            chosen_nodes = src_1, src_2, t
+            src_1 = sources[np.random.choice(t_max_ancs)]
+            chosen_nodes = src_1, t
         else:  # then move in ("split", "within", "add")
             non_singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) > 1)
             ns_sources = sources[np.in1d(sources, non_singleton_nodes)]
