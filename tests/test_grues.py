@@ -192,18 +192,34 @@ def test_perform_split():
     assert (obj.dag_reduction == correct_dag_reduction).all()
 
 
-def test_consider_fiber():
+def test_consider_algebraic():
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
     obj.chain_comps = examp_chain_comps()
     obj.dag_reduction = examp_dag_reduction()
-    _, src_1, src_2, t, v = obj.consider_fiber()
 
+    src_1, src_2, t, v, T_mask = obj.consider_algebraic("del")
+    assert obj.chain_comps[t, v]
+    assert T_mask[src_1] == False
+    assert obj.dag_reduction[T_mask, t].all()
+    assert (obj.dag_reduction[:, T_mask] == False).all()
+
+    src_1, src_2, t, v, T_mask = obj.consider_algebraic("within")
     ex_cc = examp_chain_comps()
     ex_d_r = examp_dag_reduction()
     assert (t == src_1 and ex_cc[t].sum() > 1) or (
         ex_d_r[src_1, t] and ~ex_d_r[src_2, t]
     )
     assert ex_cc[t, v]
+    assert T_mask[src_1] == False
+    assert (obj.dag_reduction[:, T_mask] == False).all()
+    T_mask[src_2] = False
+    assert ~(T_mask.any()) or obj.dag_reduction[T_mask, t].all()
+
+    src_1, src_2, t, v, T_mask = obj.consider_algebraic("add")
+    assert T_mask[src_2]
+    assert (obj.dag_reduction[:, T_mask] == False).all()
+    T_mask[src_2] = False
+    assert obj.dag_reduction[T_mask, t].all()
 
 
 def test_perform_rev_fiber_T414():

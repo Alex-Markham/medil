@@ -208,7 +208,20 @@ class InputData(object):
         fiber = np.random.choice(("within", "out_of"), p=p)
         if fiber == "out_of":
             fiber = np.random.choice(("add", "del"))
-        src_1, src_2, t, v = self.consider_algebraic(fiber)
+
+        src_1, src_2, t, v, T_mask = self.consider_algebraic(fiber)
+        self.perform_algebraic(src_1, src_2, t, v, T_mask)
+
+    def consider_algebraic(self, fiber):
+        if fiber == "del":
+            src_1, src_2, t = self.pick_source_nodes("del")
+        else:
+            src_1, src_2 = self.pick_source_nodes(fiber)
+            ch_src_1, ch_src_2 = self.dag_reduction[[src_1, src_2], :]
+            poss_t_mask = np.logical_and(ch_src_1, ~ch_src_2)
+            poss_t_mask[src_1] = self.chain_comps[src_1].sum() > 1
+            t = np.random.choice(np.flatnonzero(poss_t_mask))
+        v = np.random.choice(np.flatnonzero(self.chain_comps[t]))
 
         if src_1 == t:
             T_mask = np.zeros(len(self.dag_reduction), bool)
@@ -223,21 +236,9 @@ class InputData(object):
         elif fiber == "add":
             T_mask[src_2] = True
         else:  # fiber == "within"
-            T_mask[src_1, src_2] = False, True
+            T_mask[[src_1, src_2]] = False, True
 
-        self.perform_algebraic(src_1, src_2, t, v, T_mask)
-
-    def consider_algebraic(self, fiber):
-        if fiber == "del":
-            src_1, src_2, t = self.pick_source_nodes("del")
-        else:
-            src_1, src_2 = self.pick_source_nodes(fiber)
-            ch_src_1, ch_src_2 = self.dag_reduction[[src_1, src_2], :]
-            poss_t_mask = np.logical_and(ch_src_1, ~ch_src_2)
-            poss_t_mask[src_1] = self.chain_comps[src_1].sum() > 1
-            t = np.random.choice(np.flatnonzero(poss_t_mask))
-        v = np.random.choice(np.flatnonzero(self.chain_comps[t]))
-        return src_1, src_2, t, v
+        return src_1, src_2, t, v, T_mask
 
     def perform_algebraic(self, src_1, src_2, t, v, T_mask):
         nonsources_mask = self.dag_reduction.sum(0).astype(bool)
