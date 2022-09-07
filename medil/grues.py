@@ -39,8 +39,9 @@ class InputData(object):
         self.reduce_max_cpdag()
         self.repeated = 0
         self.moves = 0
-        while self.repeated < max_repeats:
-            if self.debug:
+        self.score_list = []
+        while self.moves < 10000:  # self.repeated < max_repeats:
+            if False:  # self.debug:
                 print(str(max_repeats - self.repeated) + " repeats left")
             self.old_cpdag = np.copy(self.cpdag)
             self.old_dag = np.copy(self.dag_reduction)
@@ -53,7 +54,7 @@ class InputData(object):
             }
             move = np.random.choice(list(move_dict.keys()), p=[0.17, 0.17, 0.66])
             try:
-                if self.debug:
+                if False:  # self.debug:
                     print(move)
                 move_dict[move]()
             except ValueError:
@@ -61,39 +62,49 @@ class InputData(object):
                 continue
 
             if self.debug:
-                # each vertex is a chain component
-                assert len(self.chain_comps) == len(self.dag_reduction)
-                assert (self.chain_comps.sum(0) == 1).all()
+                try:
+                    # each vertex is a chain component
+                    assert len(self.chain_comps) == len(self.dag_reduction)
+                    assert (self.chain_comps.sum(0) == 1).all()
 
-                # every child has a unique parent set with at least two parents
-                num_pars = self.dag_reduction.sum(0)
-                children = self.dag_reduction[:, num_pars.astype(bool)]
-                assert (np.unique(children, axis=1) == children).all()
-                assert (num_pars != 1).all()
+                    # every child has a unique parent set with at least two parents
+                    num_pars = self.dag_reduction.sum(0)
+                    children = self.dag_reduction[:, num_pars.astype(bool)]
+                    assert np.unique(children, axis=1).shape[1] == children.shape[1]
+                    assert (num_pars != 1).all()
 
-                # indeed a DAG and trasitively closed
-                num_nodes = len(self.dag_reduction)
-                graph = np.copy(self.dag_reduction).astype(int)
-                for n in range(2, num_nodes):
-                    graph += np.linalg.matrix_power(self.dag_reduction, n)
-                assert np.diag(graph).sum() == 0
-                assert (graph.astype(bool) == self.dag_reduction).all()
+                    # indeed a DAG and trasitively closed
+                    num_nodes = len(self.dag_reduction)
+                    graph = np.copy(self.dag_reduction).astype(int)
+                    for n in range(2, num_nodes):
+                        graph += np.linalg.matrix_power(self.dag_reduction, n)
+                    assert np.diag(graph).sum() == 0
+                    assert (graph.astype(bool) == self.dag_reduction).all()
 
-                # check interesection number
-                old_intersection_num = np.logical_not(self.old_dag.sum(0)).sum()
-                new_intresection_num = np.logical_not(self.dag_reduction.sum(0)).sum()
-                if move == "merge":
-                    assert old_intersection_num - 1 == new_intresection_num
-                elif move == "split":
-                    assert old_intersection_num + 1 == new_intresection_num
-                else:
+                    # all edges are essential
+                    # i.e., all edges are in v-structs
 
-                    assert old_intersection_num == new_intresection_num
+                    # check interesection number
+                    old_intersection_num = np.logical_not(self.old_dag.sum(0)).sum()
+                    new_intresection_num = np.logical_not(
+                        self.dag_reduction.sum(0)
+                    ).sum()
+                    if move == "merge":
+                        assert old_intersection_num - 1 == new_intresection_num
+                    elif move == "split":
+                        assert old_intersection_num + 1 == new_intresection_num
+                    else:
+                        assert old_intersection_num == new_intresection_num
+                except AssertionError:
+                    import pdb, traceback
+
+                    trcbk = traceback.format_exc()
+                    pdb.set_trace()
 
             self.expand()
             new_score = self.get_score.full(self.cpdag)
             # new_score = self.my_score()
-            if self.debug:
+            if False:  # self.debug:
                 print(
                     "current score: "
                     + str(self.score)
@@ -101,10 +112,11 @@ class InputData(object):
                     + str(new_score)
                     + "\n\n"
                 )
-            if new_score > self.score:
+            if True:  # new_score > self.score:
                 self.score = new_score
                 self.repeated = 0
                 self.moves += 1
+                self.score_list += [new_score]
             else:
                 self.cpdag = self.old_cpdag
                 self.dag_reduction = self.old_dag
@@ -210,6 +222,8 @@ class InputData(object):
             fiber = np.random.choice(("add", "del"))
 
         src_1, src_2, t, v, T_mask = self.consider_algebraic(fiber)
+        if self.debug:
+            self.dump = fiber, src_1, src_2, t, v, T_mask
         self.perform_algebraic(src_1, src_2, t, v, T_mask)
 
     def consider_algebraic(self, fiber):
