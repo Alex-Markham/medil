@@ -130,7 +130,7 @@ class InputData(object):
         # edges and removing edges violating implied conditional
         # independence relations
         cpdag = np.copy(self.uec)
-        cpdag[j, i[i_or_k_idx]] = cpdag[j, k[i_or_k_idx]] = 0
+        cpdag[j, i[i_or_k_idx]] = cpdag[j, k[i_or_k_idx]] = False
         self.cpdag = cpdag
 
     def merge(self):
