@@ -65,7 +65,7 @@ class InputData(object):
             except AssertionError:
                 import pdb, traceback
 
-                trcbk = traceback.format_exc()
+                the_traceback = traceback.format_exc()
                 pdb.set_trace()
 
             self.expand()
@@ -132,6 +132,30 @@ class InputData(object):
         cpdag = np.copy(self.uec)
         cpdag[j, i[i_or_k_idx]] = cpdag[j, k[i_or_k_idx]] = False
         self.cpdag = cpdag
+
+        # U = np.copy(self.uec)
+
+        # # V_ik == 0 implies there's an h such that i--h--k is an induced path
+        # V = ~U @ U
+
+        # # W_ij == 1 if and only if there exists an h such that i--j--h is an induced path
+        # W = ~(V @ U)
+
+        # # This orients all v-structures and removes edges violating CI relations
+        # U[U * W] = False
+
+        # self.cpdag = U
+
+        # G = np.copy(self.uec)
+        # for j in range(self.num_feats):
+        #     nghs = np.flatnonzero(self.uec[j])
+        #     size = len(nghs)
+        #     for i in range(size):
+        #         for k in range(i, size):
+        #             ni, nk = nghs[[i, k]]
+        #             if not self.uec[ni, nk]:
+        #                 G[j, [ni, nk]] = False
+        # self.cpdag = G
 
     def merge(self):
         src_1, src_2 = self.pick_source_nodes("merge")
