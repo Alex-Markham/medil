@@ -55,48 +55,8 @@ class InputData(object):
             move = np.random.choice(list(move_dict.keys()), p=[0.17, 0.17, 0.66])
             try:
                 move_dict[move]()
-
                 if self.debug:
-                    # dag and ccs are correct type
-                    assert self.chain_comps.dtype == bool
-                    assert self.dag_reduction.dtype == bool
-
-                    # each vertex is a chain component
-                    assert len(self.chain_comps) == len(self.dag_reduction)
-                    assert (self.chain_comps.sum(0) == 1).all()
-
-                    # every child has a unique parent set with at least two parents
-                    num_pars = self.dag_reduction.sum(0)
-                    children = self.dag_reduction[:, num_pars.astype(bool)]
-                    assert np.unique(children, axis=1).shape[1] == children.shape[1]
-                    assert (num_pars != 1).all()
-
-                    # indeed a DAG and trasitively closed
-                    num_nodes = len(self.dag_reduction)
-                    graph = np.copy(self.dag_reduction).astype(int)
-                    for n in range(2, num_nodes):
-                        graph += np.linalg.matrix_power(self.dag_reduction, n)
-                    assert np.diag(graph).sum() == 0
-                    assert (graph.astype(bool) == self.dag_reduction).all()
-
-                    # all edges are essential
-                    # i.e., all edges are in v-structs
-                    A = self.dag_reduction
-                    comp_undir = ~(A + A.T)
-                    np.fill_diagonal(comp_undir, False)
-                    assert np.logical_or(~A, comp_undir @ A).all
-
-                    # check interesection number
-                    old_intersection_num = np.logical_not(self.old_dag.sum(0)).sum()
-                    new_intresection_num = np.logical_not(
-                        self.dag_reduction.sum(0)
-                    ).sum()
-                    if move == "merge":
-                        assert old_intersection_num - 1 == new_intresection_num
-                    elif move == "split":
-                        assert old_intersection_num + 1 == new_intresection_num
-                    else:
-                        assert old_intersection_num == new_intresection_num
+                    self.run_tests(move)
 
             except ValueError:
                 self.repeated += 1
@@ -353,6 +313,7 @@ class InputData(object):
 
         self.dag_reduction = cpdag
         self.chain_comps = chain_comps
+        self.run_tests()
 
     def expand(self):
         self.cpdag = np.zeros_like(self.cpdag)
@@ -395,3 +356,44 @@ class InputData(object):
         bic = self.num_samps * np.log(rss / self.num_samps) + k * np.log(self.num_samps)
 
         return -bic
+
+    def run_tests(self, move=None):
+        # dag and ccs are correct type
+        assert self.chain_comps.dtype == bool
+        assert self.dag_reduction.dtype == bool
+
+        # each vertex is a chain component
+        assert len(self.chain_comps) == len(self.dag_reduction)
+        assert (self.chain_comps.sum(0) == 1).all()
+
+        # every child has a unique parent set with at least two parents
+        num_pars = self.dag_reduction.sum(0)
+        children = self.dag_reduction[:, num_pars.astype(bool)]
+        assert np.unique(children, axis=1).shape[1] == children.shape[1]
+        assert (num_pars != 1).all()
+
+        # indeed a DAG and trasitively closed
+        num_nodes = len(self.dag_reduction)
+        graph = np.copy(self.dag_reduction).astype(int)
+        for n in range(2, num_nodes):
+            graph += np.linalg.matrix_power(self.dag_reduction, n)
+        assert np.diag(graph).sum() == 0
+        assert (graph.astype(bool) == self.dag_reduction).all()
+
+        # all edges are essential
+        # i.e., all edges are in v-structs
+        A = self.dag_reduction
+        comp_undir = ~(A + A.T)
+        np.fill_diagonal(comp_undir, False)
+        assert np.logical_or(~A, comp_undir @ A).all
+
+        # check interesection number
+        if move is not None:
+            old_intersection_num = np.logical_not(self.old_dag.sum(0)).sum()
+            new_intresection_num = np.logical_not(self.dag_reduction.sum(0)).sum()
+            if move == "merge":
+                assert old_intersection_num - 1 == new_intresection_num
+            elif move == "split":
+                assert old_intersection_num + 1 == new_intresection_num
+            elif move == "algebraic":
+                assert old_intersection_num == new_intresection_num
