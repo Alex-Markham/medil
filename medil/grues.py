@@ -40,7 +40,7 @@ class InputData(object):
         self.repeated = 0
         self.moves = 0
         self.score_list = []
-        while self.moves < 10000:  # self.repeated < max_repeats:
+        while self.moves < 1000:  # self.repeated < max_repeats:
             if False:  # self.debug:
                 print(str(max_repeats - self.repeated) + " repeats left")
             self.old_cpdag = np.copy(self.cpdag)
@@ -54,15 +54,13 @@ class InputData(object):
             }
             move = np.random.choice(list(move_dict.keys()), p=[0.17, 0.17, 0.66])
             try:
-                if False:  # self.debug:
-                    print(move)
                 move_dict[move]()
-            except ValueError:
-                self.repeated += 1
-                continue
 
-            if self.debug:
-                try:
+                if self.debug:
+                    # dag and ccs are correct type
+                    assert self.chain_comps.dtype == bool
+                    assert self.dag_reduction.dtype == bool
+
                     # each vertex is a chain component
                     assert len(self.chain_comps) == len(self.dag_reduction)
                     assert (self.chain_comps.sum(0) == 1).all()
@@ -99,11 +97,16 @@ class InputData(object):
                         assert old_intersection_num + 1 == new_intresection_num
                     else:
                         assert old_intersection_num == new_intresection_num
-                except AssertionError:
-                    import pdb, traceback
 
-                    trcbk = traceback.format_exc()
-                    pdb.set_trace()
+            except ValueError:
+                self.repeated += 1
+                continue
+
+            except AssertionError:
+                import pdb, traceback
+
+                trcbk = traceback.format_exc()
+                pdb.set_trace()
 
             self.expand()
             new_score = self.get_score.full(self.cpdag)
@@ -185,8 +188,6 @@ class InputData(object):
         if recurse:
             src_1 -= 1 if src_1 > src_2 else 0
             parentless = np.flatnonzero(self.dag_reduction.sum(0) == 1)
-            if self.debug:
-                assert len(parentless) in (0, 1)
             for child in parentless:
                 self.perform_merge(src_1, child, False)
 
