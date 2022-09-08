@@ -83,6 +83,10 @@ class InputData(object):
 
                     # all edges are essential
                     # i.e., all edges are in v-structs
+                    A = self.dag_reduction
+                    comp_undir = ~(A + A.T)
+                    np.fill_diagonal(comp_undir, False)
+                    assert np.logical_or(~A, comp_undir @ A).all
 
                     # check interesection number
                     old_intersection_num = np.logical_not(self.old_dag.sum(0)).sum()
@@ -181,6 +185,8 @@ class InputData(object):
         if recurse:
             src_1 -= 1 if src_1 > src_2 else 0
             parentless = np.flatnonzero(self.dag_reduction.sum(0) == 1)
+            if self.debug:
+                assert len(parentless) in (0, 1)
             for child in parentless:
                 self.perform_merge(src_1, child, False)
 
@@ -290,12 +296,13 @@ class InputData(object):
         if move == "merge":
             singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) == 1)
             sngl_srcs = sources[np.in1d(sources, singleton_nodes)]
-            ch_subgraph = self.dag_reduction[sngl_srcs]
+            ch_subgraph = self.dag_reduction[sngl_srcs].astype(int)
+            empty_ch_subgraph = (~self.dag_reduction[sngl_srcs]).astype(int)
             non_empty_same_ch_mask = ch_subgraph @ ch_subgraph.T
-            empty_ch_mask = ~ch_subgraph @ ~ch_subgraph.T
-            same_ch_mask = non_empty_same_ch_mask + empty_ch_mask
-            np.fill_diagonal(same_ch_mask, False)
-            same_ch_idx = np.argwhere(same_ch_mask)
+            empty_same_ch_mask = empty_ch_subgraph @ empty_ch_subgraph.T
+            same_ch_mask = non_empty_same_ch_mask + empty_same_ch_mask
+            np.fill_diagonal(same_ch_mask, 0)
+            same_ch_idx = np.argwhere(same_ch_mask == len(self.dag_reduction))
             idx = np.random.choice(range(len(same_ch_idx)))
             src_1, src_2 = sngl_srcs[same_ch_idx[idx]]
             chosen_nodes = src_1, src_2

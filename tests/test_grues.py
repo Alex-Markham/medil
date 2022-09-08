@@ -88,12 +88,6 @@ def test_pick_source_nodes():
     obj.dag_reduction = examp_dag_reduction()
     obj.chain_comps = examp_chain_comps()
 
-    src_1, src_2 = obj.pick_source_nodes("merge")
-
-    assert src_1 != src_2
-    assert (obj.dag_reduction[:, [src_1, src_2]] == 0).all()
-    assert (obj.chain_comps[[src_1, src_2]].sum(1) == 1).all()
-
     source = obj.pick_source_nodes("split")
 
     assert obj.dag_reduction[:, source].sum() == 0
@@ -110,6 +104,14 @@ def test_pick_source_nodes():
 
     assert obj.dag_reduction[source, t].all()
     assert obj.dag_reduction[:, source].sum() == 0
+
+    obj.dag_reduction[[2, 3], 0] = True
+    src_1, src_2 = obj.pick_source_nodes("merge")
+
+    assert src_1 != src_2
+    assert (obj.dag_reduction[:, [src_1, src_2]] == 0).all()
+    assert (obj.chain_comps[[src_1, src_2]].sum(1) == 1).all()
+    assert (obj.dag_reduction[src_1] == obj.dag_reduction[src_2]).all()
 
 
 def test_perform_merge():
@@ -339,3 +341,29 @@ def test_perform_algebraic_inv_with():
 
     assert (obj.chain_comps == correct_chain_comps).all()
     assert (obj.dag_reduction == correct_dag_reduction).all()
+
+
+def test_merge_house():
+    obj = medil.grues.InputData(np.empty((1, 5)))
+    obj.chain_comps = np.array(
+        [
+            [0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0],
+            [0, 0, 1, 0, 0],
+        ],
+        bool,
+    )
+    obj.dag_reduction = np.array(
+        [
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 1],
+            [0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+        ],
+        bool,
+    )
+
+    correct_chain_comps = None
