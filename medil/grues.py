@@ -320,11 +320,11 @@ class InputData(object):
         if self.debug:
             try:
                 self.run_tests()
-            except AssertionError:
-                import pdb, traceback
-
-                the_traceback = traceback.format_exc()
-                pdb.set_trace()
+            except AssertionError:  # self.uec not actualy uec representative
+                self.uec = self.cpdag @ self.cpdag.T  # now it must be
+                np.fill_diagonal(self.uec, False)
+                self.get_max_cpdag()
+                self.reduce_max_cpdag()
 
     def expand(self):
         self.cpdag = np.zeros_like(self.cpdag)
