@@ -121,41 +121,20 @@ class InputData(object):
     def get_max_cpdag(self):
         r"""Return maximal CPDAG in the UEC."""
 
-        # find all induced 2-paths i--j--k, by implicitly looping
-        # through missing edges
-        i, k = np.triu(np.logical_not(self.uec), 1).nonzero()
-        i_or_k_idx, j = np.logical_and(self.uec[i], self.uec[k]).nonzero()
+        U = np.copy(self.uec)
+        compliment_U = ~U
+        np.fill_diagonal(compliment_U, False)
 
-        # remove entries (j, i) and (j, k), thus directing essential
-        # edges and removing edges violating implied conditional
-        # independence relations
-        cpdag = np.copy(self.uec)
-        cpdag[j, i[i_or_k_idx]] = cpdag[j, k[i_or_k_idx]] = False
-        self.cpdag = cpdag
+        # V_ij == 1 if and only if there's a k adjacent to j but not i
+        V = compliment_U @ U
 
-        # U = np.copy(self.uec)
+        # W_ij == 1 if and only if there's k such that i--j--k is an induced path
+        W = np.logical_and(V, U).T
 
-        # # V_ik == 0 implies there's an h such that i--h--k is an induced path
-        # V = ~U @ U
+        # This orients all v-structures and removes edges violating CI relations
+        U[W] = False
 
-        # # W_ij == 1 if and only if there exists an h such that i--j--h is an induced path
-        # W = ~(V @ U)
-
-        # # This orients all v-structures and removes edges violating CI relations
-        # U[U * W] = False
-
-        # self.cpdag = U
-
-        # G = np.copy(self.uec)
-        # for j in range(self.num_feats):
-        #     nghs = np.flatnonzero(self.uec[j])
-        #     size = len(nghs)
-        #     for i in range(size):
-        #         for k in range(i, size):
-        #             ni, nk = nghs[[i, k]]
-        #             if not self.uec[ni, nk]:
-        #                 G[j, [ni, nk]] = False
-        # self.cpdag = G
+        self.cpdag = U
 
     def merge(self):
         src_1, src_2 = self.pick_source_nodes("merge")
