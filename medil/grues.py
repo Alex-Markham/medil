@@ -24,12 +24,15 @@ class InputData(object):
 
     """
 
-    def __init__(self, samples, debug=False):
+    def __init__(self, samples, debug=False, explore=False):
         self.samples = np.array(samples, dtype=float)
         self.num_samps, self.num_feats = self.samples.shape
         self.debug = debug
+        self.explore = explore
 
-    def grues(self, init="empty", max_repeats=10, alpha=0.05):
+    def grues(
+        self, init="empty", max_repeats=10, alpha=0.05, score="gauss", max_moves=100
+    ):
         self.alpha = alpha
         self.init_uec(init)
         self.get_max_cpdag()
@@ -40,7 +43,7 @@ class InputData(object):
         self.repeated = 0
         self.moves = 0
         self.score_list = []
-        while self.moves < 1000:  # self.repeated < max_repeats:
+        while self.moves < max_moves:  # self.repeated < max_repeats:
             if False:  # self.debug:
                 print(str(max_repeats - self.repeated) + " repeats left")
             self.old_cpdag = np.copy(self.cpdag)
@@ -79,7 +82,7 @@ class InputData(object):
                     + str(new_score)
                     + "\n\n"
                 )
-            if True:  # new_score > self.score:
+            if self.explore or new_score > self.score:
                 self.score = new_score
                 self.repeated = 0
                 self.moves += 1

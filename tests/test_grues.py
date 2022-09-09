@@ -343,27 +343,10 @@ def test_perform_algebraic_inv_with():
     assert (obj.dag_reduction == correct_dag_reduction).all()
 
 
-def test_merge_house():
-    obj = medil.grues.InputData(np.empty((1, 5)))
-    obj.chain_comps = np.array(
-        [
-            [0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0],
-            [0, 0, 0, 1, 0],
-            [0, 0, 1, 0, 0],
-        ],
-        bool,
-    )
-    obj.dag_reduction = np.array(
-        [
-            [0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 1],
-            [0, 1, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-        ],
-        bool,
-    )
-
-    correct_chain_comps = None
+# integration test
+def test_explore():
+    samples = np.random.random_sample((10, 3))
+    obj = medil.grues.InputData(samples)
+    obj.debug = obj.explore = True
+    obj.grues(init="gauss", max_repeats=1000)
+    assert len(np.unique(obj.score_list)) == 8
