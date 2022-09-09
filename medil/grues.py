@@ -56,17 +56,17 @@ class InputData(object):
             try:
                 move_dict[move]()
                 if self.debug:
-                    self.run_tests(move)
+                    try:
+                        self.run_checks(move)
+                    except AssertionError:
+                        import pdb, traceback
+
+                        exc = traceback.format_exc()
+                        pdb.set_trace()
 
             except ValueError:
                 self.repeated += 1
                 continue
-
-            except AssertionError:
-                import pdb, traceback
-
-                the_traceback = traceback.format_exc()
-                pdb.set_trace()
 
             self.expand()
             new_score = self.get_score.full(self.cpdag)
@@ -136,7 +136,8 @@ class InputData(object):
 
         self.cpdag = U
 
-        recon_uec = U @ U.T
+        T = np.eye(len(U)).astype(bool) + U + np.linalg.matrix_power(U, 2)
+        recon_uec = T.T @ T
         np.fill_diagonal(recon_uec, False)
         if not (recon_uec == self.uec).all():
             # then self.uec was invalid, so reinitialize
@@ -366,7 +367,7 @@ class InputData(object):
 
         return -bic
 
-    def run_tests(self, move=None):
+    def run_checks(self, move=None):
         # dag and ccs are correct type
         assert self.chain_comps.dtype == bool
         assert self.dag_reduction.dtype == bool
