@@ -316,7 +316,15 @@ class InputData(object):
 
         self.dag_reduction = cpdag
         self.chain_comps = chain_comps
-        self.run_tests()
+
+        if self.debug:
+            try:
+                self.run_tests()
+            except AssertionError:
+                import pdb, traceback
+
+                the_traceback = traceback.format_exc()
+                pdb.set_trace()
 
     def expand(self):
         self.cpdag = np.zeros_like(self.cpdag)
