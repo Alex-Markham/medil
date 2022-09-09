@@ -136,6 +136,13 @@ class InputData(object):
 
         self.cpdag = U
 
+        recon_uec = U @ U.T
+        np.fill_diagonal(recon_uec, False)
+        if not (recon_uec == self.uec).all():
+            # then self.uec was invalid, so reinitialize
+            self.uec = recon_uec
+            self.get_max_cpdag()
+
     def merge(self):
         src_1, src_2 = self.pick_source_nodes("merge")
         self.perform_merge(src_1, src_2)
@@ -317,15 +324,6 @@ class InputData(object):
         self.dag_reduction = cpdag
         self.chain_comps = chain_comps
 
-        if self.debug:
-            try:
-                self.run_tests()
-            except AssertionError:  # self.uec not actualy uec representative
-                self.uec = self.cpdag @ self.cpdag.T  # now it must be
-                np.fill_diagonal(self.uec, False)
-                self.get_max_cpdag()
-                self.reduce_max_cpdag()
-
     def expand(self):
         self.cpdag = np.zeros_like(self.cpdag)
         for pa in np.flatnonzero(self.dag_reduction.sum(1)):
@@ -399,12 +397,11 @@ class InputData(object):
         assert np.logical_or(~A, comp_undir @ A).all
 
         # check interesection number
-        if move is not None:
-            old_intersection_num = np.logical_not(self.old_dag.sum(0)).sum()
-            new_intresection_num = np.logical_not(self.dag_reduction.sum(0)).sum()
-            if move == "merge":
-                assert old_intersection_num - 1 == new_intresection_num
-            elif move == "split":
-                assert old_intersection_num + 1 == new_intresection_num
-            elif move == "algebraic":
-                assert old_intersection_num == new_intresection_num
+        old_intersection_num = np.logical_not(self.old_dag.sum(0)).sum()
+        new_intresection_num = np.logical_not(self.dag_reduction.sum(0)).sum()
+        if move == "merge":
+            assert old_intersection_num - 1 == new_intresection_num
+        elif move == "split":
+            assert old_intersection_num + 1 == new_intresection_num
+        elif move == "algebraic":
+            assert old_intersection_num == new_intresection_num
