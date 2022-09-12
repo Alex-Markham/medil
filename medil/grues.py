@@ -24,16 +24,13 @@ class InputData(object):
 
     """
 
-    def __init__(self, samples, debug=False, explore=False):
+    def __init__(self, samples):
         self.samples = np.array(samples, dtype=float)
         self.num_samps, self.num_feats = self.samples.shape
-        self.debug = debug
-        self.explore = explore
+        self.debug = False
+        self.explore = False
 
-    def grues(
-        self, init="empty", max_repeats=10, alpha=0.05, score="gauss", max_moves=100
-    ):
-        self.alpha = alpha
+    def grues(self, init="empty", max_repeats=10, score="gauss", max_moves=100):
         self.init_uec(init)
         self.get_max_cpdag()
         self.get_score = GaussObsL0Pen(self.samples)
@@ -100,17 +97,19 @@ class InputData(object):
             elif init == "complete":
                 self.uec = np.ones((self.num_feats, self.num_feats), bool)
                 np.fill_diagonal(self.uec, False)
-            elif init == "gauss":
+        elif type(init) is tuple:
+            init, alpha = init
+            if init == "gauss":
                 corr = np.corrcoef(self.samples, rowvar=False)
                 dist = beta(
                     self.num_samps / 2 - 1, self.num_samps / 2 - 1, loc=-1, scale=2
                 )
-                crit_val = abs(dist.ppf(self.alpha / 2))
+                crit_val = abs(dist.ppf(alpha / 2))
                 self.uec = abs(corr) >= crit_val
                 np.fill_diagonal(self.uec, False)
             elif init == "dcov_fast":
                 cov, d_bars = dcov(self.samples)
-                crit_val = chi2(1).ppf(1 - self.alpha)
+                crit_val = chi2(1).ppf(1 - alpha)
                 test_val = self.num_samps * cov / np.outer(d_bars, d_bars)
                 self.uec = test_val >= crit_val
                 np.fill_diagonal(self.uec, False)
