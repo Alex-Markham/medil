@@ -115,9 +115,6 @@ class InputData(object):
                 np.fill_diagonal(self.uec, False)
         else:
             uec = np.array(init, bool)
-            is_uec = True  # add actual check of uec-ness
-            if not is_uec:
-                raise ValueError("Invalid init parameter.")
             self.uec = uec
 
     def get_max_cpdag(self):
