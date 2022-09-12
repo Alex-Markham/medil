@@ -34,19 +34,20 @@ class InputData(object):
         self, init="empty", max_repeats=10, score="gauss", max_moves=100, p="uniform"
     ):
         if p == "uniform":
-            p = np.array([0.16, 0.16, 0.34, 0.17, 0.17])
+            self.p = np.array([0.16, 0.16, 0.34, 0.17, 0.17])
+        else:
+            self.p = p
         self.init_uec(init)
         self.get_max_cpdag()
-        self.get_score = GaussObsL0Pen(self.samples)
-        self.score = self.get_score.full(self.cpdag)
-        # self.score = self.my_score()
         self.reduce_max_cpdag()
+        self.compute_likelihood()
         self.repeated = 0
         self.moves = 0
         self.score_list = []
         while self.moves < max_moves:  # self.repeated < max_repeats:
             if False:  # self.debug:
                 print(str(max_repeats - self.repeated) + " repeats left")
+            self.old_likelihood = self.likelihood
             self.old_cpdag = np.copy(self.cpdag)
             self.old_dag = np.copy(self.dag_reduction)
             self.old_cc = np.copy(self.chain_comps)
@@ -56,7 +57,7 @@ class InputData(object):
                 "split": self.split,
                 "algebraic": self.algebraic,
             }
-            move = np.random.choice(list(move_dict.keys()), p=[0.17, 0.17, 0.66])
+            move = np.random.choice(list(move_dict.keys()), p=(p[0], p[1], p[2:].sum()))
             try:
                 move_dict[move]()
                 if self.debug:
@@ -75,15 +76,10 @@ class InputData(object):
             self.expand()
             new_score = self.get_score.full(self.cpdag)
             # new_score = self.my_score()
-            if False:  # self.debug:
-                print(
-                    "current score: "
-                    + str(self.score)
-                    + "\nconsidered new score: "
-                    + str(new_score)
-                    + "\n\n"
-                )
-            if self.explore or new_score > self.score:
+
+            h = min(1, (self.likelihood * self.q) / (self.old_likelihood * self.q_inv))
+            make_move = np.random.choice((True, False), p=(h, 1 - h))
+            if self.explore or make_move:
                 self.score = new_score
                 self.repeated = 0
                 self.moves += 1
@@ -92,6 +88,7 @@ class InputData(object):
                 self.cpdag = self.old_cpdag
                 self.dag_reduction = self.old_dag
                 self.chain_comps = self.old_cc
+                self.likelihood = self.old_likelihood
                 self.repeated += 1
 
     def init_uec(self, init):
@@ -138,16 +135,34 @@ class InputData(object):
         U[W] = False
 
         self.cpdag = U
-
-        T = np.eye(len(U)).astype(bool) + U + np.linalg.matrix_power(U, 2)
-        recon_uec = T.T @ T
-        np.fill_diagonal(recon_uec, False)
+        recon_uec = self.get_uec()
         if not (recon_uec == self.uec).all():
             # then self.uec was invalid, so reinitialize
             self.uec = recon_uec
             self.get_max_cpdag()
 
+    def reduce_max_cpdag(self):
+        cpdag = np.copy(self.cpdag)
+        undir = np.logical_and(cpdag, cpdag.T)
+        chain_comps = np.eye(self.num_feats).astype(bool)
+        while undir.any() and len(undir) > 1:
+            v, w = np.unravel_index(undir.argmax(), undir.shape)
+            cpdag = np.delete(cpdag, v, 0)
+            cpdag = np.delete(cpdag, v, 1)
+            undir = np.delete(undir, v, 0)
+            undir = np.delete(undir, v, 1)
+            chain_comps[w] += chain_comps[v]
+            chain_comps = np.delete(chain_comps, v, 0)
+
+        self.dag_reduction = cpdag
+        self.chain_comps = chain_comps
+
+    def compute_likelihood(self):
+        pass
+
     def merge(self):
+        self.q = np.copy(self.p[0])
+        self.q_inv = np.copy(self.p[1])
         src_1, src_2 = self.pick_source_nodes("merge")
         self.perform_merge(src_1, src_2)
 
@@ -166,6 +181,8 @@ class InputData(object):
                 self.perform_merge(src_1, child, False)
 
     def split(self):
+        self.q = np.copy(self.p[1])
+        self.q_inv = np.copy(self.p[0])
         v, w, source = self.consider_split()
         self.perform_split(v, w, source)
 
@@ -197,11 +214,14 @@ class InputData(object):
             self.perform_split(w, None, source, False)
             self.dag_reduction[-2:, source] = True
 
-    def algebraic(self, p=np.array((0.5, 0.5))):
+    def algebraic(self):
+        p = (self.p[2], self.p[3:])
         fiber = np.random.choice(("within", "out_of"), p=p)
+        self.q = self.q_inv = np.copy(self.p[2])
         if fiber == "out_of":
-            fiber = np.random.choice(("add", "del"))
-
+            fiber = np.random.choice(("add", "del"), p=self.p[[3, 4]])
+            self.q = np.copy(self.p[3]) if fiber == "add" else np.copy(self.p[4])
+            self.q_inv = np.copy(self.p[4]) if fiber == "add" else np.copy(self.p[3])
         src_1, src_2, t, v, T_mask = self.consider_algebraic(fiber)
         if self.debug:
             self.dump = fiber, src_1, src_2, t, v, T_mask
@@ -312,22 +332,6 @@ class InputData(object):
             np.array(vec, ndmin=1)
         )
 
-    def reduce_max_cpdag(self):
-        cpdag = np.copy(self.cpdag)
-        undir = np.logical_and(cpdag, cpdag.T)
-        chain_comps = np.eye(self.num_feats).astype(bool)
-        while undir.any() and len(undir) > 1:
-            v, w = np.unravel_index(undir.argmax(), undir.shape)
-            cpdag = np.delete(cpdag, v, 0)
-            cpdag = np.delete(cpdag, v, 1)
-            undir = np.delete(undir, v, 0)
-            undir = np.delete(undir, v, 1)
-            chain_comps[w] += chain_comps[v]
-            chain_comps = np.delete(chain_comps, v, 0)
-
-        self.dag_reduction = cpdag
-        self.chain_comps = chain_comps
-
     def expand(self):
         self.cpdag = np.zeros_like(self.cpdag)
         for pa in np.flatnonzero(self.dag_reduction.sum(1)):
@@ -348,6 +352,10 @@ class InputData(object):
         self.uec += self.uec.T
         np.fill_diagonal(self.uec, False)
         return self.uec
+
+    # T = np.eye(len(U)).astype(bool) + U + np.linalg.matrix_power(U, 2)
+    #     recon_uec = T.T @ T
+    #     np.fill_diagonal(recon_uec, False)
 
     def my_score(self):
         children = self.cpdag.sum(0).nonzero()[0]
