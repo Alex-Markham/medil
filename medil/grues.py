@@ -30,7 +30,11 @@ class InputData(object):
         self.debug = False
         self.explore = False
 
-    def grues(self, init="empty", max_repeats=10, score="gauss", max_moves=100):
+    def grues(
+        self, init="empty", max_repeats=10, score="gauss", max_moves=100, p="uniform"
+    ):
+        if p == "uniform":
+            p = np.array([0.16, 0.16, 0.34, 0.17, 0.17])
         self.init_uec(init)
         self.get_max_cpdag()
         self.get_score = GaussObsL0Pen(self.samples)
@@ -366,7 +370,7 @@ class InputData(object):
 
         return -bic
 
-    def run_checks(self, move=None):
+    def run_checks(self, move):
         # dag and ccs are correct type
         assert self.chain_comps.dtype == bool
         assert self.dag_reduction.dtype == bool
