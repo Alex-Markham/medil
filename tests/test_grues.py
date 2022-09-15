@@ -85,6 +85,7 @@ def test_reduce_max_cpdag():
 
 def test_pick_source_nodes():
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
+    obj.q = 1
     obj.dag_reduction = examp_dag_reduction()
     obj.chain_comps = examp_chain_comps()
 
@@ -151,6 +152,7 @@ def test_perform_merge():
 
 def test_consider_split():
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
+    obj.q = 1
     obj.chain_comps = examp_chain_comps()
     obj.dag_reduction = examp_dag_reduction()
     v, w, source = obj.consider_split()
@@ -199,6 +201,7 @@ def test_perform_split():
 
 def test_consider_algebraic():
     obj = medil.grues.InputData(np.empty((1, len(examp_init()))))
+    obj.q = 1
     obj.chain_comps = examp_chain_comps()
     obj.dag_reduction = examp_dag_reduction()
 
@@ -350,6 +353,3 @@ def test_explore():
     obj.debug = obj.explore = True
     obj.grues(max_moves=100)
     assert len(np.unique(obj.visited)) == 8
-
-
-test_explore()

@@ -66,6 +66,7 @@ class InputData(object):
             poss_moves = []
             p = []
             considered = {}
+            self.q = 1
             for move in moves_dict.keys():
                 try:
                     considered[move] = self.consider(move)
@@ -77,7 +78,7 @@ class InputData(object):
             p /= p.sum()
             move = np.random.choice(poss_moves, p=p)
 
-            self.q = p[np.flatnonzero(np.array(poss_moves) == move)]
+            self.q *= p[np.flatnonzero(np.array(poss_moves) == move)]
             self.q_inv = self.q
 
             print(move, self.q)
@@ -93,7 +94,7 @@ class InputData(object):
                     pdb.set_trace()
 
             likelihood_ratio, new_bic_score = self.get_likelihood_ratio()
-            h = min(1, likelihood_ratio * (self.q_inv / self.q))
+            h = min(1, likelihood_ratio)  # * (self.q_inv / self.q))
             if self.explore:
                 h = 1
             make_move = np.random.choice((True, False), p=(h, 1 - h))
@@ -202,7 +203,9 @@ class InputData(object):
 
         # uniformly pick edge v--w in the chain component to split on
         chain_comp_mask = self.chain_comps[source]
-        v, w = np.random.choice(np.flatnonzero(chain_comp_mask), 2, replace=False)
+        choices = np.flatnonzero(chain_comp_mask)
+        v, w = np.random.choice(choices, 2, replace=False)
+        self.q /= self.n_choose_2(len(choices))
 
         return v, w, source
 
@@ -237,8 +240,12 @@ class InputData(object):
             ch_src_1, ch_src_2 = self.dag_reduction[[src_1, src_2], :]
             poss_t_mask = np.logical_and(ch_src_1, ~ch_src_2)
             poss_t_mask[src_1] = self.chain_comps[src_1].sum() > 1
-            t = np.random.choice(np.flatnonzero(poss_t_mask))
-        v = np.random.choice(np.flatnonzero(self.chain_comps[t]))
+            choices = np.flatnonzero(poss_t_mask)
+            t = np.random.choice(choices)
+            self.q /= len(choices)
+        choices = np.flatnonzero(self.chain_comps[t])
+        v = np.random.choice(choices)
+        self.q /= len(choices)
 
         if src_1 == t:
             T_mask = np.zeros(len(self.dag_reduction), bool)
@@ -299,7 +306,9 @@ class InputData(object):
             same_ch_mask = non_empty_same_ch_mask + empty_same_ch_mask
             np.fill_diagonal(same_ch_mask, 0)
             same_ch_idx = np.argwhere(same_ch_mask == len(self.dag_reduction))
-            idx = np.random.choice(range(len(same_ch_idx)))
+            choices = range(len(same_ch_idx))
+            idx = np.random.choice(choices)
+            self.q /= len(choices)
             src_1, src_2 = sngl_srcs[same_ch_idx[idx]]
             chosen_nodes = src_1, src_2
         elif move == "out_del":
@@ -308,13 +317,16 @@ class InputData(object):
             poss_t = np.flatnonzero(num_pairs)
             p = num_pairs[poss_t] / num_pairs[poss_t].sum()
             t = np.random.choice(poss_t, p=p)
+            self.q *= p[poss_t == t]
             t_max_ancs = np.flatnonzero(self.dag_reduction[sources, t])
             src_1 = sources[np.random.choice(t_max_ancs)]
+            self.q /= len(t_max_ancs)
             chosen_nodes = src_1, t
         else:  # then move in ("split", "within", "out_add")
             non_singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) > 1)
             ns_sources = sources[np.in1d(sources, non_singleton_nodes)]
             chosen_nodes = np.random.choice(ns_sources)
+            self.q /= len(ns_sources)
             if move in ("within", "out_add"):
                 # srcs_mask has entry i,j = 1 if and only if
                 # i is nonsingleton or
@@ -323,7 +335,9 @@ class InputData(object):
                 other_children_mask[ns_sources] = 1
                 srcs_mask = other_children_mask[np.ix_(sources, sources)]
                 np.fill_diagonal(srcs_mask, 0)
-                chosen_idx = np.random.choice(range(srcs_mask.sum()))
+                choices = range(srcs_mask.sum())
+                chosen_idx = np.random.choice(choices)
+                self.q /= len(choices)
                 chosen_nodes = sources[np.argwhere(srcs_mask)[chosen_idx]]
         return chosen_nodes
 
