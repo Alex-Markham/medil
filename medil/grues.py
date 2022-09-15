@@ -32,7 +32,8 @@ class InputData(object):
         self.explore = False
         self.debug = False
 
-    def grues(self, init="empty", p="uniform", max_repeats=10, max_moves=100):
+    def grues(self, init="empty", p="uniform", compute_q=False, max_moves=100):
+        self.compute_q = compute_q
         if p == "uniform":
             self.p = p = np.array([0.16, 0.16, 0.34, 0.17, 0.17])
         else:
@@ -40,13 +41,11 @@ class InputData(object):
         self.init_uec(init)
         self.get_max_cpdag()
         self.reduce_max_cpdag()
-        self.repeated = 0
         self.moves = 0
-        self.visited = np.empty(max_moves, float)
-        while self.moves < max_moves:  # self.repeated < max_repeats:
-            if False:  # self.debug:
-                print(str(max_repeats - self.repeated) + " repeats left")
-            self.old_bic_score = self.bic()
+        self.visited = np.empty(max_moves + 1, float)
+        self.visited[0] = self.mle_bic = self.bic()
+        while self.moves < max_moves:
+            self.old_bic_score = self.visited[self.moves]
             self.old_cpdag = np.copy(self.cpdag)
             self.old_dag = np.copy(self.dag_reduction)
             self.old_cc = np.copy(self.chain_comps)
@@ -69,12 +68,12 @@ class InputData(object):
                         pdb.set_trace()
 
             except ValueError:
-                self.repeated += 1
                 continue
 
-            self.expand()
             likelihood_ratio, new_bic_score = self.get_likelihood_ratio()
-            # (self.q_inv / self.q)
+            if compute_q:
+                self.normalize_q(move)
+                likelihood_ratio *= self.q_inv / self.q
             h = min(1, likelihood_ratio)
             if self.explore:
                 h = 1
@@ -82,15 +81,13 @@ class InputData(object):
             if make_move:
                 print(move)
                 self.old_bic_score = new_bic_score
-                self.repeated = 0
+                self.moves += 1
                 self.visited[self.moves] = self.old_bic_score
                 # (2 ** np.flatnonzero(self.cpdag)).sum()]
-                self.moves += 1
             else:
                 self.cpdag = self.old_cpdag
                 self.dag_reduction = self.old_dag
                 self.chain_comps = self.old_cc
-                self.repeated += 1
 
     def init_uec(self, init):
         if type(init) is str:
@@ -135,7 +132,7 @@ class InputData(object):
         # This orients all v-structures and removes edges violating CI relations
         U[W] = False
 
-        self.cpdag = U
+        self.cpdag = self.mle = U
         recon_uec = self.get_uec()
         if not (recon_uec == self.uec).all():
             # then self.uec was invalid, so reinitialize
@@ -360,6 +357,7 @@ class InputData(object):
     #     np.fill_diagonal(recon_uec, False)
 
     def get_likelihood_ratio(self):
+        self.expand()
         new_bic_score = self.bic()
         d = self.old_bic_score - new_bic_score
         k_old, k_new = self.old_cpdag.sum(), self.cpdag.sum()
