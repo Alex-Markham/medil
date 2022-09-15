@@ -100,7 +100,7 @@ def test_pick_source_nodes():
     assert ch_1_mask.sum() and ch_2_mask.sum()
     assert (obj.chain_comps[src_1].sum() > 1) or (ch_1_mask @ ~ch_2_mask)
 
-    source, t = obj.pick_source_nodes("del")
+    source, t = obj.pick_source_nodes("out_del")
 
     assert obj.dag_reduction[source, t].all()
     assert obj.dag_reduction[:, source].sum() == 0
@@ -202,7 +202,7 @@ def test_consider_algebraic():
     obj.chain_comps = examp_chain_comps()
     obj.dag_reduction = examp_dag_reduction()
 
-    src_1, _, t, v, T_mask = obj.consider_algebraic("del")
+    src_1, _, t, v, T_mask = obj.consider_algebraic("out_del")
     assert obj.chain_comps[t, v]
     assert T_mask[src_1] == False
     assert obj.dag_reduction[T_mask, t].all()
@@ -220,7 +220,7 @@ def test_consider_algebraic():
     T_mask[src_2] = False
     assert ~(T_mask.any()) or obj.dag_reduction[T_mask, t].all()
 
-    src_1, src_2, t, v, T_mask = obj.consider_algebraic("add")
+    src_1, src_2, t, v, T_mask = obj.consider_algebraic("out_add")
     assert T_mask[src_2]
     assert (obj.dag_reduction[:, T_mask] == False).all()
     T_mask[src_2] = False
@@ -350,3 +350,6 @@ def test_explore():
     obj.debug = obj.explore = True
     obj.grues(max_moves=100)
     assert len(np.unique(obj.visited)) == 8
+
+
+test_explore()

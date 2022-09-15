@@ -32,10 +32,15 @@ class InputData(object):
         self.explore = False
         self.debug = False
 
-    def grues(self, init="empty", p="uniform", compute_q=False, max_moves=10000):
-        self.compute_q = compute_q
+    def grues(self, init="empty", p="uniform", max_moves=10000):
         if p == "uniform":
-            self.p = p = np.array([0.16, 0.16, 0.34, 0.17, 0.17])
+            self.p = {
+                "merge": 1 / 6,
+                "split": 1 / 6,
+                "within": 1 / 3,
+                "out_del": 1 / 6,
+                "out_add": 1 / 6,
+            }
         else:
             self.p = p
         self.init_uec(init)
@@ -50,31 +55,45 @@ class InputData(object):
             self.old_dag = np.copy(self.dag_reduction)
             self.old_cc = np.copy(self.chain_comps)
 
-            move_dict = {
+            moves_dict = {
                 "merge": self.merge,
                 "split": self.split,
-                "algebraic": self.algebraic,
+                "within": self.algebraic,
+                "out_del": self.algebraic,
+                "out_add": self.algebraic,
             }
-            move = np.random.choice(list(move_dict.keys()), p=(p[0], p[1], p[2:].sum()))
-            try:
-                move_dict[move]()
-                if self.debug:
-                    try:
-                        self.run_checks(move)
-                    except AssertionError:
-                        import pdb, traceback
 
-                        exc = traceback.format_exc()
-                        pdb.set_trace()
+            poss_moves = []
+            p = []
+            considered = {}
+            for move in moves_dict.keys():
+                try:
+                    considered[move] = self.consider(move)
+                    poss_moves += [move]
+                    p += [self.p[move]]
+                except ValueError:
+                    continue
+            p = np.array(p)
+            p /= p.sum()
+            move = np.random.choice(poss_moves, p=p)
 
-            except ValueError:
-                continue
+            self.q = p[np.flatnonzero(np.array(poss_moves) == move)]
+            self.q_inv = self.q
+
+            print(move, self.q)
+            moves_dict[move](considered[move])
+
+            if self.debug:
+                try:
+                    self.run_checks(move)
+                except AssertionError:
+                    import pdb, traceback
+
+                    exc = traceback.format_exc()
+                    pdb.set_trace()
 
             likelihood_ratio, new_bic_score = self.get_likelihood_ratio()
-            if compute_q:
-                self.normalize_q(move)
-                likelihood_ratio *= self.q_inv / self.q
-            h = min(1, likelihood_ratio)
+            h = min(1, likelihood_ratio * (self.q_inv / self.q))
             if self.explore:
                 h = 1
             make_move = np.random.choice((True, False), p=(h, 1 - h))
@@ -155,10 +174,8 @@ class InputData(object):
         self.dag_reduction = cpdag
         self.chain_comps = chain_comps
 
-    def merge(self):
-        self.q = self.p[0]
-        self.q_inv = self.p[1]
-        src_1, src_2 = self.pick_source_nodes("merge")
+    def merge(self, considered):
+        src_1, src_2 = considered
         self.perform_merge(src_1, src_2)
 
     def perform_merge(self, src_1, src_2, recurse=True):
@@ -175,10 +192,8 @@ class InputData(object):
             for child in parentless:
                 self.perform_merge(src_1, child, False)
 
-    def split(self):
-        self.q = self.p[1]
-        self.q_inv = self.p[0]
-        v, w, source = self.consider_split()
+    def split(self, considered):
+        v, w, source = considered
         self.perform_split(v, w, source)
 
     def consider_split(self):
@@ -209,26 +224,13 @@ class InputData(object):
             self.perform_split(w, None, source, False)
             self.dag_reduction[-2:, source] = True
 
-    def algebraic(self):
-        p = np.array((0.5, 0.5))  # (self.p[2], self.p[3:].sum()))
-        p /= p.sum()
-        fiber = np.random.choice(("within", "out_of"), p=p)
-        self.q = self.q_inv = self.p[2]
-        if fiber == "out_of":
-            p = np.array((0.5, 0.5))  # self.p[[3, 4]]
-            p /= p.sum()
-            fiber = np.random.choice(("add", "del"), p=p)
-            self.q = self.p[3] if fiber == "add" else self.p[4]
-            self.q_inv = self.p[4] if fiber == "add" else self.p[3]
-        print(fiber)
-        src_1, src_2, t, v, T_mask = self.consider_algebraic(fiber)
-        if self.debug:
-            self.dump = fiber, src_1, src_2, t, v, T_mask
+    def algebraic(self, considered):
+        src_1, src_2, t, v, T_mask = considered
         self.perform_algebraic(src_1, src_2, t, v, T_mask)
 
     def consider_algebraic(self, fiber):
-        if fiber == "del":
-            src_1, t = self.pick_source_nodes("del")
+        if fiber == "out_del":
+            src_1, t = self.pick_source_nodes("out_del")
             src_2 = None
         else:
             src_1, src_2 = self.pick_source_nodes(fiber)
@@ -246,9 +248,9 @@ class InputData(object):
             par_t_mask = self.dag_reduction[:, t]
             T_mask = np.logical_and(max_anc_mask, par_t_mask)
 
-        if fiber == "del":
+        if fiber == "out_del":
             T_mask[src_1] = False
-        elif fiber == "add":
+        elif fiber == "out_add":
             T_mask[src_2] = True
         else:  # fiber == "within"
             T_mask[[src_1, src_2]] = False, True
@@ -300,7 +302,7 @@ class InputData(object):
             idx = np.random.choice(range(len(same_ch_idx)))
             src_1, src_2 = sngl_srcs[same_ch_idx[idx]]
             chosen_nodes = src_1, src_2
-        elif move == "del":
+        elif move == "out_del":
             num_max_ancs = self.dag_reduction[sources].sum(0)
             num_pairs = self.n_choose_2(num_max_ancs)
             poss_t = np.flatnonzero(num_pairs)
@@ -309,11 +311,11 @@ class InputData(object):
             t_max_ancs = np.flatnonzero(self.dag_reduction[sources, t])
             src_1 = sources[np.random.choice(t_max_ancs)]
             chosen_nodes = src_1, t
-        else:  # then move in ("split", "within", "add")
+        else:  # then move in ("split", "within", "out_add")
             non_singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) > 1)
             ns_sources = sources[np.in1d(sources, non_singleton_nodes)]
             chosen_nodes = np.random.choice(ns_sources)
-            if move in ("within", "add"):
+            if move in ("within", "out_add"):
                 # srcs_mask has entry i,j = 1 if and only if
                 # i is nonsingleton or
                 # i has children other than j's children
@@ -442,3 +444,15 @@ class InputData(object):
             sorted_idx = np.append(sinks, sorted_idx)
             dag[sinks] = dag[:, sinks] = 0
         return sorted_idx
+
+    def consider(self, move):
+        if move == "merge":
+            return self.pick_source_nodes("merge")
+        elif move == "split":
+            return self.consider_split()
+        elif move == "within":
+            return self.consider_algebraic("within")
+        elif move == "out_del":
+            return self.consider_algebraic("out_del")
+        elif move == "out_add":
+            return self.consider_algebraic("out_add")
