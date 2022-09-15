@@ -32,7 +32,7 @@ class InputData(object):
         self.explore = False
         self.debug = False
 
-    def grues(self, init="empty", p="uniform", compute_q=False, max_moves=100):
+    def grues(self, init="empty", p="uniform", compute_q=False, max_moves=10000):
         self.compute_q = compute_q
         if p == "uniform":
             self.p = p = np.array([0.16, 0.16, 0.34, 0.17, 0.17])

@@ -348,5 +348,5 @@ def test_explore():
     samples = np.random.random_sample((50, 3))
     obj = medil.grues.InputData(samples)
     obj.debug = obj.explore = True
-    obj.grues()
+    obj.grues(max_moves=100)
     assert len(np.unique(obj.visited)) == 8
