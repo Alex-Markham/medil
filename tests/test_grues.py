@@ -345,8 +345,8 @@ def test_perform_algebraic_inv_with():
 
 # integration test
 def test_explore():
-    samples = np.random.random_sample((10, 3))
+    samples = np.random.random_sample((50, 3))
     obj = medil.grues.InputData(samples)
     obj.debug = obj.explore = True
     obj.grues()
-    assert len(np.unique(obj.score_list)) == 8
+    assert len(np.unique(obj.visited)) == 8

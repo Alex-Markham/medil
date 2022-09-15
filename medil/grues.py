@@ -4,7 +4,7 @@ import math
 from .gauss_obs_l0_pen import GaussObsL0Pen
 from .independence_testing import dcov
 from scipy.stats import chi2, beta
-from numpy.linalg import lstsq
+from numpy.linalg import lstsq, det, inv
 
 
 class InputData(object):
@@ -26,28 +26,27 @@ class InputData(object):
 
     def __init__(self, samples):
         self.samples = np.array(samples, dtype=float)
-        self.num_samps, self.num_feats = self.samples.shape
-        self.debug = False
-        self.explore = False
+        self.samples -= self.samples.mean(0)
 
-    def grues(
-        self, init="empty", max_repeats=10, score="gauss", max_moves=100, p="uniform"
-    ):
+        self.num_samps, self.num_feats = self.samples.shape
+        self.explore = False
+        self.debug = False
+
+    def grues(self, init="empty", p="uniform", max_repeats=10, max_moves=100):
         if p == "uniform":
-            self.p = np.array([0.16, 0.16, 0.34, 0.17, 0.17])
+            self.p = p = np.array([0.16, 0.16, 0.34, 0.17, 0.17])
         else:
             self.p = p
         self.init_uec(init)
         self.get_max_cpdag()
         self.reduce_max_cpdag()
-        self.compute_likelihood()
         self.repeated = 0
         self.moves = 0
-        self.score_list = []
+        self.visited = np.empty(max_moves, float)
         while self.moves < max_moves:  # self.repeated < max_repeats:
             if False:  # self.debug:
                 print(str(max_repeats - self.repeated) + " repeats left")
-            self.old_likelihood = self.likelihood
+            self.old_bic_score = self.bic()
             self.old_cpdag = np.copy(self.cpdag)
             self.old_dag = np.copy(self.dag_reduction)
             self.old_cc = np.copy(self.chain_comps)
@@ -74,21 +73,23 @@ class InputData(object):
                 continue
 
             self.expand()
-            new_score = self.get_score.full(self.cpdag)
-            # new_score = self.my_score()
-
-            h = min(1, (self.likelihood * self.q) / (self.old_likelihood * self.q_inv))
+            likelihood_ratio, new_bic_score = self.get_likelihood_ratio()
+            # (self.q_inv / self.q)
+            h = min(1, likelihood_ratio)
+            if self.explore:
+                h = 1
             make_move = np.random.choice((True, False), p=(h, 1 - h))
-            if self.explore or make_move:
-                self.score = new_score
+            if make_move:
+                print(move)
+                self.old_bic_score = new_bic_score
                 self.repeated = 0
+                self.visited[self.moves] = self.old_bic_score
+                # (2 ** np.flatnonzero(self.cpdag)).sum()]
                 self.moves += 1
-                self.score_list += [new_score]
             else:
                 self.cpdag = self.old_cpdag
                 self.dag_reduction = self.old_dag
                 self.chain_comps = self.old_cc
-                self.likelihood = self.old_likelihood
                 self.repeated += 1
 
     def init_uec(self, init):
@@ -157,12 +158,9 @@ class InputData(object):
         self.dag_reduction = cpdag
         self.chain_comps = chain_comps
 
-    def compute_likelihood(self):
-        pass
-
     def merge(self):
-        self.q = np.copy(self.p[0])
-        self.q_inv = np.copy(self.p[1])
+        self.q = self.p[0]
+        self.q_inv = self.p[1]
         src_1, src_2 = self.pick_source_nodes("merge")
         self.perform_merge(src_1, src_2)
 
@@ -181,8 +179,8 @@ class InputData(object):
                 self.perform_merge(src_1, child, False)
 
     def split(self):
-        self.q = np.copy(self.p[1])
-        self.q_inv = np.copy(self.p[0])
+        self.q = self.p[1]
+        self.q_inv = self.p[0]
         v, w, source = self.consider_split()
         self.perform_split(v, w, source)
 
@@ -215,13 +213,17 @@ class InputData(object):
             self.dag_reduction[-2:, source] = True
 
     def algebraic(self):
-        p = (self.p[2], self.p[3:])
+        p = np.array((0.5, 0.5))  # (self.p[2], self.p[3:].sum()))
+        p /= p.sum()
         fiber = np.random.choice(("within", "out_of"), p=p)
-        self.q = self.q_inv = np.copy(self.p[2])
+        self.q = self.q_inv = self.p[2]
         if fiber == "out_of":
-            fiber = np.random.choice(("add", "del"), p=self.p[[3, 4]])
-            self.q = np.copy(self.p[3]) if fiber == "add" else np.copy(self.p[4])
-            self.q_inv = np.copy(self.p[4]) if fiber == "add" else np.copy(self.p[3])
+            p = np.array((0.5, 0.5))  # self.p[[3, 4]]
+            p /= p.sum()
+            fiber = np.random.choice(("add", "del"), p=p)
+            self.q = self.p[3] if fiber == "add" else self.p[4]
+            self.q_inv = self.p[4] if fiber == "add" else self.p[3]
+        print(fiber)
         src_1, src_2, t, v, T_mask = self.consider_algebraic(fiber)
         if self.debug:
             self.dump = fiber, src_1, src_2, t, v, T_mask
@@ -357,26 +359,41 @@ class InputData(object):
     #     recon_uec = T.T @ T
     #     np.fill_diagonal(recon_uec, False)
 
-    def my_score(self):
-        children = self.cpdag.sum(0).nonzero()[0]
+    def get_likelihood_ratio(self):
+        new_bic_score = self.bic()
+        d = self.old_bic_score - new_bic_score
+        k_old, k_new = self.old_cpdag.sum(), self.cpdag.sum()
+        ratio = np.exp(d / 2) * self.num_samps ** ((k_new - k_old) / 2)
+        return ratio, new_bic_score
+
+    def bic(self):
+        custom = True
+        if custom:
+            return self.custom_bic()
+        else:
+            self.get_score = GaussObsL0Pen(self.samples)
+            return self.get_score.full(self.cpdag)
+
+    def custom_bic(self):
+        children_mask = self.cpdag.sum(0)
+        children = np.flatnonzero(children_mask)
+
         regress = lambda child: lstsq(
-            np.hstack(
-                (
-                    np.ones((self.num_samps, 1)),
-                    self.samples[:, self.cpdag[:, child]],
-                )
-            ),
+            self.samples[:, self.cpdag[:, child]],
             self.samples[:, child],
             rcond=None,
         )[1]
         rss = sum(map(regress, children))
 
-        # num edges + intercept term for each child
-        k = self.cpdag.sum()  # + len(children), if noise means can differ
+        non_children = np.flatnonzero(~children_mask)
+        rss += (self.samples[:, non_children] ** 2).sum()
+        # rss here is just n * var(x), which is equiv to the above since data is centered
+
+        # num edges
+        k = self.cpdag.sum()
 
         bic = self.num_samps * np.log(rss / self.num_samps) + k * np.log(self.num_samps)
-
-        return -bic
+        return bic
 
     def run_checks(self, move):
         # dag and ccs are correct type
@@ -417,3 +434,13 @@ class InputData(object):
             assert old_intersection_num + 1 == new_intresection_num
         elif move == "algebraic":
             assert old_intersection_num == new_intresection_num
+
+    def sort(self):
+        dag = np.copy(self.dag_reduction) + np.eye(len(self.dag_reduction))
+        sorted_idx = np.array([], int)
+        while dag.any():
+            sink_ccs = np.flatnonzero(dag.sum(1) == 1)
+            sinks = np.where(self.chain_comps[sink_ccs])[1]
+            sorted_idx = np.append(sinks, sorted_idx)
+            dag[sinks] = dag[:, sinks] = 0
+        return sorted_idx
