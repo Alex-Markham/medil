@@ -67,7 +67,7 @@ class InputData(object):
             poss_moves, considered, p = self.compute_transition_kernel(moves_dict)
             move = np.random.choice(poss_moves, p=p)
 
-            q = float(self.q[move] * p[np.flatnonzero(poss_moves == move)])
+            q = float(self.q[move] * p[poss_moves == move])
 
             moves_dict[move](considered[move])
 
@@ -88,8 +88,9 @@ class InputData(object):
                 "out_add": "out_del",
             }
             inv_move = inv_moves[move]
+
             poss_moves, _, p = self.compute_transition_kernel(moves_dict)
-            q_inv = float(self.q[inv_move] * p[np.flatnonzero(poss_moves == inv_move)])
+            q_inv = float(self.q[inv_move] * p[poss_moves == inv_move])
 
             likelihood_ratio, new_bic_score = self.get_likelihood_ratio()
             if new_bic_score < self.mle_bic:
@@ -97,7 +98,6 @@ class InputData(object):
                 self.mle = self.cpdag
 
             h = min(1, likelihood_ratio * (q_inv / q))
-            print(likelihood_ratio, (q_inv / q), h)
             if self.explore:
                 h = 1
             make_move = np.random.choice((True, False), p=(h, 1 - h))
@@ -333,10 +333,10 @@ class InputData(object):
         else:  # then move in ("split", "within", "out_add")
             non_singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) > 1)
             ns_sources = sources[np.in1d(sources, non_singleton_nodes)]
-            chosen_nodes = np.random.choice(ns_sources)
-            self.q[move] /= len(ns_sources)
-
-            if move in ("within", "out_add"):
+            if move == "split":
+                chosen_nodes = np.random.choice(ns_sources)
+                self.q[move] /= len(ns_sources)
+            else:  # move in ("within", "out_add")
                 # srcs_mask has entry i,j = 1 if and only if
                 # i is nonsingleton or
                 # i has children other than j's children
@@ -491,8 +491,6 @@ class InputData(object):
                 p += [self.p[move]]
             except ValueError:
                 continue
-        if len(p) == 0:
-            warnings.warn("no move possible")
         p = np.array(p)
         p /= p.sum()
 
