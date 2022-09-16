@@ -64,25 +64,10 @@ class InputData(object):
                 "out_add": self.algebraic,
             }
 
-            poss_moves = []
-            p = []
-            considered = {}
-            self.q = 1
-            for move in moves_dict.keys():
-                try:
-                    considered[move] = self.consider(move)
-                    poss_moves += [move]
-                    p += [self.p[move]]
-                except ValueError:
-                    continue
-            if len(p) == 0:
-                continue
-            p = np.array(p)
-            p /= p.sum()
+            poss_moves, considered, p = self.compute_transition_kernel(moves_dict)
             move = np.random.choice(poss_moves, p=p)
 
-            self.q *= p[np.flatnonzero(np.array(poss_moves) == move)]
-            self.q_inv = self.q
+            q = float(self.q[move] * p[np.flatnonzero(poss_moves == move)])
 
             moves_dict[move](considered[move])
 
@@ -95,17 +80,27 @@ class InputData(object):
                     exc = traceback.format_exc()
                     pdb.set_trace()
 
+            inv_moves = {
+                "merge": "split",
+                "split": "merge",
+                "within": "within",
+                "out_del": "out_add",
+                "out_add": "out_del",
+            }
+            inv_move = inv_moves[move]
+            poss_moves, _, p = self.compute_transition_kernel(moves_dict)
+            q_inv = float(self.q[inv_move] * p[np.flatnonzero(poss_moves == inv_move)])
+
             likelihood_ratio, new_bic_score = self.get_likelihood_ratio()
             if new_bic_score < self.mle_bic:
                 self.mle_bic = new_bic_score
                 self.mle = self.cpdag
 
-            h = min(1, likelihood_ratio)  # * (self.q_inv / self.q))
+            h = min(1, likelihood_ratio * (q_inv / q))
+            print(likelihood_ratio, (q_inv / q), h)
             if self.explore:
                 h = 1
-            p = np.array((h, 1 - h)).flatten()
-            make_move = np.random.choice((True, False), p=p)
-            print(move, ": ", make_move, h, new_bic_score, self.mle_bic)
+            make_move = np.random.choice((True, False), p=(h, 1 - h))
             if make_move:
                 self.old_bic_score = new_bic_score
                 self.moves += 1
@@ -211,7 +206,8 @@ class InputData(object):
         chain_comp_mask = self.chain_comps[source]
         choices = np.flatnonzero(chain_comp_mask)
         v, w = np.random.choice(choices, 2, replace=False)
-        self.q /= self.n_choose_2(len(choices))
+
+        self.q["split"] /= self.n_choose_2(len(choices))
 
         return v, w, source
 
@@ -248,12 +244,12 @@ class InputData(object):
             poss_t_mask[src_1] = self.chain_comps[src_1].sum() > 1
             choices = np.flatnonzero(poss_t_mask)
             t = np.random.choice(choices)
-            self.q /= len(choices)
+            self.q[fiber] /= len(choices)
             if len(choices) == 0:
                 warnings.warn("inaccurate self.q")
         choices = np.flatnonzero(self.chain_comps[t])
         v = np.random.choice(choices)
-        self.q /= len(choices)
+        self.q[fiber] /= len(choices)
         if len(choices) == 0:
             warnings.warn("inaccurate self.q")
 
@@ -318,7 +314,7 @@ class InputData(object):
             same_ch_idx = np.argwhere(same_ch_mask == len(self.dag_reduction))
             choices = range(len(same_ch_idx))
             idx = np.random.choice(choices)
-            self.q /= len(choices)
+            self.q[move] /= len(choices)
             src_1, src_2 = sngl_srcs[same_ch_idx[idx]]
             chosen_nodes = src_1, src_2
         elif move == "out_del":
@@ -327,10 +323,10 @@ class InputData(object):
             poss_t = np.flatnonzero(num_pairs)
             p = num_pairs[poss_t] / num_pairs[poss_t].sum()
             t = np.random.choice(poss_t, p=p)
-            self.q *= p[poss_t == t]
+            self.q[move] *= p[poss_t == t]
             t_max_ancs = np.flatnonzero(self.dag_reduction[sources, t])
             src_1 = sources[np.random.choice(t_max_ancs)]
-            self.q /= len(t_max_ancs)
+            self.q[move] /= len(t_max_ancs)
             if len(t_max_ancs) == 0:
                 warnings.warn("inaccurate self.q")
             chosen_nodes = src_1, t
@@ -338,7 +334,8 @@ class InputData(object):
             non_singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) > 1)
             ns_sources = sources[np.in1d(sources, non_singleton_nodes)]
             chosen_nodes = np.random.choice(ns_sources)
-            self.q /= len(ns_sources)
+            self.q[move] /= len(ns_sources)
+
             if move in ("within", "out_add"):
                 # srcs_mask has entry i,j = 1 if and only if
                 # i is nonsingleton or
@@ -349,7 +346,7 @@ class InputData(object):
                 np.fill_diagonal(srcs_mask, 0)
                 choices = range(srcs_mask.sum())
                 chosen_idx = np.random.choice(choices)
-                self.q /= len(choices)
+                self.q[move] /= len(choices)
                 chosen_nodes = sources[np.argwhere(srcs_mask)[chosen_idx]]
         return chosen_nodes
 
@@ -408,8 +405,7 @@ class InputData(object):
             self.samples[:, child],
             rcond=None,
         )[1]
-        rss = sum(map(regress, children))
-
+        rss = float(sum(map(regress, children)))
         non_children = np.flatnonzero(~children_mask)
         nc_samps = self.samples[:, non_children]
         rss += (nc_samps.T @ nc_samps).sum()
@@ -482,3 +478,22 @@ class InputData(object):
             return self.consider_algebraic("out_del")
         elif move == "out_add":
             return self.consider_algebraic("out_add")
+
+    def compute_transition_kernel(self, moves_dict):
+        poss_moves = []
+        p = []
+        considered = {}
+        self.q = {key: 1.0 for key in self.p.keys()}
+        for move in moves_dict.keys():
+            try:
+                considered[move] = self.consider(move)
+                poss_moves += [move]
+                p += [self.p[move]]
+            except ValueError:
+                continue
+        if len(p) == 0:
+            warnings.warn("no move possible")
+        p = np.array(p)
+        p /= p.sum()
+
+        return np.array(poss_moves), considered, p
