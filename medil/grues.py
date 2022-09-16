@@ -1,6 +1,7 @@
 """Implement the Groebner basis-based UEC search algorithm (GrUES)."""
 import numpy as np
 import math
+import warnings
 from .gauss_obs_l0_pen import GaussObsL0Pen
 from .independence_testing import dcov
 from scipy.stats import chi2, beta
@@ -74,6 +75,8 @@ class InputData(object):
                     p += [self.p[move]]
                 except ValueError:
                     continue
+            if len(p) == 0:
+                continue
             p = np.array(p)
             p /= p.sum()
             move = np.random.choice(poss_moves, p=p)
@@ -81,7 +84,6 @@ class InputData(object):
             self.q *= p[np.flatnonzero(np.array(poss_moves) == move)]
             self.q_inv = self.q
 
-            print(move, self.q)
             moves_dict[move](considered[move])
 
             if self.debug:
@@ -94,12 +96,17 @@ class InputData(object):
                     pdb.set_trace()
 
             likelihood_ratio, new_bic_score = self.get_likelihood_ratio()
+            if new_bic_score < self.mle_bic:
+                self.mle_bic = new_bic_score
+                self.mle = self.cpdag
+
             h = min(1, likelihood_ratio)  # * (self.q_inv / self.q))
             if self.explore:
                 h = 1
-            make_move = np.random.choice((True, False), p=(h, 1 - h))
+            p = np.array((h, 1 - h)).flatten()
+            make_move = np.random.choice((True, False), p=p)
+            print(move, ": ", make_move, h, new_bic_score, self.mle_bic)
             if make_move:
-                print(move)
                 self.old_bic_score = new_bic_score
                 self.moves += 1
                 self.visited[self.moves] = self.old_bic_score
@@ -133,8 +140,7 @@ class InputData(object):
                 self.uec = test_val >= crit_val
                 np.fill_diagonal(self.uec, False)
         else:
-            uec = np.array(init, bool)
-            self.uec = uec
+            self.uec = np.array(init, bool)
 
     def get_max_cpdag(self):
         r"""Return maximal CPDAG in the UEC."""
@@ -243,9 +249,13 @@ class InputData(object):
             choices = np.flatnonzero(poss_t_mask)
             t = np.random.choice(choices)
             self.q /= len(choices)
+            if len(choices) == 0:
+                warnings.warn("inaccurate self.q")
         choices = np.flatnonzero(self.chain_comps[t])
         v = np.random.choice(choices)
         self.q /= len(choices)
+        if len(choices) == 0:
+            warnings.warn("inaccurate self.q")
 
         if src_1 == t:
             T_mask = np.zeros(len(self.dag_reduction), bool)
@@ -321,6 +331,8 @@ class InputData(object):
             t_max_ancs = np.flatnonzero(self.dag_reduction[sources, t])
             src_1 = sources[np.random.choice(t_max_ancs)]
             self.q /= len(t_max_ancs)
+            if len(t_max_ancs) == 0:
+                warnings.warn("inaccurate self.q")
             chosen_nodes = src_1, t
         else:  # then move in ("split", "within", "out_add")
             non_singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) > 1)
@@ -362,23 +374,21 @@ class InputData(object):
         np.fill_diagonal(self.cpdag, False)
 
     def get_uec(self):
-        d_connected = self.cpdag.T @ self.cpdag
-        self.uec = d_connected.astype(bool) + self.cpdag
-        self.uec += self.uec.T
-        np.fill_diagonal(self.uec, False)
-        return self.uec
-
-    # T = np.eye(len(U)).astype(bool) + U + np.linalg.matrix_power(U, 2)
-    #     recon_uec = T.T @ T
-    #     np.fill_diagonal(recon_uec, False)
+        G = self.cpdag
+        T = np.eye(len(G)).astype(bool) + G + np.linalg.matrix_power(G, 2)
+        recon_uec = T.T @ T
+        np.fill_diagonal(recon_uec, False)
+        return recon_uec
 
     def get_likelihood_ratio(self):
         self.expand()
         new_bic_score = self.bic()
-        d = self.old_bic_score - new_bic_score
-        k_old, k_new = self.old_cpdag.sum(), self.cpdag.sum()
-        ratio = np.exp(d / 2) * self.num_samps ** ((k_new - k_old) / 2)
-        return ratio, new_bic_score
+        # d = self.old_bic_score - new_bic_score
+        # k_old, k_new = self.old_cpdag.sum(), self.cpdag.sum()
+        # ratio = np.exp(d / 2) * self.num_samps ** ((k_new - k_old) / 2)
+        # print(d, k_old, k_new, ratio)
+        # return ratio, new_bic_score
+        return new_bic_score / self.old_bic_score, new_bic_score
 
     def bic(self):
         custom = True
@@ -389,25 +399,27 @@ class InputData(object):
             return self.get_score.full(self.cpdag)
 
     def custom_bic(self):
-        children_mask = self.cpdag.sum(0)
+        uec = self.get_uec()
+        children_mask = uec.sum(0)
         children = np.flatnonzero(children_mask)
 
         regress = lambda child: lstsq(
-            self.samples[:, self.cpdag[:, child]],
+            self.samples[:, uec[:, child]],
             self.samples[:, child],
             rcond=None,
         )[1]
         rss = sum(map(regress, children))
 
         non_children = np.flatnonzero(~children_mask)
-        rss += (self.samples[:, non_children] ** 2).sum()
+        nc_samps = self.samples[:, non_children]
+        rss += (nc_samps.T @ nc_samps).sum()
         # rss here is just n * var(x), which is equiv to the above since data is centered
 
         # num edges
-        k = self.cpdag.sum()
+        k = uec.sum()
 
         bic = self.num_samps * np.log(rss / self.num_samps) + k * np.log(self.num_samps)
-        return bic
+        return 1 / rss
 
     def run_checks(self, move):
         # dag and ccs are correct type
