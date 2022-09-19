@@ -3,7 +3,7 @@ import numpy as np
 from scipy.spatial.distance import pdist, squareform
 from multiprocessing import Pool
 
-from numpy import linalg as la
+from numpy import linalg as LA
 from scipy.stats import chi2
 
 try:
@@ -247,7 +247,7 @@ def dep_con_kernel_one_samp(X, alpha=None):
     F = Z.reshape(num_feats * num_samps, num_samps)
     left = np.tensordot(Z, thresh, axes=([0], [0]))
     left_right = np.tensordot(left, Z, axes=([2, 1], [0, 1]))
-    gamma = (F.T @ F) ** 2 - 2 * (left_right) + la.norm(thresh)  # helper kernel
+    gamma = (F.T @ F) ** 2 - 2 * (left_right) + LA.norm(thresh)  # helper kernel
 
     diag = np.diag(gamma)
     kappa = gamma / np.sqrt(np.outer(diag, diag))  # cosine similarity
@@ -277,7 +277,7 @@ def dep_con_kernel_two_samp(samps_1, samps_2, alpha):
     F = Z.reshape(num_feats * num_samps_1, num_samps_2)
     left = np.tensordot(Z, thresh, axes=([0], [0]))
     left_right = np.tensordot(left, Z, axes=([2, 1], [0, 1]))
-    gamma = (F.T @ F) ** 2 - 2 * (left_right) + la.norm(thresh)  # helper kernel
+    gamma = (F.T @ F) ** 2 - 2 * (left_right) + LA.norm(thresh)  # helper kernel
 
     diag = np.diag(gamma)
     kappa = gamma / np.sqrt(np.outer(diag, diag))  # cosine similarity
