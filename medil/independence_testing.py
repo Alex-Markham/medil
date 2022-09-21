@@ -1,6 +1,6 @@
 """Independence testing on samples of random variables."""
 import numpy as np
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import pdist, squareform, cdist
 from multiprocessing import Pool
 
 from numpy import linalg as LA
@@ -236,14 +236,9 @@ def dep_con_kernel_one_samp(X, alpha=None):
         thresh[thresh == 1] = 0
     Z = np.zeros((num_feats, num_samps, num_samps))
     for j in range(num_feats):
-        n = num_samps
-        t = np.tile
         D = squareform(pdist(X[:, j].reshape(-1, 1), "cityblock"))
-        D_bar = d.mean()
-        D -= (
-            t(d.mean(0), (n, 1)) + t(d.mean(1), (n, 1)).T - t(D_bar, (n, n))
-        )  # doubly centered
-        Z[j] = D / (D_bar)  # standardized
+        # doubly center and standardized:
+        Z[j] = ((D - D.mean(0) - D.mean(1).reshape(-1, 1)) / D.mean()) + 1
     F = Z.reshape(num_feats * num_samps, num_samps)
     left = np.tensordot(Z, thresh, axes=([0], [0]))
     left_right = np.tensordot(left, Z, axes=([2, 1], [0, 1]))
@@ -261,19 +256,15 @@ def dep_con_kernel_two_samp(samps_1, samps_2, alpha):
     thresh = np.eye(num_feats)
     if alpha is not None:
         thresh[thresh == 0] = (
-            chi2(1).ppf(1 - alpha) / num_samps
+            chi2(1).ppf(1 - alpha) / num_samps_2
         )  # critical value corresponding to alpha
         thresh[thresh == 1] = 0
     Z = np.zeros((num_feats, num_samps_1, num_samps_2))
     for j in range(num_feats):
-        D = cdist(samps_1[:, j], samps_2[:, j], "cityblock")
-        D_bar = d.mean()
-        D -= (
-            np.tile(d.mean(0), (num_samps_1, 1))
-            + np.tile(d.mean(1), (1, num_samps_2))
-            - np.tile(D_bar, (num_samps_1, num_samps_2))
-        )  # doubly centered
-        Z[j] = D / (D_bar)  # standardized
+        D = cdist(
+            samps_1[:, j].reshape(-1, 1), samps_2[:, j].reshape(-1, 1), "cityblock"
+        )
+        Z[j] = ((D - D.mean(0) - D.mean(1).reshape(-1, 1)) / D.mean()) + 1
     F = Z.reshape(num_feats * num_samps_1, num_samps_2)
     left = np.tensordot(Z, thresh, axes=([0], [0]))
     left_right = np.tensordot(left, Z, axes=([2, 1], [0, 1]))
@@ -282,4 +273,4 @@ def dep_con_kernel_two_samp(samps_1, samps_2, alpha):
     diag = np.diag(gamma)
     kappa = gamma / np.sqrt(np.outer(diag, diag))  # cosine similarity
     kappa[kappa > 1] = 1  # correct numerical errors
-    return kappa.sum()
+    return kappa
