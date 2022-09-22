@@ -380,7 +380,6 @@ class InputData(object):
         T = np.eye(len(G)).astype(bool) + G + np.linalg.matrix_power(G, 2)
         recon_uec = T.T @ T
         np.fill_diagonal(recon_uec, False)
-        self.uec = recon_uec
         return recon_uec
 
     def get_likelihood_ratio(self):
@@ -390,7 +389,7 @@ class InputData(object):
 
     def compute_mle_rss(self, graph=None):
         if graph is None:
-            graph = self.get_uec()
+            graph = self.uec = self.get_uec()
         # children_mask = graph.sum(0)
         # children = np.flatnonzero(children_mask)
 
