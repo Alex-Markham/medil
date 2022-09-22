@@ -49,9 +49,13 @@ class InputData(object):
         self.reduce_max_cpdag()
         self.moves = 0
         self.visited = np.empty(max_moves + 1, float)
-        self.visited[0] = self.mle_bic = self.bic()
+        self.visited[0] = self.mle_likelihood = self.compute_mle_rss()
+        self.markov_chain = np.empty(
+            (max_moves + 1, self.num_feats, self.num_feats), bool
+        )
+        self.markov_chain[0] = self.cpdag
         while self.moves < max_moves:
-            self.old_bic_score = self.visited[self.moves]
+            self.old_likelihood = self.visited[self.moves]
             self.old_cpdag = np.copy(self.cpdag)
             self.old_dag = np.copy(self.dag_reduction)
             self.old_cc = np.copy(self.chain_comps)
@@ -92,9 +96,9 @@ class InputData(object):
             poss_moves, _, p = self.compute_transition_kernel(moves_dict)
             q_inv = float(self.q[inv_move] * p[poss_moves == inv_move])
 
-            likelihood_ratio, new_bic_score = self.get_likelihood_ratio()
-            if new_bic_score < self.mle_bic:
-                self.mle_bic = new_bic_score
+            likelihood_ratio, new_likelihood = self.get_likelihood_ratio()
+            if new_likelihood < self.mle_likelihood:
+                self.mle_likelihood = new_likelihood
                 self.mle = self.cpdag
 
             h = min(1, likelihood_ratio * (q_inv / q))
@@ -102,9 +106,10 @@ class InputData(object):
                 h = 1
             make_move = np.random.choice((True, False), p=(h, 1 - h))
             if make_move:
-                self.old_bic_score = new_bic_score
+                self.old_likelihood = new_likelihood
                 self.moves += 1
-                self.visited[self.moves] = self.old_bic_score
+                self.visited[self.moves] = self.old_likelihood
+                self.markov_chain[self.moves] = self.cpdag
                 # (2 ** np.flatnonzero(self.cpdag)).sum()]
             else:
                 self.cpdag = self.old_cpdag
@@ -379,43 +384,27 @@ class InputData(object):
 
     def get_likelihood_ratio(self):
         self.expand()
-        new_bic_score = self.bic()
-        # d = self.old_bic_score - new_bic_score
-        # k_old, k_new = self.old_cpdag.sum(), self.cpdag.sum()
-        # ratio = np.exp(d / 2) * self.num_samps ** ((k_new - k_old) / 2)
-        # print(d, k_old, k_new, ratio)
-        # return ratio, new_bic_score
-        return new_bic_score / self.old_bic_score, new_bic_score
+        new_likelihood = self.compute_mle_rss()
+        return new_likelihood / self.old_likelihood, new_likelihood
 
-    def bic(self):
-        custom = True
-        if custom:
-            return self.custom_bic()
-        else:
-            self.get_score = GaussObsL0Pen(self.samples)
-            return self.get_score.full(self.cpdag)
-
-    def custom_bic(self):
-        uec = self.get_uec()
-        children_mask = uec.sum(0)
+    def compute_mle_rss(self, graph=None):
+        if graph is None:
+            graph = self.get_uec()
+        children_mask = graph.sum(0)
         children = np.flatnonzero(children_mask)
 
         regress = lambda child: lstsq(
-            self.samples[:, uec[:, child]],
+            self.samples[:, graph[:, child]],
             self.samples[:, child],
             rcond=None,
         )[1]
         rss = float(sum(map(regress, children)))
         non_children = np.flatnonzero(~children_mask)
         nc_samps = self.samples[:, non_children]
-        rss += (nc_samps.T @ nc_samps).sum()
+        rss += np.diag(nc_samps.T @ nc_samps).sum()
         # rss here is just n * var(x), which is equiv to the above since data is centered
 
-        # num edges
-        k = uec.sum()
-
-        bic = self.num_samps * np.log(rss / self.num_samps) + k * np.log(self.num_samps)
-        return 1 / rss
+        return rss
 
     def run_checks(self, move):
         # dag and ccs are correct type
