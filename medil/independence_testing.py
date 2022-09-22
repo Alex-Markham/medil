@@ -250,27 +250,11 @@ def dep_con_kernel_one_samp(X, alpha=None):
     return kappa
 
 
+# note: for this and one_samp, add outputs arg, with options to compute/return Gram matrix, similarity, or distance
 def dep_con_kernel_two_samp(samps_1, samps_2, alpha):
-    num_samps_1, num_feats = samps_1.shape
-    num_samps_2 = len(samps_2)
-    thresh = np.eye(num_feats)
-    if alpha is not None:
-        thresh[thresh == 0] = (
-            chi2(1).ppf(1 - alpha) / num_samps_2
-        )  # critical value corresponding to alpha
-        thresh[thresh == 1] = 0
-    Z = np.zeros((num_feats, num_samps_1, num_samps_2))
-    for j in range(num_feats):
-        D = cdist(
-            samps_1[:, j].reshape(-1, 1), samps_2[:, j].reshape(-1, 1), "cityblock"
-        )
-        Z[j] = ((D - D.mean(0) - D.mean(1).reshape(-1, 1)) / D.mean()) + 1
-    F = Z.reshape(num_feats * num_samps_1, num_samps_2)
-    left = np.tensordot(Z, thresh, axes=([0], [0]))
-    left_right = np.tensordot(left, Z, axes=([2, 1], [0, 1]))
-    gamma = (F.T @ F) ** 2 - 2 * (left_right) + LA.norm(thresh)  # helper kernel
-
-    diag = np.diag(gamma)
-    kappa = gamma / np.sqrt(np.outer(diag, diag))  # cosine similarity
-    kappa[kappa > 1] = 1  # correct numerical errors
+    num_samps_1 = len(samps_1)
+    samps = np.vstack((samps_1, samps_2))
+    full_kappa = dep_con_kernel_one_samp(samps, alpha=None)
+    kappa = full_kappa[:num_samps_1]
+    kappa = kappa[:, num_samps_1:]
     return kappa
