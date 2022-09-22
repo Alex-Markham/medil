@@ -27,7 +27,6 @@ class InputData(object):
 
     def __init__(self, samples):
         self.samples = np.array(samples, dtype=float)
-        self.samples -= self.samples.mean(0)
 
         self.num_samps, self.num_feats = self.samples.shape
         self.explore = False
@@ -99,7 +98,7 @@ class InputData(object):
             likelihood_ratio, new_likelihood = self.get_likelihood_ratio()
             if new_likelihood < self.mle_likelihood:
                 self.mle_likelihood = new_likelihood
-                self.mle = self.cpdag
+                self.mle = self.uec
 
             h = min(1, likelihood_ratio * (q_inv / q))
             if self.explore:
@@ -141,6 +140,7 @@ class InputData(object):
                 np.fill_diagonal(self.uec, False)
         else:
             self.uec = np.array(init, bool)
+        self.mle = self.uec
 
     def get_max_cpdag(self):
         r"""Return maximal CPDAG in the UEC."""
@@ -158,11 +158,11 @@ class InputData(object):
         # This orients all v-structures and removes edges violating CI relations
         U[W] = False
 
-        self.cpdag = self.mle = U
+        self.cpdag = U
         recon_uec = self.get_uec()
         if not (recon_uec == self.uec).all():
             # then self.uec was invalid, so reinitialize
-            self.uec = recon_uec
+            self.uec = self.mle = recon_uec
             self.get_max_cpdag()
 
     def reduce_max_cpdag(self):
@@ -380,6 +380,7 @@ class InputData(object):
         T = np.eye(len(G)).astype(bool) + G + np.linalg.matrix_power(G, 2)
         recon_uec = T.T @ T
         np.fill_diagonal(recon_uec, False)
+        self.uec = recon_uec
         return recon_uec
 
     def get_likelihood_ratio(self):
@@ -390,21 +391,22 @@ class InputData(object):
     def compute_mle_rss(self, graph=None):
         if graph is None:
             graph = self.get_uec()
-        children_mask = graph.sum(0)
-        children = np.flatnonzero(children_mask)
+        # children_mask = graph.sum(0)
+        # children = np.flatnonzero(children_mask)
 
-        regress = lambda child: lstsq(
-            self.samples[:, graph[:, child]],
-            self.samples[:, child],
-            rcond=None,
-        )[1]
-        rss = float(sum(map(regress, children)))
-        non_children = np.flatnonzero(~children_mask)
-        nc_samps = self.samples[:, non_children]
-        rss += np.diag(nc_samps.T @ nc_samps).sum()
-        # rss here is just n * var(x), which is equiv to the above since data is centered
+        # regress = lambda child: lstsq(
+        #     self.samples[:, graph[:, child]],
+        #     self.samples[:, child],
+        #     rcond=None,
+        # )[1]
+        # rss = float(sum(map(regress, children)))
+        # non_children = np.flatnonzero(~children_mask)
+        # nc_samps = self.samples[:, non_children]
+        # rss += np.diag(nc_samps.T @ nc_samps).sum()
+        # # rss here is just n * var(x), which is equiv to the above since data is centered
 
-        return rss
+        # return rss
+        return GaussObsL0Pen(self.samples)._mle_full(graph)[1].sum()
 
     def run_checks(self, move):
         # dag and ccs are correct type
