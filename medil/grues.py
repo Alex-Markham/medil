@@ -32,7 +32,7 @@ class InputData(object):
         self.explore = False
         self.debug = False
 
-    def grues(self, init="empty", p="uniform", max_moves=10000):
+    def grues(self, init="empty", p="uniform", max_moves=10000, prior=None):
         if p == "uniform":
             self.p = {
                 "merge": 1 / 6,
@@ -100,7 +100,11 @@ class InputData(object):
                 self.mle_likelihood = new_likelihood
                 self.mle = self.uec
 
-            h = min(1, likelihood_ratio * (q_inv / q))
+            likelihood_and_transition_ratio = likelihood_ratio * (q_inv / q)
+            if prior is not None:
+                prior_ratio = prior(self.uec) / prior(self.get_uec(self.old_cpdag))
+                likelihood_and_transition_ratio *= prior_ratio
+            h = min(1, likelihood_and_transition_ratio)
             if self.explore:
                 h = 1
             make_move = np.random.choice((True, False), p=(h, 1 - h))
@@ -375,8 +379,11 @@ class InputData(object):
                 self.cpdag[node, ch] = True
         np.fill_diagonal(self.cpdag, False)
 
-    def get_uec(self):
-        G = self.cpdag
+    def get_uec(self, cpdag=None):
+        if cpdag is None:
+            G = self.cpdag
+        else:
+            G = cpdag
         T = np.eye(len(G)).astype(bool) + G + np.linalg.matrix_power(G, 2)
         recon_uec = T.T @ T
         np.fill_diagonal(recon_uec, False)
