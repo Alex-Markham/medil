@@ -48,7 +48,9 @@ class InputData(object):
         self.reduce_max_cpdag()
         self.moves = 0
         self.visited = np.empty(max_moves + 1, float)
-        self.visited[0] = self.mle_likelihood = self.compute_mle_rss()
+        self.visited[0] = self.mle_likelihood = (self.cpdag.sum()) * np.log(
+            self.num_samps
+        ) + self.num_samps * np.log(self.compute_mle_rss() / self.num_samps)
         self.markov_chain = np.empty(
             (max_moves + 1, self.num_feats, self.num_feats), bool
         )
@@ -102,7 +104,7 @@ class InputData(object):
 
             likelihood_and_transition_ratio = likelihood_ratio * (q_inv / q)
             if prior is not None:
-                prior_ratio = prior(self.uec) / prior(self.get_uec(self.old_cpdag))
+                prior_ratio = prior(self)
                 likelihood_and_transition_ratio *= prior_ratio
             h = min(1, likelihood_and_transition_ratio)
             if self.explore:
@@ -391,12 +393,16 @@ class InputData(object):
 
     def get_likelihood_ratio(self):
         self.expand()
-        new_likelihood = self.compute_mle_rss()
-        return new_likelihood / self.old_likelihood, new_likelihood
+        new_likelihood = self.num_samps * np.log(
+            self.compute_mle_rss() / self.num_samps
+        )
+        new_likelihood += (self.cpdag.sum()) * np.log(self.num_samps)
+        # unscaled_ratio = (new_likelihood / self.old_likelihood).astype(np.longdouble)
+        return self.old_likelihood / new_likelihood, new_likelihood
 
     def compute_mle_rss(self, graph=None):
         if graph is None:
-            graph = self.uec = self.get_uec()
+            graph = self.cpdag  # self.uec = self.get_uec()
         # children_mask = graph.sum(0)
         # children = np.flatnonzero(children_mask)
 
