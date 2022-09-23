@@ -48,15 +48,16 @@ class InputData(object):
         self.reduce_max_cpdag()
         self.moves = 0
         self.visited = np.empty(max_moves + 1, float)
-        self.visited[0] = self.mle_likelihood = (self.cpdag.sum()) * np.log(
+        self.old_rss = self.compute_mle_rss()
+        self.visited[0] = self.optimal_bic = (self.cpdag.sum()) * np.log(
             self.num_samps
-        ) + self.num_samps * np.log(self.compute_mle_rss() / self.num_samps)
+        ) + self.num_samps * np.log(self.old_rss / self.num_samps)
         self.markov_chain = np.empty(
             (max_moves + 1, self.num_feats, self.num_feats), bool
         )
         self.markov_chain[0] = self.cpdag
         while self.moves < max_moves:
-            self.old_likelihood = self.visited[self.moves]
+            self.old_bic = self.visited[self.moves]
             self.old_cpdag = np.copy(self.cpdag)
             self.old_dag = np.copy(self.dag_reduction)
             self.old_cc = np.copy(self.chain_comps)
@@ -97,10 +98,10 @@ class InputData(object):
             poss_moves, _, p = self.compute_transition_kernel(moves_dict)
             q_inv = float(self.q[inv_move] * p[poss_moves == inv_move])
 
-            likelihood_ratio, new_likelihood = self.get_likelihood_ratio()
-            if new_likelihood < self.mle_likelihood:
-                self.mle_likelihood = new_likelihood
-                self.mle = self.uec
+            likelihood_ratio, new_rss, new_bic = self.get_likelihood_ratio()
+            if new_bic / self.old_bic < 1:
+                self.optimal_bic = new_bic
+                self.optimal_uec = self.cpdag
 
             likelihood_and_transition_ratio = likelihood_ratio * (q_inv / q)
             if prior is not None:
@@ -111,9 +112,9 @@ class InputData(object):
                 h = 1
             make_move = np.random.choice((True, False), p=(h, 1 - h))
             if make_move:
-                self.old_likelihood = new_likelihood
+                self.old_rss = new_rss
                 self.moves += 1
-                self.visited[self.moves] = self.old_likelihood
+                self.visited[self.moves] = new_bic
                 self.markov_chain[self.moves] = self.cpdag
                 # (2 ** np.flatnonzero(self.cpdag)).sum()]
             else:
@@ -146,7 +147,7 @@ class InputData(object):
                 np.fill_diagonal(self.uec, False)
         else:
             self.uec = np.array(init, bool)
-        self.mle = self.uec
+        self.optimal_uec = self.uec
 
     def get_max_cpdag(self):
         r"""Return maximal CPDAG in the UEC."""
@@ -168,7 +169,7 @@ class InputData(object):
         recon_uec = self.get_uec()
         if not (recon_uec == self.uec).all():
             # then self.uec was invalid, so reinitialize
-            self.uec = self.mle = recon_uec
+            self.uec = self.optimal_uec = recon_uec
             self.get_max_cpdag()
 
     def reduce_max_cpdag(self):
@@ -393,12 +394,11 @@ class InputData(object):
 
     def get_likelihood_ratio(self):
         self.expand()
-        new_likelihood = self.num_samps * np.log(
-            self.compute_mle_rss() / self.num_samps
-        )
-        new_likelihood += (self.cpdag.sum()) * np.log(self.num_samps)
+        new_rss = self.compute_mle_rss()
+        new_bic = self.num_samps * np.log(new_rss / self.num_samps)
+        new_bic += self.cpdag.sum() * np.log(self.num_samps)
         # unscaled_ratio = (new_likelihood / self.old_likelihood).astype(np.longdouble)
-        return self.old_likelihood / new_likelihood, new_likelihood
+        return self.old_rss / new_rss, new_rss, new_bic
 
     def compute_mle_rss(self, graph=None):
         if graph is None:
