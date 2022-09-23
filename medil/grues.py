@@ -55,7 +55,7 @@ class InputData(object):
         self.markov_chain = np.empty(
             (max_moves + 1, self.num_feats, self.num_feats), bool
         )
-        self.markov_chain[0] = self.cpdag
+        self.markov_chain[0] = self.uec
         while self.moves < max_moves:
             self.old_bic = self.visited[self.moves]
             self.old_cpdag = np.copy(self.cpdag)
@@ -115,7 +115,7 @@ class InputData(object):
                 self.old_rss = new_rss
                 self.moves += 1
                 self.visited[self.moves] = new_bic
-                self.markov_chain[self.moves] = self.cpdag
+                self.markov_chain[self.moves] = self.uec
                 # (2 ** np.flatnonzero(self.cpdag)).sum()]
             else:
                 self.cpdag = self.old_cpdag
@@ -402,7 +402,8 @@ class InputData(object):
 
     def compute_mle_rss(self, graph=None):
         if graph is None:
-            graph = self.cpdag  # self.uec = self.get_uec()
+            graph = self.cpdag
+            self.uec = self.get_uec()
         # children_mask = graph.sum(0)
         # children = np.flatnonzero(children_mask)
 
