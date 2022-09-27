@@ -1,5 +1,6 @@
 """Implement the Groebner basis-based UEC search algorithm (GrUES)."""
 import numpy as np
+from numpy.random import default_rng
 import math
 import warnings
 from .gauss_obs_l0_pen import GaussObsL0Pen
@@ -25,14 +26,15 @@ class InputData(object):
 
     """
 
-    def __init__(self, samples):
+    def __init__(self, samples, rng=np.random.default_rng()):
         self.samples = np.array(samples, dtype=float)
+        self.rng = rng
 
         self.num_samps, self.num_feats = self.samples.shape
         self.explore = False
         self.debug = False
 
-    def grues(self, init="empty", p="uniform", max_moves=10000, prior=None):
+    def mcmc(self, init="empty", p="uniform", max_moves=10000, prior=None):
         if p == "uniform":
             self.p = {
                 "merge": 1 / 6,
@@ -49,9 +51,9 @@ class InputData(object):
         self.moves = 0
         self.visited = np.empty(max_moves + 1, float)
         self.old_rss = self.compute_mle_rss()
-        self.visited[0] = self.optimal_bic = (self.cpdag.sum()) * np.log(
+        self.visited[0] = self.optimal_bic = self.cpdag.sum() * np.log(
             self.num_samps
-        ) + self.num_samps * np.log(self.old_rss / self.num_samps)
+        ) + self.num_samps * np.log(self.old_rss)
         self.markov_chain = np.empty(
             (max_moves + 1, self.num_feats, self.num_feats), bool
         )
@@ -71,7 +73,7 @@ class InputData(object):
             }
 
             poss_moves, considered, p = self.compute_transition_kernel(moves_dict)
-            move = np.random.choice(poss_moves, p=p)
+            move = self.rng.choice(poss_moves, p=p)
 
             q = float(self.q[move] * p[poss_moves == move])
 
@@ -99,18 +101,20 @@ class InputData(object):
             q_inv = float(self.q[inv_move] * p[poss_moves == inv_move])
 
             likelihood_ratio, new_rss, new_bic = self.get_likelihood_ratio()
-            if new_bic / self.old_bic < 1:
+            if new_bic / self.optimal_bic < 1:
                 self.optimal_bic = new_bic
-                self.optimal_uec = self.cpdag
+                self.optimal_uec = self.uec
 
             likelihood_and_transition_ratio = likelihood_ratio * (q_inv / q)
-            if prior is not None:
+            if type(prior) is tuple:
+                prior_ratio = self.poisson_prior(prior)
+            elif prior is not None:
                 prior_ratio = prior(self)
                 likelihood_and_transition_ratio *= prior_ratio
             h = min(1, likelihood_and_transition_ratio)
             if self.explore:
                 h = 1
-            make_move = np.random.choice((True, False), p=(h, 1 - h))
+            make_move = self.rng.choice((True, False), p=(h, 1 - h))
             if make_move:
                 self.old_rss = new_rss
                 self.moves += 1
@@ -217,7 +221,7 @@ class InputData(object):
         # uniformly pick edge v--w in the chain component to split on
         chain_comp_mask = self.chain_comps[source]
         choices = np.flatnonzero(chain_comp_mask)
-        v, w = np.random.choice(choices, 2, replace=False)
+        v, w = self.rng.choice(choices, 2, replace=False)
 
         self.q["split"] /= self.n_choose_2(len(choices))
 
@@ -255,12 +259,12 @@ class InputData(object):
             poss_t_mask = np.logical_and(ch_src_1, ~ch_src_2)
             poss_t_mask[src_1] = self.chain_comps[src_1].sum() > 1
             choices = np.flatnonzero(poss_t_mask)
-            t = np.random.choice(choices)
+            t = self.rng.choice(choices)
             self.q[fiber] /= len(choices)
             if len(choices) == 0:
                 warnings.warn("inaccurate self.q")
         choices = np.flatnonzero(self.chain_comps[t])
-        v = np.random.choice(choices)
+        v = self.rng.choice(choices)
         self.q[fiber] /= len(choices)
         if len(choices) == 0:
             warnings.warn("inaccurate self.q")
@@ -325,7 +329,7 @@ class InputData(object):
             np.fill_diagonal(same_ch_mask, 0)
             same_ch_idx = np.argwhere(same_ch_mask == len(self.dag_reduction))
             choices = range(len(same_ch_idx))
-            idx = np.random.choice(choices)
+            idx = self.rng.choice(choices)
             self.q[move] /= len(choices)
             src_1, src_2 = sngl_srcs[same_ch_idx[idx]]
             chosen_nodes = src_1, src_2
@@ -334,10 +338,10 @@ class InputData(object):
             num_pairs = self.n_choose_2(num_max_ancs)
             poss_t = np.flatnonzero(num_pairs)
             p = num_pairs[poss_t] / num_pairs[poss_t].sum()
-            t = np.random.choice(poss_t, p=p)
+            t = self.rng.choice(poss_t, p=p)
             self.q[move] *= p[poss_t == t]
             t_max_ancs = np.flatnonzero(self.dag_reduction[sources, t])
-            src_1 = sources[np.random.choice(t_max_ancs)]
+            src_1 = sources[self.rng.choice(t_max_ancs)]
             self.q[move] /= len(t_max_ancs)
             if len(t_max_ancs) == 0:
                 warnings.warn("inaccurate self.q")
@@ -346,7 +350,7 @@ class InputData(object):
             non_singleton_nodes = np.flatnonzero(self.chain_comps.sum(1) > 1)
             ns_sources = sources[np.in1d(sources, non_singleton_nodes)]
             if move == "split":
-                chosen_nodes = np.random.choice(ns_sources)
+                chosen_nodes = self.rng.choice(ns_sources)
                 self.q[move] /= len(ns_sources)
             else:  # move in ("within", "out_add")
                 # srcs_mask has entry i,j = 1 if and only if
@@ -357,7 +361,7 @@ class InputData(object):
                 srcs_mask = other_children_mask[np.ix_(sources, sources)]
                 np.fill_diagonal(srcs_mask, 0)
                 choices = range(srcs_mask.sum())
-                chosen_idx = np.random.choice(choices)
+                chosen_idx = self.rng.choice(choices)
                 self.q[move] /= len(choices)
                 chosen_nodes = sources[np.argwhere(srcs_mask)[chosen_idx]]
         return chosen_nodes
@@ -395,7 +399,7 @@ class InputData(object):
     def get_likelihood_ratio(self):
         self.expand()
         new_rss = self.compute_mle_rss()
-        new_bic = self.num_samps * np.log(new_rss / self.num_samps)
+        new_bic = self.num_samps * np.log(new_rss)
         new_bic += self.cpdag.sum() * np.log(self.num_samps)
         # unscaled_ratio = (new_likelihood / self.old_likelihood).astype(np.longdouble)
         return self.old_rss / new_rss, new_rss, new_bic
@@ -499,3 +503,21 @@ class InputData(object):
         p /= p.sum()
 
         return np.array(poss_moves), considered, p
+
+    def poisson_prior(self, mean_power):
+        mean, power = mean_power
+
+        def prior_ratio(self):
+            max_sources = self.num_feats
+            k = np.arange(1, max_sources + 1)
+            lam = mean
+            pmf = (np.power(lam, k) * np.exp(-lam)) / factorial(k)
+            pmf /= pmf.sum()
+            pmf = np.power(pmf, power)
+            pmf /= pmf.sum()
+            new_num_sources = (obj.dag_reduction.sum(0) == 0).sum()
+            old_num_sources = (obj.old_dag.sum(0) == 0).sum()
+
+            return pmf[new_num_sources - 1] / pmf[old_num_sources - 1]
+
+        return prior_ratio
