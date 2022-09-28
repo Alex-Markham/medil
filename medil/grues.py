@@ -1,11 +1,11 @@
 """Implement the Groebner basis-based UEC search algorithm (GrUES)."""
 import numpy as np
-from numpy.random import default_rng
 import math
 import warnings
 from .gauss_obs_l0_pen import GaussObsL0Pen
 from .independence_testing import dcov
 from scipy.stats import chi2, beta
+from scipy.special import factorial
 from numpy.linalg import lstsq, det, inv
 
 
@@ -26,9 +26,10 @@ class InputData(object):
 
     """
 
-    def __init__(self, samples, rng=np.random.default_rng()):
+    def __init__(self, samples, rng=np.random.default_rng(0)):
         self.samples = np.array(samples, dtype=float)
         self.rng = rng
+        self.pmf = None
 
         self.num_samps, self.num_feats = self.samples.shape
         self.explore = False
@@ -49,16 +50,14 @@ class InputData(object):
         self.get_max_cpdag()
         self.reduce_max_cpdag()
         self.moves = 0
-        self.visited = np.empty(max_moves + 1, float)
+        self.visited = np.empty(max_moves, float)
         self.old_rss = self.compute_mle_rss()
         self.visited[0] = self.optimal_bic = self.cpdag.sum() * np.log(
             self.num_samps
         ) + self.num_samps * np.log(self.old_rss)
-        self.markov_chain = np.empty(
-            (max_moves + 1, self.num_feats, self.num_feats), bool
-        )
+        self.markov_chain = np.empty((max_moves, self.num_feats, self.num_feats), bool)
         self.markov_chain[0] = self.uec
-        while self.moves < max_moves:
+        while self.moves < max_moves - 1:
             self.old_bic = self.visited[self.moves]
             self.old_cpdag = np.copy(self.cpdag)
             self.old_dag = np.copy(self.dag_reduction)
@@ -107,7 +106,8 @@ class InputData(object):
 
             likelihood_and_transition_ratio = likelihood_ratio * (q_inv / q)
             if type(prior) is tuple:
-                prior_ratio = self.poisson_prior(prior)
+                prior_ratio = self.scaled_triangle_prior(prior)
+                likelihood_and_transition_ratio *= prior_ratio
             elif prior is not None:
                 prior_ratio = prior(self)
                 likelihood_and_transition_ratio *= prior_ratio
@@ -141,7 +141,7 @@ class InputData(object):
                     self.num_samps / 2 - 1, self.num_samps / 2 - 1, loc=-1, scale=2
                 )
                 crit_val = abs(dist.ppf(alpha / 2))
-                self.uec = abs(corr) >= crit_val
+                self.uec = self.indep_test_U = abs(corr) >= crit_val
                 np.fill_diagonal(self.uec, False)
             elif init == "dcov_fast":
                 cov, d_bars = dcov(self.samples)
@@ -504,20 +504,28 @@ class InputData(object):
 
         return np.array(poss_moves), considered, p
 
-    def poisson_prior(self, mean_power):
-        mean, power = mean_power
+    def scaled_triangle_prior(self, peak_scale):
+        if self.pmf is None:
+            peak, scale = peak_scale
+            min = 0
+            max = self.num_feats + 1
+            pmf = np.arange(1, max, dtype=float)
+            pmf[peak - 1] = 2 / max
+            below = pmf[: peak - 1]
+            above = pmf[peak:]
 
-        def prior_ratio(self):
-            max_sources = self.num_feats
-            k = np.arange(1, max_sources + 1)
-            lam = mean
-            pmf = (np.power(lam, k) * np.exp(-lam)) / factorial(k)
+            below *= 2 / (max * peak)
+            above *= -1
+            above += max
+            above *= 2 / (max * (max - peak))
+            pmf[: peak - 1] = below
+            pmf[peak:] = above
+
+            pmf = np.power(pmf, scale)
             pmf /= pmf.sum()
-            pmf = np.power(pmf, power)
-            pmf /= pmf.sum()
-            new_num_sources = (obj.dag_reduction.sum(0) == 0).sum()
-            old_num_sources = (obj.old_dag.sum(0) == 0).sum()
+            self.pmf = pmf
 
-            return pmf[new_num_sources - 1] / pmf[old_num_sources - 1]
+        new_num_sources = (self.dag_reduction.sum(0) == 0).sum()
+        old_num_sources = (self.old_dag.sum(0) == 0).sum()
 
-        return prior_ratio
+        return self.pmf[new_num_sources - 1] / self.pmf[old_num_sources - 1]
