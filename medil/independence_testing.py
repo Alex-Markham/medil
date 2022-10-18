@@ -1,7 +1,10 @@
 """Independence testing on samples of random variables."""
 import numpy as np
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import pdist, squareform, cdist
 from multiprocessing import Pool
+
+from numpy import linalg as LA
+from scipy.stats import chi2
 
 try:
     from dcor import pairwise, distance_correlation as dist_corr
