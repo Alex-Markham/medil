@@ -16,5 +16,8 @@ test/ecc_test
 
 # docs rendered files
 docs/_build
+docs/medil*rst
 
-
+# dev environ
+Pipfile
+Pipfile.lock
