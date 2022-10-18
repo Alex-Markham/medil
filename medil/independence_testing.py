@@ -221,40 +221,6 @@ def dcov(samples):
         d = squareform(pdist(samples[:, feat_idx].reshape(-1, 1), "cityblock"))
         # doubly centered:
         d -= t(d.mean(0), (n, 1)) + t(d.mean(1), (n, 1)).T - t(d.mean(), (n, n))
-        d = squareform(d, checks=False)  # ignore assymmetry do to numerical error
+        d = squareform(d, checks=False)  # ignore assymmetry due to numerical error
         dists[feat_idx] = d
     return dists @ dists.T / num_samps**2
-
-
-def dep_con_kernel_one_samp(X, alpha=None):
-    num_samps, num_feats = X.shape
-    thresh = np.eye(num_feats)
-    if alpha is not None:
-        thresh[thresh == 0] = (
-            chi2(1).ppf(1 - alpha) / num_samps
-        )  # critical value corresponding to alpha
-        thresh[thresh == 1] = 0
-    Z = np.zeros((num_feats, num_samps, num_samps))
-    for j in range(num_feats):
-        D = squareform(pdist(X[:, j].reshape(-1, 1), "cityblock"))
-        # doubly center and standardized:
-        Z[j] = ((D - D.mean(0) - D.mean(1).reshape(-1, 1)) / D.mean()) + 1
-    F = Z.reshape(num_feats * num_samps, num_samps)
-    left = np.tensordot(Z, thresh, axes=([0], [0]))
-    left_right = np.tensordot(left, Z, axes=([2, 1], [0, 1]))
-    gamma = (F.T @ F) ** 2 - 2 * (left_right) + LA.norm(thresh)  # helper kernel
-
-    diag = np.diag(gamma)
-    kappa = gamma / np.sqrt(np.outer(diag, diag))  # cosine similarity
-    kappa[kappa > 1] = 1  # correct numerical errors
-    return kappa
-
-
-# note: for this and one_samp, add outputs arg, with options to compute/return Gram matrix, similarity, or distance
-def dep_con_kernel_two_samp(samps_1, samps_2, alpha):
-    num_samps_1 = len(samps_1)
-    samps = np.vstack((samps_1, samps_2))
-    full_kappa = dep_con_kernel_one_samp(samps, alpha=None)
-    kappa = full_kappa[:num_samps_1]
-    kappa = kappa[:, num_samps_1:]
-    return kappa

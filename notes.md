@@ -8,11 +8,9 @@ only:
   - master
  ```
  
-- clean up setup.py and docs/conf.py (version number)
 - finish documentation
 - docs for different versions of medil
 - put on conda
-- [change license again](https://write.pixie.town/licenses-for-freedom/)
 
  -------------------------------------------------------------------------------
  
