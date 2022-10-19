@@ -224,3 +224,14 @@ def dcov(samples):
         d = squareform(d, checks=False)  # ignore assymmetry due to numerical error
         dists[feat_idx] = d
     return dists @ dists.T / num_samps**2
+
+
+def estimate_UDG(samples, method="dcov_fast", signicicance_level="0.05"):
+    num_samps = len(samples)
+    if method == "dcov_fast":
+        cov, d_bars = dcov(samples)
+        crit_val = chi2(1).ppf(1 - alpha)
+        test_val = num_samps * cov / np.outer(d_bars, d_bars)
+        udg = test_val >= crit_val
+        np.fill_diagonal(udg, False)
+    return udg
