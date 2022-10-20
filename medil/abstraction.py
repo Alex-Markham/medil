@@ -79,9 +79,20 @@ class MicroData(object):
         # pii_cons are what don't change;
         # figure out how that determines some PEOs
 
-        abstraction = None  # then collapse chain comps using grues code
+        # then collapse chain comps using grues code
+        micro_ICPDAG = np.copy(macro_ICPDAG)
+        undir = np.logical_and(micro_ICPDAG, micro_ICPDAG.T)
+        chain_comps = np.eye(num_macro_caus_vars).astype(bool)
+        while undir.any() and len(undir) > 1:
+            v, w = np.unravel_index(undir.argmax(), undir.shape)
+            cpdag = np.delete(micro_ICPDAG, v, 0)
+            cpdag = np.delete(micro_ICPDAG, v, 1)
+            undir = np.delete(undir, v, 0)
+            undir = np.delete(undir, v, 1)
+            chain_comps[w] += chain_comps[v]
+            chain_comps = np.delete(chain_comps, v, 0)
 
-        return abstraction
+        return micro_ICPDAG, chain_comps
 
     def get_pii_constraints(self):
         return
