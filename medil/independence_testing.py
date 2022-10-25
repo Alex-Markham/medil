@@ -213,6 +213,7 @@ def dcov(samples):
     num_samps, num_feats = samples.shape
     num_pairs = num_samps * (num_samps - 1) // 2
     dists = np.zeros((num_feats, num_pairs))
+    d_bars = np.zeros(num_feats)
     # compute doubly centered distance matrix for every feature:
     for feat_idx in range(num_feats):
         n = num_samps
@@ -220,10 +221,12 @@ def dcov(samples):
         # raw distance matrix:
         d = squareform(pdist(samples[:, feat_idx].reshape(-1, 1), "cityblock"))
         # doubly centered:
-        d -= t(d.mean(0), (n, 1)) + t(d.mean(1), (n, 1)).T - t(d.mean(), (n, n))
+        d_bar = d.mean()
+        d -= t(d.mean(0), (n, 1)) + t(d.mean(1), (n, 1)).T - t(d_bar, (n, n))
         d = squareform(d, checks=False)  # ignore assymmetry due to numerical error
         dists[feat_idx] = d
-    return dists @ dists.T / num_samps**2
+        d_bars[feat_idx] = d_bar
+    return dists @ dists.T / num_samps**2, d_bars
 
 
 def estimate_UDG(samples, method="dcov_fast", signicicance_level="0.05"):
