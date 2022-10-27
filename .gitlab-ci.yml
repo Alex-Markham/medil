@@ -2,7 +2,6 @@ pytest:
   image: continuumio/miniconda3
   stage: test
   only:
-    - merge_requests
     - main
   script:
     - conda update conda
@@ -17,7 +16,6 @@ pages:
   image: alpine
   stage: deploy
   only:
-    - merge_requests
     - main
   script:
     - apk add py3-pip python3-dev make unzip
