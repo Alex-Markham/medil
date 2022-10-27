@@ -18,7 +18,7 @@ For viewing docs site locally:
  
  docs/: make clean; make html
  
- (zook) docs/_build/: python -m http.server
+ docs/_build/: python -m http.server
 
 -------------------------------------------------------------------------------
 
