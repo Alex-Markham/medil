@@ -1,8 +1,6 @@
 pytest:
   image: continuumio/miniconda3
   stage: test
-  only:
-    - main
   script:
     - conda update conda
     - conda install pip
@@ -15,8 +13,6 @@ pytest:
 pages:
   image: alpine
   stage: deploy
-  only:
-    - main
   script:
     - apk add py3-pip python3-dev make unzip
     - pip install sphinx m2r2 sphinx-rtd-theme sphinxcontrib-bibtex
