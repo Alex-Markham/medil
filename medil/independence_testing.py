@@ -171,16 +171,16 @@ def pearson_correlation(samples, perm=False):
 
 def permute_within_rows(x):
     """Randomly rearrange values according to column index without
-        changing row index.
+    changing row index.
 
-        Parameters
-        ----------
-        x : 2d numpy array
-    q
-        Returns
-        -------
-        2d numpy array
-            Reordered copy of input.
+    Parameters
+    ----------
+    x : 2d numpy array
+
+    Returns
+    -------
+    2d numpy array
+        Reordered copy of input.
 
     """
     # get random new index for col of each element
@@ -240,5 +240,4 @@ def estimate_UDG(samples, method="dcov_fast", significance_level=0.05):
         np.fill_diagonal(udg, False)
     elif method == "g-test":
         pass
-
     return udg
