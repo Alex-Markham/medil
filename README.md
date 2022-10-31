@@ -9,10 +9,7 @@ Additionally, if you would like to use this package or any of its code in your r
 
 ### License
 See [LICENSE](https://gitlab.com/alex-markham/medil/blob/master/LICENSE.txt), which is the Cooperative Non-Violent Public License v7 or later (CNPLv7+).
-
-#### Brief License Summary (For Lay-People)
-
-The Nonviolent Public License aims to ensure basic protections against forms of violence, coercion, and discrimination.
+Brief License Summary: The Nonviolent Public License aims to ensure basic protections against forms of violence, coercion, and discrimination.
 This license covers several formats of creative work but has extra terms for software given the power it has as a tool outside of its creative capacities.
 The Cooperative Nonviolent Public License goes further to only allow commercial use of the copyrighted work for individuals and worker-owned organizations. 
 
@@ -20,4 +17,4 @@ The Cooperative Nonviolent Public License goes further to only allow commercial 
 See [CHANGELOG](https://gitlab.com/alex-markham/medil/blob/master/CHANGELOG.md) for a history of the already implemented features, works in progress, and future feature ideas.
 
 ### References
-<a name="uai_paper"> 1.</a> Markham, Alex & Grosse-Wentrup, Moritz. (2020). Measurement Dependence Inducing Latent Causal Models. In *Conference on Uncertainty in Artificial Intelligence (UAI)* PMLR 124:590&ndash;599. URL: [http://proceedings.mlr.press/v124/markham20a/markham20a.pdf](http://proceedings.mlr.press/v124/markham20a/markham20a.pdf)
+<a name="uai_paper"> 1.</a> Markham, Alex & Grosse-Wentrup, Moritz. (2020). Measurement Dependence Inducing Latent Causal Models. In *Conference on Uncertainty in Artificial Intelligence (UAI)* PMLR 124:590&ndash;599. URL: [http://proceedings.mlr.press/v124/markham20a/markham20a.pdf](http://proceedings.mlr.press/v124/markham20a/markham20a.pdf). [arXiv:1910.08778](https://arxiv.org/abs/1910.08778) [stat.ML].
