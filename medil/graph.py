@@ -22,6 +22,10 @@ class UndirectedDependenceGraph(object):
     algebraic operations, so adjacency matrix representation (via
     NumPy) is most covenient.
 
+    The diag is used to store information when the graph is reduced,
+    not to indicate self loops, so it is important that diag = 1 at
+    init.
+
     """
 
     def __init__(self, adj_matrix, verbose=False):
