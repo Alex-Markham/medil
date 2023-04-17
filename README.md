@@ -10,7 +10,7 @@ Additionally, if you would like to use this package or any of its code in your r
 ### License
 See [LICENSE](https://gitlab.com/alex-markham/medil/blob/master/LICENSE.txt), which is the Cooperative Non-Violent Public License v7 or later (CNPLv7+).
 
-#### Brief License Summary (For Lay-People)
+#### Brief License Summary
 
 The Nonviolent Public License aims to ensure basic protections against forms of violence, coercion, and discrimination.
 This license covers several formats of creative work but has extra terms for software given the power it has as a tool outside of its creative capacities.
