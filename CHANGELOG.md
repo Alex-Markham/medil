@@ -4,15 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased ##
-- implement AM clique cover
-- implement ECC heuristics
-
 ### In progress ###
-- causal clustering
-- causal abstraction
-- GUES: improved GES using unconditional equivalence classes (UECs)
-- improving GAN performance and theory
+- better functional MCMs
+- splitting package to focus MeDIL on MCMs; new packages for GUES and kernel
+
+## [0.8.0] - 2023-XX-XX ##
+### (to be) Added ###
+- wrapper for heuristic algorithm implemented in Java
+- Chaterjee's xi correlation for independence testing
+- sampling from (given or randomly generated) linear Gaussian minMCM
+- script to reproduce NeurIPS results
+
+### Changed ###
+- `functional_MCM` to use VAE framework instead of GAN-inspired
+
+### Removed ###
+- `grues` submodule
 
 ## [0.7.0] - 2022-10-18 ##
 ### Changed ###
