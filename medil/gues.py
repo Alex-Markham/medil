@@ -1,5 +1,6 @@
 """Implement the Greedy Unconditional Equivalence Search (GUES) algorithm."""
 import numpy as np
+from .gauss_obs_l0_pen import GaussObsL0Pen
 from numpy.linalg import lstsq, norm
 from scipy.stats import chi2, beta
 from scipy.spatial.distance import pdist, squareform
@@ -47,7 +48,8 @@ class InputData(object):
         self.score_func = score_func
         self.estimate_uec(test, alpha)
         self.init_CPDAG()
-        # score initial cpdag
+        self.score_obj = GaussObsL0Pen(self.samples)
+        self.score = self.score_obj.full_score(self.cpdag)
         while True:
             # get possible moves
             # find best scoring move and its score
@@ -193,45 +195,31 @@ class InputData(object):
     # could be used to deduce which PDAG contains the best-scoring
     # width-1 completion
 
-    def make_best_move(self):
-        r"""Set self.dag to highest scoring DAG within one move."""
+    def score_undir_rm(self):
+        return
 
-    def full_score(self):
-        r"""Return BIC score of given DAG."""
+    def score_dir_rm(self):
+        return
 
-        children = dag.sum(0).nonzero()[0]
+    def get_T(rmed_edge):
+        v, w = rmed_edge
+        ne_v = np.logical_or(self.cpdag[v], self.cpdag[:, v])
+        ne_cc_w = np.logical_and(self.cpdag[w], self.cpdag[:, w])
+        return np.logical_and(ne_v, ne_cc_w)
 
-        # return residual sum of squared errors (rss) from least squares solution
-        # use the values of parents to predict values of their child
-        # also add 1s column for intercept term
+    def undir_completions(rmed_edge):
+        v, w = rmed_edge
+        T_mask = get_T(rmed_edge)
+        if T_mask.sum() > 1:
+            return cpdags
+        else:
+            return ?????
 
-        #
-        # add up rss for every child
-        # rss = sum(map(regress, children))
+    def dir_completions(rmed_edge):
+        v, w = rmed_edge
+        T = get_T(rmed_edge)
 
-        if self.score_func == "GOL0":
-            return GaussObsL0Pen(self.samples).full_score(dag)
-
-        elif self.score_func == "OLS":
-            regress = lambda child: lstsq(
-                np.hstack(
-                    (
-                        np.ones((self.num_samps, 1)),
-                        self.samples[:, dag[:, child]],
-                    )
-                ),
-                self.samples[:, child],
-                rcond=None,
-            )[1]
-
-        rss = sum(map(regress, children))
-
-        # num edges + intercept term for each child
-        k = dag.sum()  # + len(children), if noise means can differ
-
-        bic = self.num_samps * np.log(rss / self.num_samps) + k * np.log(self.num_samps)
-
-        return -bic
+        return cpdags
 
 
 def dcov(samples):

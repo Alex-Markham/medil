@@ -53,7 +53,7 @@ class DecomposableScore:
         self._debug = debug
         self.p = None
 
-    def local(self, x, pa):
+    def local_score(self, x, pa):
         """
         Return the local score of a given node and a set of
         parents. If self.cache=True, will use previously computed
