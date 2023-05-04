@@ -14,12 +14,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Chaterjee's xi correlation for independence testing
 - sampling from (given or randomly generated) linear Gaussian minMCM
 - script to reproduce NeurIPS results
+- examples, documentation, and tests
 
 ### Changed ###
 - `functional_MCM` to use VAE framework instead of GAN-inspired
+- making api more like `sklearn`
+- improved script to reproduce PGM demo
 
 ### Removed ###
-- `grues` submodule
+- `gues` and `grues` submodule
 
 ## [0.7.0] - 2022-10-18 ##
 ### Changed ###
