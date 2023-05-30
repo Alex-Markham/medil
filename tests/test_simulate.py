@@ -1,5 +1,6 @@
 import numpy as np
-from medil.simulate import MicroModel as mm
+
+# from medil.simulate import MicroModel as mm
 
 # from medil.grues import InputData as data
 
