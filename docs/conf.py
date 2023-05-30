@@ -20,7 +20,7 @@ import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
 project = "MeDIL"
-copyright = "2019–2022, Alex Markham"
+copyright = "2019–2023, Alex Markham"
 author = "Alex Markham"
 
 # The version info for the project you're documenting, acts as replacement for
