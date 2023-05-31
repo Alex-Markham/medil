@@ -15,7 +15,7 @@ pages:
   stage: deploy
   script:
     - apk add py3-pip python3-dev make unzip
-    - pip install sphinx m2r2 sphinx-rtd-theme sphinxcontrib-bibtex
+    - pip install 'sphinx<7' m2r2 sphinx-rtd-theme sphinxcontrib-bibtex
     - cd docs
     - make html
     - cd ..

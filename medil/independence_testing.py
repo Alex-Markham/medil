@@ -1,6 +1,6 @@
 """Independence testing on samples of random variables."""
 import numpy as np
-from scipy.spatial.distance import pdist, squareform, cdist
+from scipy.spatial.distance import pdist, squareform
 from multiprocessing import Pool
 
 from numpy import linalg as LA
@@ -100,7 +100,7 @@ def hypothesis_test(samples, num_resamples, measure=default_measure, alpha=0.05)
 
 def distance_correlation(samples, perm=False):
     r"""Compute distance correlation on samples set (or on permuted samples
-    set, if ``perm`` is ``True).
+    set, if ``perm`` is ``True``
 
     Parameters
     ----------
@@ -140,7 +140,7 @@ def distance_correlation(samples, perm=False):
 
 def pearson_correlation(samples, perm=False):
     r"""Computes Pearson product-moment correlation coefficient on samples
-    set (or on permuted samples set, if ``perm`` is ``True).
+    set (or on permuted samples set, if ``perm`` is ``True``).
 
     Parameters
     ----------
@@ -267,7 +267,8 @@ def dep_con_kernel_one_samp(X, alpha=None):
     return kappa
 
 
-# note: for this and one_samp, add outputs arg, with options to compute/return Gram matrix, similarity, or distance
+# note: for this and one_samp, add outputs arg, with options to
+# compute/return Gram matrix, similarity, or distance
 def dep_con_kernel_two_samp(samps_1, samps_2, alpha):
     num_samps_1 = len(samps_1)
     samps = np.vstack((samps_1, samps_2))

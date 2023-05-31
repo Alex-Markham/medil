@@ -65,10 +65,11 @@ autosummary_mock_imports = [
     "networkx",
     "torch",
     "pytorch_lightning",
+    "scipy",
 ]
 autosummary_generate = True
 
-# A list of prefixs that are ignored when creating the module index. (new in Sphinx 0.6)
+# A list of prefixs that are ignored when creating the module index.
 modindex_common_prefix = ["medil."]
 
 # Add any paths that contain templates here, relative to this directory.
