@@ -1,17 +1,19 @@
 """Independence testing on samples of random variables."""
 import numpy as np
 from scipy.spatial.distance import pdist, squareform, cdist
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 
 from numpy import linalg as LA
 from scipy.stats import chi2
 
 try:
+    from dcor.independence import distance_correlation_t_test
     from dcor import pairwise, distance_correlation as dist_corr
 
     default_measure = "dcor"
 except ImportError:
     default_measure = "pearson"
+from xicorrelation import xicorr
 
 
 def hypothesis_test(samples, num_resamples, measure=default_measure, alpha=0.05):
@@ -195,24 +197,22 @@ def permute_within_rows(x):
 
 def dcov(samples):
     r"""Compute sample distance covariance matrix.
-
     Parameters
     ----------
     samples : 2d numpy array of floats
               A :math:`N \times M` matrix with :math:`N` samples of
               :math:`M` random variables.
-
     Returns
     -------
     2d numpy array
         A square matrix :math:`C`, where :math:`C_{i,j}` is the sample
         distance covariance between random variables :math:`R_i` and
         :math:`R_j`.
-
     """
     num_samps, num_feats = samples.shape
     num_pairs = num_samps * (num_samps - 1) // 2
     dists = np.zeros((num_feats, num_pairs))
+    d_bars = np.zeros(num_feats)
     # compute doubly centered distance matrix for every feature:
     for feat_idx in range(num_feats):
         n = num_samps
@@ -220,7 +220,52 @@ def dcov(samples):
         # raw distance matrix:
         d = squareform(pdist(samples[:, feat_idx].reshape(-1, 1), "cityblock"))
         # doubly centered:
-        d -= t(d.mean(0), (n, 1)) + t(d.mean(1), (n, 1)).T - t(d.mean(), (n, n))
+        d_bar = d.mean()
+        d -= t(d.mean(0), (n, 1)) + t(d.mean(1), (n, 1)).T - t(d_bar, (n, n))
         d = squareform(d, checks=False)  # ignore assymmetry due to numerical error
         dists[feat_idx] = d
-    return dists @ dists.T / num_samps**2
+        d_bars[feat_idx] = d_bar
+    return dists @ dists.T / num_samps**2, d_bars
+
+
+def estimate_UDG(sample, method="dcov_fast", significance_level=0.05):
+    samp_size, num_feats = sample.shape
+
+    if isinstance(method, np.ndarray):
+        p_vals = method
+        udg = p_vals < significance_level
+    elif method == "dcov_fast":
+        cov, d_bars = dcov(sample)
+        crit_val = chi2(1).ppf(1 - significance_level)
+        test_val = samp_size * cov / np.outer(d_bars, d_bars)
+        udg = test_val >= crit_val
+        p_vals = None
+    elif method == "g-test":
+        pass
+    else:
+        p_vals = np.zeros((num_feats, num_feats), float)
+        idxs, jdxs = np.triu_indices(num_feats, 1)
+        zipped = zip(idxs, jdxs)
+        sample_iter = (sample[:, i_j].T for i_j in zipped)
+        if method == "dcov_big":
+            test = dcor_test
+        elif method == "xicor":
+            test = xicor_test
+        with Pool(max(1, int(0.75 * cpu_count()))) as p:
+            p_vals[idxs, jdxs] = p_vals[jdxs, idxs] = np.fromiter(
+                p.imap(test, sample_iter, 100), float
+            )
+            udg = (p_vals < significance_level)
+    np.fill_diagonal(udg, False)
+    return udg, p_vals
+
+
+def dcor_test(x_y):
+    x, y = x_y
+    return distance_correlation_t_test(x, y).pvalue
+
+
+def xicor_test(x_y):
+    x, y = x_y
+    xi, pvalue = xicorr(x, y)
+    return pvalue

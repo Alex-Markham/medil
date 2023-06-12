@@ -1,0 +1,8 @@
+numpy~=1.23.4
+cdt~=0.6.0
+scipy~=1.9.3
+matplotlib~=3.6.2
+seaborn~=0.12.1
+networkx~=2.8.8
+setuptools~=65.5.0
+sklearn
