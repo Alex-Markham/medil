@@ -4,22 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-### In progress ###
-- better functional MCMs
-- splitting package to focus MeDIL on MCMs; new packages for GUES and kernel
+### Unreleased ###
+- splitting package to focus MeDIL on MCMs; new package for kernel
 
 ## [0.8.0] - 2023-XX-XX ##
 ### (to be) Added ###
 - wrapper for heuristic algorithm implemented in Java
 - Chaterjee's xi correlation for independence testing
 - sampling from (given or randomly generated) linear Gaussian minMCM
-- script to reproduce NeurIPS results
 - examples, documentation, and tests
 
 ### Changed ###
 - `functional_MCM` to use VAE framework instead of GAN-inspired
 - making api more like `sklearn`
 - improved script to reproduce PGM demo
+- back to AGPLv3+ license
 
 ### Removed ###
 - `gues` and `grues` submodule
@@ -34,7 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [0.6.0] - 2021-06-07 ##
 ### Changed ###
-- licences from AGPLv3+ to CNPLv6+	
+- licences from AGPLv3+ to CNPLv6+
 
 ### Fixed ###
 - name in `setup.py`
