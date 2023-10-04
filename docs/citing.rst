@@ -1,8 +1,9 @@
 Citing
 ======
 
-If you make use of the ``MeDIL`` package in connection with MeDIL causal models, please cite our UAI paper :cite:`Markham_2020_UAI`, e.g., using the following ``bibtex`` code:
+If you make use of the ``MeDIL`` package or associated theory, please cite the relevant subset of the following papers:
 
+The UAI paper :cite:`Markham_2020_UAI` provides basic definitions and first results for MeDIL causal models.
 .. code-block:: bibtex
 
    @Article{Markham_2020_UAI,
@@ -16,8 +17,7 @@ If you make use of the ``MeDIL`` package in connection with MeDIL causal models,
    }
 
 
-Additionally (or alternatively, if you only use the package in ways unrelated to the MeDIL causal modelling framework, e.g., for independence testing or finding edge clique covers), please cite our PGM software demonstration paper :cite:`Markham_2020_PGM`:
-
+The PGM software demonstration :cite:`Markham_2020_PGM` is specifically associated with the ``MeDIL`` Python package.
 .. code-block:: bibtex
 
    @Article{Markham_2020_PGM,
@@ -29,4 +29,14 @@ Additionally (or alternatively, if you only use the package in ways unrelated to
      publisher    = {PMLR}
    }
 
+The arXiv preprint :cite:`markham2023neuro` further develops the MeDIL causal model framework, more explicitly connects it to factor analysis, and extends the framework to a deep generative model.
+.. code-block:: bibtex
 
+   @misc{markham2023neuro,
+     author =       {Alex Markham and Mingyu Liu and Bryon Aragam and
+                     Liam Solus},
+     title =        {Neuro-Causal Factor Analysis},
+     year =         2023,
+     note =         {preprint, arXiv:2305.19802 [stat.ML]},
+     url =          {https://arxiv.org/abs/2305.19802}
+   }

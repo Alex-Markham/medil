@@ -1,8 +1,12 @@
 Welcome to ``MeDIL``'s documentation!
 =====================================
 
-This is the documentation site for the ``MeDIL`` Python package for causal modelling.
-Its current features focus on
+MeDIL is a Python package for causal factor analysis, using the measurement dependence inducing latent (MeDIL) causal model framework[<sup>1</sup>](#uai_paper).
+
+Features:
+
+Design principles:
+
 
 (i) nonlinear unconditional pairwise independence testing,
 (ii) constraint-based causal structure learning, and
@@ -28,7 +32,7 @@ Documentation
    :maxdepth: 2
 
    installation
-   theory   
+   theory
    tutorial
    apilist
    license

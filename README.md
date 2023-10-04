@@ -9,7 +9,7 @@ If you have any questions, suggestions, feedback, or bugs to report, please [ope
 Additionally, if you would like to use this package or any of its code in your research, or to contribute to this package, feel free (but not obliged) to [contact me](https://causal.dev/#contact).
 
 ### License
-See [LICENSE](https://gitlab.com/alex-markham/medil/blob/master/LICENSE.md), which is the GNU Affero General Public License version 3+.
+See [LICENSE](https://gitlab.com/alex-markham/medil/blob/master/LICENSE.md), which is the GNU Affero General Public License version 3 or later.
 
 ### Changelog
 See [CHANGELOG](https://gitlab.com/alex-markham/medil/blob/master/CHANGELOG.md) for a history of the already implemented features, works in progress, and future feature ideas.
