@@ -1,3 +1,6 @@
+import numpy as np
+
+
 def sfd(biadj_mat, biadj_mat_recon):
     """Perform analysis of the distances between true and reconstructed structures
     Parameters
@@ -26,3 +29,21 @@ def sfd(biadj_mat, biadj_mat_recon):
     sfd = ((wtd_ug - wtd_ug_recon) ** 2).sum()
 
     return sfd, ushd
+
+
+def recover_ug(biadj_mat):
+    """Recover the undirected graph from the directed graph
+    Parameters
+    ----------
+    biadj_mat: learned directed graph
+
+    Returns
+    -------
+    ug: the recovered undirected graph
+    """
+
+    # get the undirected graph from the directed graph
+    ug = biadj_mat.T @ biadj_mat
+    np.fill_diagonal(ug, False)
+
+    return ug
