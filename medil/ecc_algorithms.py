@@ -1,6 +1,9 @@
 """Implementations of edge clique clover finding algorithms."""
-from .graph import UndirectedDependenceGraph
+import subprocess, os, shutil
+
 import numpy as np
+
+from .graph import UndirectedDependenceGraph
 
 
 def find_clique_min_cover(graph, verbose=False):
@@ -8,7 +11,7 @@ def find_clique_min_cover(graph, verbose=False):
 
     Parameters
     ----------
-    graph : 2d numpy array 
+    graph : np.array
             Adjacency matrix for undirected graph.
 
     verbose : bool, optional
@@ -16,18 +19,18 @@ def find_clique_min_cover(graph, verbose=False):
 
     Returns
     -------
-    the_cover : 2d numpy array
-                Biadjacency matrix representing edge clique cover.
+    the_cover: np.array
+               Biadjacency matrix representing edge clique cover.
 
     See Also
     --------
-    graph.UndirectedDependenceGraph : Defines auxilliary data structure 
+    graph.UndirectedDependenceGraph : Defines auxilliary data structure
                                       and reduction rules used by this
                                       algorithm.
 
     Notes
     -----
-    This is an implementation of the algorithm described in 
+    This is an implementation of the algorithm described in
     :cite:`Gramm_2009`.
 
     """
@@ -40,27 +43,32 @@ def find_clique_min_cover(graph, verbose=False):
 
     num_cliques = 1
     the_cover = None
-    if True:# verbose:
+    if True:  # verbose:
         # find bound for cliques in solution
-        max_intersect_num = graph.num_vertices ** 2 // 4
+        max_intersect_num = graph.num_vertices**2 // 4
         if max_intersect_num < graph.num_edges:
             p = graph.n_choose_2(graph.num_vertices) - graph.num_edges
             t = int(np.sqrt(p))
             max_intersect_num = p + t if p > 0 else 1
         print("solution has at most {} cliques.".format(max_intersect_num))
     while the_cover is None:
-        if True:                # verbose:
-            print("\ntesting for solutions with {}/{} cliques".format(num_cliques, max_intersect_num))
-        the_cover = branch(graph, num_cliques, the_cover)
+        if True:  # verbose:
+            print(
+                "\ntesting for solutions with {}/{} cliques".format(
+                    num_cliques, max_intersect_num
+                )
+            )
+        the_cover = branch(graph, num_cliques, the_cover, iteration=0, iteration_max=3)
         num_cliques += 1
 
-    return the_cover
+    return add_isolated_verts(the_cover)
 
 
-def branch(graph, k_num_cliques, the_cover):
+def branch(graph, k_num_cliques, the_cover, iteration, iteration_max):
     """Helper function for `find_clique_min_cover()`.
 
-    Describing the solution search space as a tree, this function tests whether the given node is a solution, and it branches if not,
+    Describing the solution search space as a tree.
+    This function tests whether the given node is a solution, and it branches if not.
 
     Parameters
     ----------
@@ -70,8 +78,12 @@ def branch(graph, k_num_cliques, the_cover):
     k_num_cliques : int
                     Current depth of search; number of cliques in cover being testet for solution.
 
-    the_cover : 2d numpy array
+    the_cover : np.array
                 Biadjacency matrix representing (possibly partial) edge clique cover.
+
+    iteration: current iteration
+
+    iteration_max: maximum number of iteration_max
 
     Returns
     -------
@@ -79,6 +91,8 @@ def branch(graph, k_num_cliques, the_cover):
         Biadjacency matrix representing (complete) edge clique cover or None if cover is only partial.
 
     """
+
+    iteration = iteration + 1
     branch_graph = graph.reducible_copy()
     # if the_cover is not None:
     #     print(the_cover)
@@ -88,7 +102,7 @@ def branch(graph, k_num_cliques, the_cover):
     #         branch_graph.cover_edges()  # only works one clique at a time, or on a list of edges
     branch_graph.the_cover = the_cover
     branch_graph.cover_edges()
-    
+
     if branch_graph.num_edges == 0:
         return branch_graph.reconstruct_cover(the_cover)
 
@@ -96,13 +110,15 @@ def branch(graph, k_num_cliques, the_cover):
 
     branch_graph.reduzieren(k_num_cliques)
     k_num_cliques = branch_graph.k_num_cliques
-    
+
     if k_num_cliques < 0:
         return None
 
     if branch_graph.num_edges == 0:  # equiv to len(branch_graph.extant_edges_idx)==0
-        return branch_graph.the_cover  # not in paper, but speeds it up slightly; or rather return None?
-    
+        return (
+            branch_graph.the_cover
+        )  # not in paper, but speeds it up slightly; or rather return None?
+
     chosen_nbrhood = branch_graph.choose_nbrhood()
     # print("num cliques: {}".format(len([x for x in max_cliques(chosen_nbrhood)])))
     for clique_nodes in max_cliques(chosen_nbrhood):
@@ -110,9 +126,23 @@ def branch(graph, k_num_cliques, the_cover):
             continue
         clique = np.zeros(branch_graph.unreduced.num_vertices, dtype=int)
         clique[clique_nodes] = 1
-        union = clique.reshape(1, -1) if branch_graph.the_cover is None else np.vstack((branch_graph.the_cover, clique))
+        union = (
+            clique.reshape(1, -1)
+            if branch_graph.the_cover is None
+            else np.vstack((branch_graph.the_cover, clique))
+        )
 
-        the_cover_prime = branch(branch_graph, k_num_cliques-1, union)
+        # print(iteration)
+        if iteration > iteration_max:
+            return branch_graph.the_cover
+
+        the_cover_prime = branch(
+            branch_graph,
+            k_num_cliques - 1,
+            union,
+            iteration,
+            iteration_max=iteration_max,
+        )
         if the_cover_prime is not None:
             return the_cover_prime
     return None
@@ -123,7 +153,7 @@ def max_cliques(nbrhood):
 
     Parameters
     ----------
-    nbrhood : 2d numpy array
+    nbrhood : np.array
             Adjacency matrix for undirected (sub)graph.
 
     Returns
@@ -136,12 +166,15 @@ def max_cliques(nbrhood):
     Pieced together from nx.from_numpy_array and nx.find_cliques, which
     is output sensitive.
 
-    """    
+    """
+
     if len(nbrhood) == 0:
         return
-    
+
     # convert adjacency matrix to nx style graph
-    adj = {u: {v for v in np.nonzero(nbrhood[u])[0] if v != u} for u in range(len(nbrhood))}
+    adj = {
+        u: {v for v in np.nonzero(nbrhood[u])[0] if v != u} for u in range(len(nbrhood))
+    }
     Q = [None]
 
     subg = set(range(len(nbrhood)))
@@ -173,6 +206,54 @@ def max_cliques(nbrhood):
                 Q.pop()
                 subg, cand, ext_u = stack.pop()
     except IndexError:
-        pass    
+        pass
     # note: max_cliques is a generator, so it's consumed after being
     # looped through once
+
+
+def find_heuristic_clique_cover(graph):
+    graph = UndirectedDependenceGraph(graph)
+
+    if graph.num_edges == 0:
+        # solution is trivial
+        the_cover = np.eye(graph.max_num_verts)
+        return the_cover
+
+    # convert and save graph in useable format for java code
+    graph.convert_to_nde()
+
+    # use java code to find heuristic ecc while supressing printout
+    devnull = open(os.devnull, "w")
+    subprocess.call(
+        ["java", "-jar", "ECC8.jar", "-g", "temp.nde", "-o", "temp", "-f", "nde"],
+        stdout=devnull,
+        stderr=devnull,
+    )
+
+    # load solution from java code and delete the temp files it created/used
+    with open("temp/temp.nde-rand.EPSc.cover", "r") as f:
+        the_cover_idcs = [map(int, x.split()) for x in f.readlines()]
+
+    os.remove("temp.nde")
+    shutil.rmtree("temp")
+
+    # convert back to clique mask format
+    num_cliques = len(the_cover_idcs)
+    expanded_idcs = np.array(
+        [[i, j] for i in range(num_cliques) for j in the_cover_idcs[i]]
+    ).T
+    latent_idcs, observed_idcs = expanded_idcs
+    the_cover = np.zeros((len(the_cover_idcs), graph.max_num_verts)).astype(bool)
+    the_cover[latent_idcs, observed_idcs] = True
+
+    return add_isolated_verts(the_cover)
+
+
+def add_isolated_verts(cover):
+    cover = cover.astype(bool)
+    iso_vert_idx = np.flatnonzero(cover.sum(0) == 0)
+    num_rows = len(iso_vert_idx)
+    num_cols = cover.shape[1]
+    iso_vert_cover = np.zeros((num_rows, num_cols), bool)
+    iso_vert_cover[np.arange(num_rows), iso_vert_idx] = True
+    return np.vstack((cover, iso_vert_cover))
