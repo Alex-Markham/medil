@@ -84,4 +84,4 @@ def test_assign_DoF():
 def test_rand():
     num_latent, num_obs = 3, 5
     mcm = MedilCausalModel().rand(num_obs, num_latent).biadj_mat
-    assert ((num_latent, num_obs) == mcm.shape).all()
+    assert (num_latent, num_obs) == mcm.shape

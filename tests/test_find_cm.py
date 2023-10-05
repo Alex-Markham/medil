@@ -27,8 +27,9 @@ def test_reduction_rule_1_on_3cycle_plus_isolated():
 
     cover = find_cm(graph)
 
-    assert cover.shape == (1, 4)
-    assert ~np.any(cover - [0, 1, 1, 1], axis=1)
+    assert cover.shape == (2, 4)
+    assert (cover[0] == [0, 1, 1, 1]).all()
+    assert (cover[1] == [1, 0, 0, 0]).all()
 
 
 def test_find_cm_on_examples():
