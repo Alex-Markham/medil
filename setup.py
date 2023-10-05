@@ -21,6 +21,6 @@ setup(
         "dcor": ["dcor"],
         "GAN": ["pytorch-lightning"],
         "vis": ["matplotlib", "networkx"],
-        "all": ["dcor", "torch", "matplotlib", "networkx"],
+        "all": ["dcor", "torch", "matplotlib", "networkx", "xicorrelation", "gues"],
     },
 )
