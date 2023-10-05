@@ -1,17 +1,20 @@
 """Independence testing on samples of random variables."""
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
+
 
 from numpy import linalg as LA
 from scipy.stats import chi2
 
 try:
+    from dcor.independence import distance_correlation_t_test
     from dcor import pairwise, distance_correlation as dist_corr
 
     default_measure = "dcor"
 except ImportError:
     default_measure = "pearson"
+from xicorrelation import xicorr
 
 
 def hypothesis_test(samples, num_resamples, measure=default_measure, alpha=0.05):
@@ -195,20 +198,17 @@ def permute_within_rows(x):
 
 def dcov(samples):
     r"""Compute sample distance covariance matrix.
-
     Parameters
     ----------
     samples : 2d numpy array of floats
               A :math:`N \times M` matrix with :math:`N` samples of
               :math:`M` random variables.
-
     Returns
     -------
     2d numpy array
         A square matrix :math:`C`, where :math:`C_{i,j}` is the sample
         distance covariance between random variables :math:`R_i` and
         :math:`R_j`.
-
     """
     num_samps, num_feats = samples.shape
     num_pairs = num_samps * (num_samps - 1) // 2
@@ -229,50 +229,44 @@ def dcov(samples):
     return dists @ dists.T / num_samps**2, d_bars
 
 
-def estimate_UDG(samples, method="dcov_fast", significance_level=0.05):
-    num_samps = len(samples)
+def estimate_UDG(sample, method="dcov_fast", significance_level=0.05):
+    samp_size, num_feats = sample.shape
 
-    if method == "dcov_fast":
-        cov, d_bars = dcov(samples)
+    if isinstance(method, np.ndarray):
+        p_vals = method
+        udg = p_vals < significance_level
+    elif method == "dcov_fast":
+        cov, d_bars = dcov(sample)
         crit_val = chi2(1).ppf(1 - significance_level)
-        test_val = num_samps * cov / np.outer(d_bars, d_bars)
+        test_val = samp_size * cov / np.outer(d_bars, d_bars)
         udg = test_val >= crit_val
-        np.fill_diagonal(udg, False)
+        p_vals = None
     elif method == "g-test":
         pass
-    return udg
+    else:
+        p_vals = np.zeros((num_feats, num_feats), float)
+        idxs, jdxs = np.triu_indices(num_feats, 1)
+        zipped = zip(idxs, jdxs)
+        sample_iter = (sample[:, i_j].T for i_j in zipped)
+        if method == "dcov_big":
+            test = dcor_test
+        elif method == "xicor":
+            test = xicor_test
+        with Pool(max(1, int(0.75 * cpu_count()))) as p:
+            p_vals[idxs, jdxs] = p_vals[jdxs, idxs] = np.fromiter(
+                p.imap(test, sample_iter, 100), float
+            )
+            udg = p_vals < significance_level
+    np.fill_diagonal(udg, False)
+    return udg, p_vals
 
 
-def dep_con_kernel_one_samp(X, alpha=None):
-    num_samps, num_feats = X.shape
-    thresh = np.eye(num_feats)
-    if alpha is not None:
-        thresh[thresh == 0] = (
-            chi2(1).ppf(1 - alpha) / num_samps
-        )  # critical value corresponding to alpha
-        thresh[thresh == 1] = 0
-    Z = np.zeros((num_feats, num_samps, num_samps))
-    for j in range(num_feats):
-        D = squareform(pdist(X[:, j].reshape(-1, 1), "cityblock"))
-        # doubly center and standardized:
-        Z[j] = ((D - D.mean(0) - D.mean(1).reshape(-1, 1)) / D.mean()) + 1
-    F = Z.reshape(num_feats * num_samps, num_samps)
-    left = np.tensordot(Z, thresh, axes=([0], [0]))
-    left_right = np.tensordot(left, Z, axes=([2, 1], [0, 1]))
-    gamma = (F.T @ F) ** 2 - 2 * (left_right) + LA.norm(thresh)  # helper kernel
-
-    diag = np.diag(gamma)
-    kappa = gamma / np.sqrt(np.outer(diag, diag))  # cosine similarity
-    kappa[kappa > 1] = 1  # correct numerical errors
-    return kappa
+def dcor_test(x_y):
+    x, y = x_y
+    return distance_correlation_t_test(x, y).pvalue
 
 
-# note: for this and one_samp, add outputs arg, with options to
-# compute/return Gram matrix, similarity, or distance
-def dep_con_kernel_two_samp(samps_1, samps_2, alpha):
-    num_samps_1 = len(samps_1)
-    samps = np.vstack((samps_1, samps_2))
-    full_kappa = dep_con_kernel_one_samp(samps, alpha=None)
-    kappa = full_kappa[:num_samps_1]
-    kappa = kappa[:, num_samps_1:]
-    return kappa
+def xicor_test(x_y):
+    x, y = x_y
+    xi, pvalue = xicorr(x, y)
+    return pvalue

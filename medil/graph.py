@@ -1,5 +1,6 @@
 """Various types and representations of graphs."""
 import numpy as np
+from numpy.random import default_rng
 
 
 class UndirectedDependenceGraph(object):
@@ -126,6 +127,14 @@ class UndirectedDependenceGraph(object):
 
     def reducible_copy(self):
         return ReducibleUndDepGraph(self)
+
+    def convert_to_nde(self, name="temp"):
+        with open(name + ".nde", "w") as f:
+            f.write(str(self.max_num_verts) + "\n")
+            for idx, node in enumerate(self.adj_matrix):
+                f.write(str(idx) + " " + str(node.sum()) + "\n")
+            for v1, v2 in np.argwhere(np.triu(self.adj_matrix)):
+                f.write(str(v1) + " " + str(v2) + "\n")
 
 
 class ReducibleUndDepGraph(UndirectedDependenceGraph):
@@ -385,10 +394,6 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             the_cover[cliques_to_update_mask, vert] = 1
 
         return the_cover
-
-
-# class minMCM(object):
-# TODO: implement as a bigraph with biadjacency matrix with rows M and cols L
 
 
 # class MCM(object):
