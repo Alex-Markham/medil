@@ -14,9 +14,10 @@ pages:
   image: alpine
   stage: deploy
   script:
-    - apk add py3-pip python3-dev make unzip
+    - apk add py3-pip python3-dev make unzip pandoc-cli
     - pip install 'sphinx<7' m2r2 sphinx-rtd-theme sphinxcontrib-bibtex
     - cd docs
+    - pandoc -s ../CHANGELOG.md -o changelog.rst
     - make html
     - cd ..
     - mv docs/_build/html/ public/
