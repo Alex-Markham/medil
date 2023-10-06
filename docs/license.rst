@@ -1,6 +1,6 @@
 License
 =======
-MeDIL is licensed with the Cooperative Non-Violent Public License v6 or later (CNPLv6+).
+MeDIL is licensed with the GNU Affero General Public License version 3 or later (AGPLv3+).
 
 ..
    .. image:: agplv3-with-text-162x68.png
@@ -8,5 +8,5 @@ MeDIL is licensed with the Cooperative Non-Violent Public License v6 or later (C
       :alt: purple GNU AGPL v3 Free Software logo
       :align: center
 
-.. literalinclude:: ../LICENSE.txt
+.. literalinclude:: ../LICENSE.md
    :language: text
