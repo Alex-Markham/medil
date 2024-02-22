@@ -1,4 +1,5 @@
 """Randomly sample from and generate functional MeDIL Causal Models."""
+from typing import BinaryIO, assert_type
 import warnings
 
 from numpy.random import default_rng
@@ -36,6 +37,23 @@ def rand_biadj_mat(num_obs, edge_prob, rng=default_rng(0)):
     biadj_mat = biadj_mat.astype(bool)
 
     return biadj_mat
+
+
+def rand_1pc(num_obs, effect_prob=None, rng=default_rng(0)):
+    num_latent = rng.integers(1, num_obs)
+    biadj_mat = np.zeros((num_latent, num_obs), bool)
+    biadj_mat[:, :num_latent] = np.eye(num_latent)
+    if effect_prob is None:
+        effect_prob = rng.random()
+    max_num_edges = (num_obs - num_latent) * num_latent
+    num_edges = np.round(max_num_edges * effect_prob).astype(int)
+    edges = np.zeros(max_num_edges, bool)
+    edges[:num_edges] = True
+    edges = rng.permutation(edges).reshape(num_latent, num_obs - num_latent)
+    # effect_prob is a conditional sparsity of the biadj_mat, given
+    # the number of obs and latent and that it satisfies 1pc
+    biadj_mat[:, num_latent:] = edges
+    return rng.permutation(biadj_mat, axis=1)
 
 
 def sample_from_minMCM(minMCM, num_samps=1000, rng=default_rng(0)):
@@ -127,7 +145,17 @@ def assign_DoF(biadj_mat, deg_of_freedom=None, method="uniform", variances=None)
 
 
 class MedilCausalModel(object):
-    def __init__(self, biadj_mat=None, latent_dag=None, rng=default_rng(0)):
+    def __init__(
+        self,
+        biadj_mat=None,
+        latent_dag=None,
+        parameterization="Gaussian",
+        ecc_method="exact",
+        one_pure_child=True,
+        udg_method="constraint-based",
+        dof="min",
+        rng=default_rng(0),
+    ):
         self.biadj_mat = biadj_mat
         self.latent_dag = latent_dag
         if biadj_mat is not None:
@@ -143,7 +171,7 @@ class MedilCausalModel(object):
                 # take trans closure?
                 pass
 
-    def fit(self, dataset, method="lin_gaus"):
+    def fit(self, dataset):
         if self.biadj_mat is None:
             # indep test to get U
             # use ECC alg to get biadj_mat
@@ -254,3 +282,10 @@ class MedilCausalModel(object):
         sources = np.flatnonzero(dag.sum(0) == 0)
         dag[sources, sources] = True  # take de(sources) as cliques
         self.biadj_mat = dag[sources, :]
+
+
+def NeuroCausalFactorAnalysis():
+    # just call MedilCausalModel with NCFA defaults, so we have
+    # import NeuroCausalFactorAnalysis as ncfa
+    # model = ncfa.fit(data)
+    return True
