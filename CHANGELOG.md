@@ -7,21 +7,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Unreleased ###
 - splitting package to focus MeDIL on MCMs; new package for kernel
 
-## [0.8.0] - 2023-XX-XX ##
+## [1.0.0] - 2024-0X-XX ##
 ### (to be) Added ###
-- wrapper for heuristic algorithm implemented in Java
 - Chaterjee's xi correlation for independence testing
 - sampling from (given or randomly generated) linear Gaussian minMCM
+- random generation of UDGs satisfying 1-pure-child condition
+- BIC-optimal UDG estimation
 - examples, documentation, and tests
 
 ### Changed ###
-- `functional_MCM` to use VAE framework instead of GAN-inspired
+- `functional_mcm` to use VAE framework instead of GAN-inspired
 - making api more like `sklearn`
 - improved script to reproduce PGM demo
 - back to AGPLv3+ license
+- simplified extra dependencies to just "dgm" and "vis"
+- refactoring and reorganizing to improve PEP 8 compliance
 
 ### Removed ###
-- `gues` and `grues` submodule
+- `gues`, `grues`, and `abstraction` submodules
 
 ## [0.7.0] - 2022-10-18 ##
 ### Changed ###

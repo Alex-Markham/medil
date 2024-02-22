@@ -18,9 +18,8 @@ setup(
     packages=["medil"],
     install_requires=["numpy"],
     extras_require={
-        "dcor": ["dcor"],
-        "GAN": ["pytorch-lightning"],
         "vis": ["matplotlib", "networkx"],
-        "all": ["dcor", "torch", "matplotlib", "networkx", "xicorrelation", "gues"],
+        "dgm": ["dcor", "xicorrelation", "torch"],
+        "all": ["matplotlib", "networkx", "dcor", "dcor", "xicorrelation", "torch"],
     },
 )
