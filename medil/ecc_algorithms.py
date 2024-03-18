@@ -263,27 +263,33 @@ def add_isolated_verts(cover):
 def find_heuristic_1pc(graph):
     num_meas = len(graph)
 
-    nx_graph = nx.from_numpy_array(graph)
-    indep_set = list(nx.approximation.maximum_independent_set(nx_graph))
+    # nx_graph = nx.from_numpy_array(graph)
+    # indep_set =
+    # list(nx.approximation.maximum_independent_set(nx_graph))
+
+    indep_sets = max_cliques(np.logical_not(graph))
+    max_indep_set = next(indep_sets)
+    for indep_set in indep_sets:
+        if len(indep_set) > len(max_indep_set):
+            max_indep_set = indep_set
 
     num_latents = len(indep_set)
 
     the_cover = np.zeros((num_latents, num_meas), bool)
     the_cover[np.arange(num_latents), indep_set] = True
 
-    for node in indep_set:
-        node_idx = indep_set.index(node)
-        nbrs = list(nx_graph.adj[node])
-        the_cover[node_idx, nbrs] = True
+    for idx, node in enumerate(indep_set):
+        nbrs = np.flatnonzero(graph[idx])
+        the_cover[idx, nbrs] = True
 
     uncovered_edges = deque(
         {
             edge
-            for edge in nx_graph.edges
-            if edge[0] != edge[1]
-            and not np.logical_and(the_cover[:, edge[0]], the_cover[:, edge[1]]).any()
+            for edge in np.argwhere(np.triu(graph, 1))
+            if not np.logical_and(the_cover[:, edge[0]], the_cover[:, edge[1]]).any()
         }
     )
+
     while bool(uncovered_edges):
         u, v = uncovered_edges.popleft()
         if the_cover[:, u].any():
