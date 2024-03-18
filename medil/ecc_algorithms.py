@@ -1,5 +1,6 @@
 """Implementations of edge clique clover finding algorithms."""
 import subprocess, os, shutil
+from collections import deque
 
 import numpy as np
 
@@ -257,3 +258,43 @@ def add_isolated_verts(cover):
     iso_vert_cover = np.zeros((num_rows, num_cols), bool)
     iso_vert_cover[np.arange(num_rows), iso_vert_idx] = True
     return np.vstack((cover, iso_vert_cover))
+
+
+def find_heuristic_1pc(graph):
+    num_meas = len(graph)
+
+    nx_graph = nx.from_numpy_array(graph)
+    indep_set = list(nx.approximation.maximum_independent_set(nx_graph))
+
+    num_latents = len(indep_set)
+
+    the_cover = np.zeros((num_latents, num_meas), bool)
+    the_cover[np.arange(num_latents), indep_set] = True
+
+    for node in indep_set:
+        node_idx = indep_set.index(node)
+        nbrs = list(nx_graph.adj[node])
+        the_cover[node_idx, nbrs] = True
+
+    uncovered_edges = deque(
+        {
+            edge
+            for edge in nx_graph.edges
+            if edge[0] != edge[1]
+            and not np.logical_and(the_cover[:, edge[0]], the_cover[:, edge[1]]).any()
+        }
+    )
+    while bool(uncovered_edges):
+        u, v = uncovered_edges.popleft()
+        if the_cover[:, u].any():
+            the_cover[np.argmax(the_cover[:, u]), v] = True
+        elif the_cover[:, v].any():
+            the_cover[np.argmax(the_cover[:, v]), u] = True
+        else:
+            uncovered_edges.append((u, v))
+
+    recon = the_cover.T @ the_cover
+    if np.logical_not(graph <= recon).any():
+        raise Exception(f"Problem with `find_hueristic_1pc()` for input {graph}")
+
+    return the_cover
