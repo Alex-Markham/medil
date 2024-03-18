@@ -8,6 +8,7 @@ from gues.grues import InputData as rand_walker
 
 from .ecc_algorithms import find_heuristic_clique_cover as find_h
 from .ecc_algorithms import find_clique_min_cover as find_cm
+from .ecc_algorithms import find_heuristic_1pc
 
 
 def rand_biadj_mat(num_obs, edge_prob, rng=default_rng(0)):
@@ -147,7 +148,7 @@ def assign_DoF(biadj_mat, deg_of_freedom=None, method="uniform", variances=None)
 class MedilCausalModel(object):
     def __init__(
         self,
-        biadj_mat=None,
+        biadj=_mat=None,
         latent_dag=None,
         parameterization="Gaussian",
         ecc_method="exact",
@@ -172,11 +173,29 @@ class MedilCausalModel(object):
                 pass
 
     def fit(self, dataset):
+        self.dataset = dataset
         if self.biadj_mat is None:
-            # indep test to get U
-            # use ECC alg to get biadj_mat
+            self._compute_biadj()
+
+        if self.parameterization == 'gauss':
+            # either use scipy minimize or implement gradient descent
+            # myself in numpy, or try to find more info about/how to
+            # implement MLE (check MLE in Factor analysis---an
+            # algebraic derivation by stoica and jansson)
             pass
+
         pass
+
+    def _compute_biadj(self):
+        if self.udg is None:
+            self._estimate_udg()
+        self.biadj = find_heuristic_1pc(self.udg)
+
+    def _estimate_udg(self):
+        if self.paramaterization == 'gauss':
+            udg = bic_optimal()
+        elif self.paramaterization == 'vae':
+            udg = True
 
     def sample(self, sample_size):
         if hasattr(self, "vae"):
