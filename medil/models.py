@@ -68,9 +68,9 @@ class MedilCausalModel(object):
                 np.zeros(num_latent), np.eye(num_latent), sample_size
             )
             error_sample = self.rng.multivariate_normal(
-                self.error_means, self.error_variances, sample_size
+                self.error_means, np.diagflat(self.error_variances), sample_size
             )
-            sample = self.biadj_weights.T @ latent_sample + error_sample
+            sample = latent_sample @ self.biadj_weights + error_sample
         return sample
 
 
