@@ -13,7 +13,7 @@ class MedilCausalModel(object):
         udg: None | npt.NDArray = None,
         parameterization: str = "gauss",
         one_pure_child: bool = True,
-        udg_method: str = "constraint-based",
+        udg_method: str = "bic",
         rng=default_rng(0),
     ) -> None:
         self.biadj = biadj
@@ -22,12 +22,19 @@ class MedilCausalModel(object):
         self.one_pure_child = one_pure_child
         self.udg_method = udg_method
         self.rng = rng
+        if parameterization == "gauss":
+            self.biadj_weights = None
+            self.error_means = None
+            self.error_variances = None
+            # self.params = {biadj_weights: None, error_means: None,
+            # error_variances: None}
+        elif parameterization == "vae":
+            self.vae = None
 
     def fit(self, dataset: npt.NDArray) -> "MedilCausalModel":
         """"""
-
         self.dataset = dataset
-        if self.biadj_mat is None:
+        if self.biadj is None:
             self._compute_biadj()
 
         if self.parameterization == "gauss":
@@ -51,30 +58,20 @@ class MedilCausalModel(object):
             udg = True
 
     def sample(self, sample_size: int) -> npt.NDArray:
-        if hasattr(self, "vae"):
+        if self.parameterization == "vae":
             # samp = sample drawn from vae model
-            pass
-        else:
-            if not hasattr(self, "cov"):
-                # generate random weights in +-[0.5, 2]
-                num_edges = self.biadj.sum()
-                idcs = np.argwhere(self.biadj)
-                idcs[:, 1] += self.num_latent
-
-                weights = (self.rng.random(num_edges) * 1.5) + 0.5
-                weights[self.rng.choice((True, False), num_edges)] *= -1
-
-                precision = np.eye(self.num_latent + self.num_obs, dtype=float)
-                precision[idcs[:, 0], idcs[:, 1]] = weights
-                precision = precision.dot(precision.T)
-
-                cov = np.linalg.inv(precision)
-                self.cov = cov
-
-            samp = self.rng.multivariate_normal(
-                np.zeros(len(self.cov)), self.cov, sample_size
+            print("not implemented yet :(")
+            sample = None
+        elif self.parameterization == "gauss":
+            num_latent, num_meas = self.biadj.shape
+            latent_sample = self.rng.multivariate_normal(
+                np.zeros(num_latent), np.eye(num_latent), sample_size
             )
-        return samp
+            error_sample = self.rng.multivariate_normal(
+                self.error_means, self.error_variances, sample_size
+            )
+            sample = self.biadj_weights.T @ latent_sample + error_sample
+        return sample
 
 
 class NeuroCausalFactorAnalysis(MedilCausalModel):
