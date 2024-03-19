@@ -6,7 +6,6 @@ from numpy.random import default_rng
 import numpy as np
 from gues.grues import InputData as rand_walker
 
-from .ecc_algorithms import find_heuristic_clique_cover as find_h
 from .ecc_algorithms import find_clique_min_cover as find_cm
 from .ecc_algorithms import find_heuristic_1pc
 
