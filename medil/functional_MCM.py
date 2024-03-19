@@ -148,36 +148,26 @@ def assign_DoF(biadj_mat, deg_of_freedom=None, method="uniform", variances=None)
 class MedilCausalModel(object):
     def __init__(
         self,
-        biadj=_mat=None,
-        latent_dag=None,
+        biadj=None,
+        udg=None,
         parameterization="Gaussian",
-        ecc_method="exact",
-        one_pure_child=True,
+        ecc_method="1pc",
         udg_method="constraint-based",
-        dof="min",
         rng=default_rng(0),
     ):
-        self.biadj_mat = biadj_mat
-        self.latent_dag = latent_dag
-        if biadj_mat is not None:
-            self.num_latent, self.num_obs = biadj_mat.shape()
+        self.biadj = biadj
+        self.udg = udg
+        self.parameterization = parameterization
+        self.ecc_method = ecc_method
+        self.udg_method = udg_method
         self.rng = rng
-        if biadj_mat is None:
-            self.udg = None
-        else:
-            if latent_dag is None:
-                self.udg = biadj_mat.T @ biadj_mat
-                np.fill_diagonal(self.udg, False)
-            else:
-                # take trans closure?
-                pass
 
     def fit(self, dataset):
         self.dataset = dataset
         if self.biadj_mat is None:
             self._compute_biadj()
 
-        if self.parameterization == 'gauss':
+        if self.parameterization == "gauss":
             # either use scipy minimize or implement gradient descent
             # myself in numpy, or try to find more info about/how to
             # implement MLE (check MLE in Factor analysis---an
@@ -192,9 +182,9 @@ class MedilCausalModel(object):
         self.biadj = find_heuristic_1pc(self.udg)
 
     def _estimate_udg(self):
-        if self.paramaterization == 'gauss':
+        if self.paramaterization == "gauss":
             udg = bic_optimal()
-        elif self.paramaterization == 'vae':
+        elif self.paramaterization == "vae":
             udg = True
 
     def sample(self, sample_size):
