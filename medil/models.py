@@ -1,6 +1,9 @@
 """MeDIL causal model base class and a preconfigured NCFA class."""
 import numpy as np
 import numpy.typing as npt
+from numpy.random import default_rng
+
+from .ecc_algorithms import find_heuristic_1pc
 
 
 class MedilCausalModel(object):
@@ -20,7 +23,7 @@ class MedilCausalModel(object):
         self.udg_method = udg_method
         self.rng = rng
 
-    def fit(self, dataset: npt.NDArray) -> MedilCausalModel:
+    def fit(self, dataset: npt.NDArray) -> "MedilCausalModel":
         """"""
 
         self.dataset = dataset
@@ -34,7 +37,7 @@ class MedilCausalModel(object):
             # algebraic derivation by stoica and jansson)
             pass
 
-        pass
+        return self
 
     def _compute_biadj(self):
         if self.udg is None:
@@ -42,9 +45,9 @@ class MedilCausalModel(object):
         self.biadj = find_heuristic_1pc(self.udg)
 
     def _estimate_udg(self):
-        if self.paramaterization == "gauss":
+        if self.parameterization == "gauss":
             udg = bic_optimal()
-        elif self.paramaterization == "vae":
+        elif self.parameterization == "vae":
             udg = True
 
     def sample(self, sample_size: int) -> npt.NDArray:
@@ -54,8 +57,8 @@ class MedilCausalModel(object):
         else:
             if not hasattr(self, "cov"):
                 # generate random weights in +-[0.5, 2]
-                num_edges = self.biadj_mat.sum()
-                idcs = np.argwhere(self.biadj_mat)
+                num_edges = self.biadj.sum()
+                idcs = np.argwhere(self.biadj)
                 idcs[:, 1] += self.num_latent
 
                 weights = (self.rng.random(num_edges) * 1.5) + 0.5
@@ -68,53 +71,10 @@ class MedilCausalModel(object):
                 cov = np.linalg.inv(precision)
                 self.cov = cov
 
-            samp = sef.rng.multivariate_normal(
+            samp = self.rng.multivariate_normal(
                 np.zeros(len(self.cov)), self.cov, sample_size
             )
         return samp
-
-    def rand_struct(self, num_obs, num_latent=None, edge_prob=None):
-        self.num_obs = num_obs
-
-        if num_latent is not None and edge_prob is not None:
-            raise ValueError(
-                "You may specify `num_latent` or `edge_prob` but not both."
-            )
-        elif num_latent is not None:
-            self.num_latent = num_latent
-            self.rand_grues()
-        else:
-            if edge_prob is None:
-                edge_prob = 0.5
-            self.rand_er(edge_prob)
-
-        return self
-
-    def rand_params(self):
-        return False
-
-    def rand_er(self, edge_prob):
-        """Generate minMCM from Erdős–Rényi random undirected graph
-        over observed variables."""
-        # ER random graph
-        udg = np.zeros((self.num_obs, self.num_obs), bool)
-        max_edges = (self.num_obs * (self.num_obs - 1)) // 2
-        num_edges = np.round(edge_prob * max_edges).astype(int)
-        edges = np.ones(max_edges)
-        edges[num_edges:] = 0
-        udg[np.triu_indices(self.num_obs, k=1)] = self.rng.permutation(edges)
-        udg += udg.T
-        np.fill_diagonal(udg, True)
-        self.udg = udg
-
-        # find latent connections (minimum edge clique cover)
-        biadj_mat = find_cm(udg)
-        self.biadj_mat = biadj_mat.astype(bool)
-        self.num_latent = len(biadj_mat)
-
-    # if we have 1pc, then we take num M, num L<M, and a density param
-
-    # otherwise, do the above in rand_er?
 
 
 class NeuroCausalFactorAnalysis(MedilCausalModel):
