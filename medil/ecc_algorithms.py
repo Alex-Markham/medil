@@ -241,7 +241,7 @@ def find_heuristic_1pc(graph):
     the_cover[np.arange(num_latents), indep_set] = True
 
     for idx, node in enumerate(indep_set):
-        nbrs = np.flatnonzero(graph[idx])
+        nbrs = np.flatnonzero(graph[node])
         the_cover[idx, nbrs] = True
 
     uncovered_edges = deque(
