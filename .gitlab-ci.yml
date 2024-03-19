@@ -27,3 +27,7 @@ pages:
   artifacts:
     paths:
     - public
+  only:
+    - changes:
+      - "*.md"
+      - "*.rst"
