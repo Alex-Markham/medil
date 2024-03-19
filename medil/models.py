@@ -63,7 +63,7 @@ class MedilCausalModel(object):
             print("not implemented yet :(")
             sample = None
         elif self.parameterization == "gauss":
-            num_latent, num_meas = self.biadj.shape
+            num_latent = len(self.biadj.shape)
             latent_sample = self.rng.multivariate_normal(
                 np.zeros(num_latent), np.eye(num_latent), sample_size
             )
