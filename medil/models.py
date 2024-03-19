@@ -13,7 +13,7 @@ class MedilCausalModel(object):
         udg: None | npt.NDArray = None,
         parameterization: str = "gauss",
         one_pure_child: bool = True,
-        udg_method: str = "bic",
+        udg_method: str = "default",
         rng=default_rng(0),
     ) -> None:
         self.biadj = biadj
@@ -23,12 +23,16 @@ class MedilCausalModel(object):
         self.udg_method = udg_method
         self.rng = rng
         if parameterization == "gauss":
+            if self.udg_method == "default":
+                self.udg_method = "bic"
             self.biadj_weights = None
             self.error_means = None
             self.error_variances = None
             # self.params = {biadj_weights: None, error_means: None,
             # error_variances: None}
         elif parameterization == "vae":
+            if self.udg_method == "default":
+                self.udg_method = "xicor"
             self.vae = None
 
     def fit(self, dataset: npt.NDArray) -> "MedilCausalModel":
@@ -52,10 +56,15 @@ class MedilCausalModel(object):
         self.biadj = find_heuristic_1pc(self.udg)
 
     def _estimate_udg(self):
-        if self.parameterization == "gauss":
-            udg = bic_optimal()
-        elif self.parameterization == "vae":
-            udg = True
+        if self.udg_method == "bic":
+            samp_size = len(self.dataset)
+            cov = np.cov(self.dataset, rowvar=False)
+            corr = np.corrcoef(self.dataset, rowvar=False)
+            udg = np.log(1 - cov * corr) < -np.log(samp_size) / samp_size
+        else:
+            num_meas = self.dataset.shape[1]
+            udg = np.ones((num_meas, num_meas), bool)
+        self.udg = udg
 
     def sample(self, sample_size: int) -> npt.NDArray:
         if self.parameterization == "vae":
