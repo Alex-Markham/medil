@@ -212,44 +212,6 @@ def max_cliques(nbrhood):
     # looped through once
 
 
-def find_heuristic_clique_cover(graph):
-    graph = UndirectedDependenceGraph(graph)
-
-    if graph.num_edges == 0:
-        # solution is trivial
-        the_cover = np.eye(graph.max_num_verts)
-        return the_cover
-
-    # convert and save graph in useable format for java code
-    graph.convert_to_nde()
-
-    # use java code to find heuristic ecc while supressing printout
-    devnull = open(os.devnull, "w")
-    subprocess.call(
-        ["java", "-jar", "ECC8.jar", "-g", "temp.nde", "-o", "temp", "-f", "nde"],
-        stdout=devnull,
-        stderr=devnull,
-    )
-
-    # load solution from java code and delete the temp files it created/used
-    with open("temp/temp.nde-rand.EPSc.cover", "r") as f:
-        the_cover_idcs = [map(int, x.split()) for x in f.readlines()]
-
-    os.remove("temp.nde")
-    shutil.rmtree("temp")
-
-    # convert back to clique mask format
-    num_cliques = len(the_cover_idcs)
-    expanded_idcs = np.array(
-        [[i, j] for i in range(num_cliques) for j in the_cover_idcs[i]]
-    ).T
-    latent_idcs, observed_idcs = expanded_idcs
-    the_cover = np.zeros((len(the_cover_idcs), graph.max_num_verts)).astype(bool)
-    the_cover[latent_idcs, observed_idcs] = True
-
-    return add_isolated_verts(the_cover)
-
-
 def add_isolated_verts(cover):
     cover = cover.astype(bool)
     iso_vert_idx = np.flatnonzero(cover.sum(0) == 0)
