@@ -27,7 +27,6 @@ pages:
   artifacts:
     paths:
     - public
-  only:
+  rules:
     - changes:
-      - "*.md"
-      - "*.rst"
+      - "*.{rst,md}"
