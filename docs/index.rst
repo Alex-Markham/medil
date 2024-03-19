@@ -7,7 +7,7 @@ The package is under active development---see the ``develop`` branch of the repo
 Features:
 ---------
 
-* constraint-based learning of minimum MeDIL causal graphs from marginal independence tests using `distance covariance <https://dcor.readthedocs.io/en/stable/index.html>`_ or `xi correlation <https://pypi.org/project/xicorrelation/>`_
+* score- and constraint-based learning of minimum MeDIL causal graphs from marginal independence tests using `distance covariance <https://dcor.readthedocs.io/en/stable/index.html>`_ or `xi correlation <https://pypi.org/project/xicorrelation/>`_
 
 * estimation of causal factor loadings in the linear Gaussian setting or in the nonparametric setting using a variational autoencoder :cite:`markham2023neuro`
 
@@ -20,7 +20,9 @@ Design principles:
 
 * `scikit-learn <https://scikit-learn.org/stable/developers/develop.html#apis-of-scikit-learn-objects>`_ style API
 
-* basic functionality with minimal dependencies (just `NumPy <https://numpy.org/>`_) and optional dependencies for more functionality
+* basic functionality with minimal dependencies (just `NumPy
+  <https://numpy.org>`_) and optional dependencies (`PyTorch
+  <https://pytorch.org>`_, `NetworkX <https://networkx.org/>`_, etc.) for more functionality
 
 * as much as possible implemented using NumPy ``ndarray``s and methods for fast performance and wide compatibility
 
