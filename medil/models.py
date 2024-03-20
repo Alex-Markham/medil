@@ -84,4 +84,5 @@ class MedilCausalModel(object):
 
 
 class NeuroCausalFactorAnalysis(MedilCausalModel):
-    pass
+    def __init__(self):
+        raise (NotImplementedError)
