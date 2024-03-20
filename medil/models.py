@@ -2,6 +2,7 @@
 import numpy as np
 import numpy.typing as npt
 from numpy.random import default_rng
+from scipy.optimize import minimize
 
 from .ecc_algorithms import find_heuristic_1pc
 
@@ -42,6 +43,30 @@ class MedilCausalModel(object):
             self._compute_biadj()
 
         if self.parameterization == "gauss":
+            self.error_means = self.dataset.mean(0)
+            cov = np.cov(self.dataset, rowvar=False)
+
+            num_weights = self.biadj.sum()
+            num_err_vars = self.biadj.shape[1]
+
+            def _objective(weights_and_err_vars):
+                weights = weights_and_err_vars[:num_weights]
+                err_vars = weights_and_err_vars[num_weights:]
+
+                biadj_weights = np.zeros_like(self.biadj, float)
+                biadj_weights[self.biadj] = weights
+
+                return (
+                    cov - biadj_weights.T @ biadj_weights - np.diagflat(err_vars)
+                ) ** 2
+
+            vectorized_solution = minimize(
+                _objective, np.ones(num_weights + num_err_vars)
+            )
+            weights = vectorized_solution[:num_weights]
+            self.error_variances = vectorized_solution[num_weights:]
+            self.biadj_weights = np.zeros_like(self.biadj, float)
+            self.biadj_weights[self.biadj] = weights
             # either use scipy minimize or implement gradient descent
             # myself in numpy, or try to find more info about/how to
             # implement MLE (check MLE in Factor analysis---an
