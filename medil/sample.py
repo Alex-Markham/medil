@@ -33,10 +33,11 @@ def mcm(
         mcm.error_variances = (rng.random(num_meas) * 1.5) + 0.5
 
     elif parameterization == "vae":
-        print("not implemented yet :(")
-        mcm = MedilCausalModel()
+        raise (NotImplementedError)
+
     else:
         raise ValueError(f"Parameterization '{parameterization}' is invalid.")
+
     return mcm
 
 
