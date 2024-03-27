@@ -85,7 +85,11 @@ class MedilCausalModel(object):
             samp_size = len(self.dataset)
             cov = np.cov(self.dataset, rowvar=False)
             corr = np.corrcoef(self.dataset, rowvar=False)
-            udg = np.log(1 - cov * corr) < -np.log(samp_size) / samp_size
+            inner_numerator = 1 - cov * corr  # should never be <= 0?
+            inner_numerator = inner_numerator.clip(min=0.00001)
+            inner_numerator[np.tril_indices_from(inner_numerator)] = 1
+            udg_triu = np.log(inner_numerator) < (-np.log(samp_size) / samp_size)
+            udg = udg_triu + udg_triu.T
         else:
             num_meas = self.dataset.shape[1]
             udg = np.ones((num_meas, num_meas), bool)
