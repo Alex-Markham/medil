@@ -21,6 +21,12 @@ from .ecc_algorithms import find_heuristic_1pc
 # import pickle
 # import os
 
+# need to decide how to organize classes; could have (gaussian)
+# MedCausMod and then similar (but not inherted) NCFA;
+
+# alternatively have MedCausMod common base and then inhert that to
+# gaussian and NFCA classes?
+
 
 class MedilCausalModel(object):
     def __init__(
