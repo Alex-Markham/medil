@@ -1,4 +1,6 @@
 """MeDIL causal model base class and a preconfigured NCFA class."""
+import warnings
+
 import numpy as np
 import numpy.typing as npt
 from numpy.random import default_rng
@@ -57,22 +59,19 @@ class MedilCausalModel(object):
                 biadj_weights[self.biadj] = weights
 
                 return (
-                    cov - biadj_weights.T @ biadj_weights - np.diagflat(err_vars)
-                ) ** 2
+                    (cov - biadj_weights.T @ biadj_weights - np.diagflat(err_vars)) ** 2
+                ).sum()
 
-            vectorized_solution = minimize(
-                _objective, np.ones(num_weights + num_err_vars)
-            )
-            weights = vectorized_solution[:num_weights]
-            self.error_variances = vectorized_solution[num_weights:]
+            result = minimize(_objective, np.ones(num_weights + num_err_vars))
+            if not result.success:
+                warnings.warn(f"Optimization failed: {result.message}")
+            self.error_variances = result.x[num_weights:]
             self.biadj_weights = np.zeros_like(self.biadj, float)
-            self.biadj_weights[self.biadj] = weights
+            self.biadj_weights[self.biadj] = result.x[:num_weights]
             # either use scipy minimize or implement gradient descent
             # myself in numpy, or try to find more info about/how to
             # implement MLE (check MLE in Factor analysis---an
             # algebraic derivation by stoica and jansson)
-            pass
-
         return self
 
     def _compute_biadj(self):
