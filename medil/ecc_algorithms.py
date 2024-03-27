@@ -235,12 +235,12 @@ def find_heuristic_1pc(graph):
         if len(indep_set) > len(max_indep_set):
             max_indep_set = indep_set
 
-    num_latents = len(indep_set)
+    num_latents = len(max_indep_set)
 
     the_cover = np.zeros((num_latents, num_meas), bool)
-    the_cover[np.arange(num_latents), indep_set] = True
+    the_cover[np.arange(num_latents), max_indep_set] = True
 
-    for idx, node in enumerate(indep_set):
+    for idx, node in enumerate(max_indep_set):
         nbrs = np.flatnonzero(graph[node])
         the_cover[idx, nbrs] = True
 
