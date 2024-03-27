@@ -1,91 +1,123 @@
-def assign_DoF(biadj_mat, deg_of_freedom=None, method="uniform", variances=None):
-    """Assign degrees of freedom (latent variables) of VAE to latent factors from causal structure learning
-    Parameters
-    ----------
-    biadj_mat: biadjacency matrix of MCM
-    deg_of_freedom: desired size of latent space of VAE
-    method: how to distribute excess degrees of freedom to latent causal factors
-    variances: diag of covariance matrix over measurement variables
+import math
 
-    Returns
-    -------
-    redundant_biadj_mat: biadjacency matrix specifing VAE structure from latent space to decoder
-    """
+import torch
+from torch import nn
+from torch.nn.parameter import Parameter
 
-    num_cliques, num_obs = biadj_mat.shape
-    if deg_of_freedom is None:
-        # then default to upper bound; TODO: change to max_intersect_num from medil.ecc_algorithms
-        deg_of_freedom = num_obs**2 // 4
-    elif deg_of_freedom < num_cliques:
-        warnings.warn(
-            f"Input `deg_of_freedom={deg_of_freedom}` is less than the {num_cliques} required for the estimated causal structure. `deg_of_freedom` increased to {num_cliques} to compensate."
+
+class VariationalAutoencoder(nn.Module):
+    def __init__(self, m, n, mask):
+        super(VariationalAutoencoder, self).__init__()
+        self.encoder = Encoder(m, n)
+        self.decoder = Decoder(m, n, mask)
+
+    def forward(self, x):
+        mu, logvar = self.encoder(x)
+        latent = self.latent_sample(mu, logvar)
+        x_recon, logcov = self.decoder(latent)
+
+        return x_recon, logcov, mu, logvar
+
+    def latent_sample(self, mu, logvar):
+        # the re-parameterization trick
+        if self.training:
+            std = logvar.mul(0.5).exp_()
+            eps = torch.empty_like(std).normal_()
+            return eps.mul(std).add_(mu)
+        else:
+            return mu
+
+
+class Block(nn.Module):
+    def __init__(self, m, n):
+        super(Block, self).__init__()
+        self.input_dim = n
+        self.latent_dim = m
+        self.output_dim = n
+
+
+class Encoder(Block):
+    def __init__(self, m, n):
+        super(Encoder, self).__init__(m, n)
+
+        # first encoder layer
+        self.inter_dim = self.input_dim
+        self.enc1 = nn.Linear(in_features=self.input_dim, out_features=self.inter_dim)
+
+        # second encoder layer
+        self.enc2 = nn.Linear(in_features=self.inter_dim, out_features=self.inter_dim)
+
+        # map to mu and variance
+        self.fc_mu = nn.Linear(in_features=self.inter_dim, out_features=self.latent_dim)
+        self.fc_logvar = nn.Linear(
+            in_features=self.inter_dim, out_features=self.latent_dim
         )
-        deg_of_freedom = num_cliques
 
-    if method == "uniform":
-        latents_per_clique = np.ones(num_cliques, int) * (deg_of_freedom // num_cliques)
-    elif method == "clique_size":
-        latents_per_clique = np.round(
-            (biadj_mat.sum(1) / biadj_mat.sum()) * (deg_of_freedom - num_cliques)
-        ).astype(int)
-    elif method == "tot_var" or method == "avg_var":
-        clique_variances = biadj_mat @ variances
-        if method == "avg_var":
-            clique_variances /= biadj_mat.sum(1)
-        clique_variances /= clique_variances.sum()
-        latents_per_clique = np.round(
-            clique_variances * (deg_of_freedom - num_cliques)
-        ).astype(int)
+    def forward(self, x):
+        # encoder layers
+        inter = torch.relu(self.enc1(x))
+        inter = torch.relu(self.enc2(inter))
 
-    for _ in range(2):
-        remainder = deg_of_freedom - latents_per_clique.sum()
-        latents_per_clique[np.argsort(latents_per_clique)[0:remainder]] += 1
+        # calculate mu & logvar
+        mu = self.fc_mu(inter)
+        logvar = self.fc_logvar(inter)
 
-    redundant_biadj_mat = np.repeat(biadj_mat, latents_per_clique, axis=0)
-
-    return redundant_biadj_mat
+        return mu, logvar
 
 
-def test_assign_DoF():
-    biadj_mat = np.array([[0, 0, 1, 1, 1], [0, 1, 0, 1, 0], [1, 0, 1, 0, 0]])
-    variances = np.array([2.5, 0.33, 2.5, 0.66, 0.88])
+class Decoder(Block):
+    def __init__(self, m, n, mask):
+        super(Decoder, self).__init__(m, n)
 
-    warnings.filterwarnings("error")
-    try:
-        test_insufficient = assign_DoF(biadj_mat, 2, "uniform")
-        assert False
-    except UserWarning:
-        warnings.resetwarnings()
-        warnings.simplefilter("ignore")
-        test_insufficient = assign_DoF(biadj_mat, 2, "uniform")
-        assert (test_insufficient == biadj_mat).all()
+        # decoder layer -- estimate mean
+        self.dec_mean = SparseLinear(
+            in_features=self.latent_dim, out_features=self.output_dim, mask=mask
+        )
 
-    test_uniform = assign_DoF(biadj_mat, 8, "uniform")
-    unique_uniform, counts_uniform = np.unique(test_uniform, axis=0, return_counts=True)
-    assert (biadj_mat == unique_uniform).all()
-    assert min(counts_uniform) == 2
-    assert max(counts_uniform) == 3
-    assert counts_uniform.sum() == 8
+        # decoder layer -- estimate log-covariance
+        self.fc_logcov = SparseLinear(
+            in_features=self.latent_dim, out_features=self.output_dim, mask=mask
+        )
 
-    test_clique = assign_DoF(biadj_mat, 11, "clique_size")
-    unique_clique, counts_clique = np.unique(test_clique, axis=0, return_counts=True)
-    assert (biadj_mat == unique_clique).all()
-    assert min(counts_clique) == 3
-    assert max(counts_clique) == 4
-    assert counts_clique.sum() == 11
+    def forward(self, z):
+        # linear layer
+        mean = self.dec_mean(z)
+        logcov = self.fc_logcov(z)
 
-    test_tot = assign_DoF(biadj_mat, 13, "tot_var", variances)
-    unique_tot, counts_tot = np.unique(test_tot, axis=0, return_counts=True)
-    assert (biadj_mat == unique_tot).all()
-    assert ((5, 2, 6) == counts_tot).all()
+        return mean, logcov
 
-    test_avg = assign_DoF(biadj_mat, 29, "avg_var", variances)
-    unique_avg, counts_avg = np.unique(test_avg, axis=0, return_counts=True)
-    assert (biadj_mat == unique_avg).all()
-    assert ((9, 4, 16) == counts_avg).all()
 
-    for dof in range(3, 12):
-        for method in ("uniform", "clique_size", "tot_var", "avg_var"):
-            test_rounding = assign_DoF(biadj_mat, dof, method, variances)
-            assert (np.unique(test_rounding, axis=0) == biadj_mat).all()
-            assert dof == len(test_rounding)
+class SparseLinear(nn.Module):
+    def __init__(
+        self, in_features, out_features, mask, bias=True, device=None, dtype=None
+    ):
+        factory_kwargs = {"device": device, "dtype": dtype}
+        super(SparseLinear, self).__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.mask = mask
+        self.weight = Parameter(
+            torch.empty((out_features, in_features), **factory_kwargs)
+        )
+
+        if bias:
+            self.bias = Parameter(torch.empty(out_features, **factory_kwargs))
+        else:
+            self.register_parameter("bias", None)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        if self.bias is not None:
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
+            init.uniform_(self.bias, -bound, bound)
+
+    def forward(self, input):
+        # masked linear layer
+        return nn.functional.linear(input, self.weight * self.mask, self.bias)
+
+    def extra_repr(self):
+        return "in_features={}, out_features={}, bias={}".format(
+            self.in_features, self.out_features, self.bias is not None
+        )
