@@ -21,41 +21,54 @@ from .ecc_algorithms import find_heuristic_1pc
 # import pickle
 # import os
 
-# need to decide how to organize classes; could have (gaussian)
-# MedCausMod and then similar (but not inherted) NCFA;
-
-# alternatively have MedCausMod common base and then inhert that to
-# gaussian and NFCA classes?
-
 
 class MedilCausalModel(object):
+    """Base class using principle of polymorphism to establish common
+    interface for derived parametric estimators.
+    """
+
     def __init__(
         self,
-        biadj: None | npt.NDArray = None,
-        udg: None | npt.NDArray = None,
-        parameterization: str = "gauss",
+        biadj: npt.NDArray = np.array([]),
+        udg: npt.NDArray = np.array([]),
         one_pure_child: bool = True,
-        udg_method: str = "default",
+        parameters: dict = dict(),
         rng=default_rng(0),
     ) -> None:
         self.biadj = biadj
         self.udg = udg
-        self.parameterization = parameterization
         self.one_pure_child = one_pure_child
-        self.udg_method = udg_method
+        self.parameters = parameters
         self.rng = rng
-        if parameterization == "gauss":
-            if self.udg_method == "default":
-                self.udg_method = "bic"
-            self.biadj_weights = None
-            self.error_means = None
-            self.error_variances = None
-            # self.params = {biadj_weights: None, error_means: None,
-            # error_variances: None}
-        elif parameterization == "vae":
-            if self.udg_method == "default":
-                self.udg_method = "xicor"
-            self.vae = None
+
+    def fit(self):
+        raise NotImplementedError
+
+    def sample(self):
+        raise NotImplementedError
+
+
+class Parameters(object):
+    def __init__(self, parameterization: str) -> None:
+        self.parameterization = parameterization
+
+        if parameterization == "Gaussian":
+            self.error_means = np.array([])
+            self.error_variances = np.array([])
+            self.biadj_weights = np.array([])
+        elif parameterization == "VAE":
+            raise NotImplementedError
+
+    def __str__(self) -> str:
+        return "\n".join(
+            f"parameters.{attr}: {val}" for attr, val in vars(self).items()
+        )
+
+
+class GaussianMCM(MedilCausalModel):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.parameters = Parameters("Gaussian")
 
     def fit(self, dataset: npt.NDArray) -> "MedilCausalModel":
         """"""
@@ -63,34 +76,33 @@ class MedilCausalModel(object):
         if self.biadj is None:
             self._compute_biadj()
 
-        if self.parameterization == "gauss":
-            self.error_means = self.dataset.mean(0)
-            cov = np.cov(self.dataset, rowvar=False)
+        self.parameters.error_means = self.dataset.mean(0)
 
-            num_weights = self.biadj.sum()
-            num_err_vars = self.biadj.shape[1]
+        cov = np.cov(self.dataset, rowvar=False)
 
-            def _objective(weights_and_err_vars):
-                weights = weights_and_err_vars[:num_weights]
-                err_vars = weights_and_err_vars[num_weights:]
+        num_weights = self.biadj.sum()
+        num_err_vars = self.biadj.shape[1]
 
-                biadj_weights = np.zeros_like(self.biadj, float)
-                biadj_weights[self.biadj] = weights
+        def _objective(weights_and_err_vars):
+            weights = weights_and_err_vars[:num_weights]
+            err_vars = weights_and_err_vars[num_weights:]
 
-                return (
-                    (cov - biadj_weights.T @ biadj_weights - np.diagflat(err_vars)) ** 2
-                ).sum()
+            biadj_weights = np.zeros_like(self.biadj, float)
+            biadj_weights[self.biadj] = weights
 
-            result = minimize(_objective, np.ones(num_weights + num_err_vars))
-            if not result.success:
-                warnings.warn(f"Optimization failed: {result.message}")
-            self.error_variances = result.x[num_weights:]
-            self.biadj_weights = np.zeros_like(self.biadj, float)
-            self.biadj_weights[self.biadj] = result.x[:num_weights]
-            # either use scipy minimize or implement gradient descent
-            # myself in numpy, or try to find more info about/how to
-            # implement MLE (check MLE in Factor analysis---an
-            # algebraic derivation by stoica and jansson)
+            return (
+                (cov - biadj_weights.T @ biadj_weights - np.diagflat(err_vars)) ** 2
+            ).sum()
+
+        result = minimize(_objective, np.ones(num_weights + num_err_vars))
+        if not result.success:
+            warnings.warn(f"Optimization failed: {result.message}")
+
+        self.parameters.error_variances = result.x[num_weights:]
+
+        self.parameters.biadj_weights = np.zeros_like(self.biadj, float)
+        self.parameters.biadj_weights[self.biadj] = result.x[:num_weights]
+
         return self
 
     def _compute_biadj(self):
@@ -99,34 +111,27 @@ class MedilCausalModel(object):
         self.biadj = find_heuristic_1pc(self.udg)
 
     def _estimate_udg(self):
-        if self.udg_method == "bic":
-            samp_size = len(self.dataset)
-            cov = np.cov(self.dataset, rowvar=False)
-            corr = np.corrcoef(self.dataset, rowvar=False)
-            inner_numerator = 1 - cov * corr  # should never be <= 0?
-            inner_numerator = inner_numerator.clip(min=0.00001)
-            inner_numerator[np.tril_indices_from(inner_numerator)] = 1
-            udg_triu = np.log(inner_numerator) < (-np.log(samp_size) / samp_size)
-            udg = udg_triu + udg_triu.T
-        else:
-            num_meas = self.dataset.shape[1]
-            udg = np.ones((num_meas, num_meas), bool)
+        samp_size = len(self.dataset)
+        cov = np.cov(self.dataset, rowvar=False)
+        corr = np.corrcoef(self.dataset, rowvar=False)
+        inner_numerator = 1 - cov * corr  # should never be <= 0?
+        inner_numerator = inner_numerator.clip(min=0.00001)
+        inner_numerator[np.tril_indices_from(inner_numerator)] = 1
+        udg_triu = np.log(inner_numerator) < (-np.log(samp_size) / samp_size)
+        udg = udg_triu + udg_triu.T
         self.udg = udg
 
     def sample(self, sample_size: int) -> npt.NDArray:
-        if self.parameterization == "vae":
-            # samp = sample drawn from vae model
-            print("not implemented yet :(")
-            sample = None
-        elif self.parameterization == "gauss":
-            num_latent = len(self.biadj)
-            latent_sample = self.rng.multivariate_normal(
-                np.zeros(num_latent), np.eye(num_latent), sample_size
-            )
-            error_sample = self.rng.multivariate_normal(
-                self.error_means, np.diagflat(self.error_variances), sample_size
-            )
-            sample = latent_sample @ self.biadj_weights + error_sample
+        num_latent = len(self.biadj)
+        latent_sample = self.rng.multivariate_normal(
+            np.zeros(num_latent), np.eye(num_latent), sample_size
+        )
+        error_sample = self.rng.multivariate_normal(
+            self.parameters.error_means,
+            np.diagflat(self.parameters.error_variances),
+            sample_size,
+        )
+        sample = latent_sample @ self.parameters.biadj_weights + error_sample
         return sample
 
 
