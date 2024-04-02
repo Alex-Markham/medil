@@ -3,36 +3,35 @@ import numpy as np
 import numpy.typing as npt
 from numpy.random import default_rng
 
-from .models import MedilCausalModel
+from .models import GaussianMCM
 from .ecc_algorithms import find_clique_min_cover
 
 
 def mcm(
     rng: np.random.Generator = default_rng(0),
-    parameterization: str = "gauss",
-    biadj: None | npt.NDArray = None,
+    parameterization: str = "Gaussian",
+    biadj: npt.NDArray = np.array([]),
     **kwargs,
-) -> MedilCausalModel:
-    if biadj is None:
+) -> GaussianMCM:
+    if biadj.size == 0:
         biadj = _biadj(**kwargs)
-    if parameterization == "gauss":
-        mcm = MedilCausalModel(biadj)
+    if parameterization == "Gaussian":
+        mcm = GaussianMCM(biadj=biadj)
+        params = mcm.parameters
 
         num_edges = biadj.sum()
         weights = (rng.random(num_edges) * 1.5) + 0.5
         weights[rng.choice((True, False), num_edges)] *= -1
-        biadj_weights = np.zeros_like(biadj, float)
-        biadj_weights[biadj] = weights
-        mcm.biadj_weights = biadj_weights
+        params.biadj_weights = np.zeros_like(biadj, float)
+        params.biadj_weights[biadj] = weights
 
         num_meas = biadj.shape[1]
-        error_means = rng.random(num_meas) * 2
-        error_means[rng.choice((True, False), num_meas)] *= -1
-        mcm.error_means = error_means
+        params.error_means = rng.random(num_meas) * 2
+        params.error_means[rng.choice((True, False), num_meas)] *= -1
 
-        mcm.error_variances = (rng.random(num_meas) * 1.5) + 0.5
+        params.error_variances = (rng.random(num_meas) * 1.5) + 0.5
 
-    elif parameterization == "vae":
+    elif parameterization == "VAE":
         raise (NotImplementedError)
 
     else:
