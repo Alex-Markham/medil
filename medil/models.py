@@ -32,23 +32,23 @@ class MedilCausalModel(object):
         biadj: npt.NDArray = np.array([]),
         udg: npt.NDArray = np.array([]),
         one_pure_child: bool = True,
-        parameters: dict = dict(),
         rng=default_rng(0),
     ) -> None:
         self.biadj = biadj
         self.udg = udg
         self.one_pure_child = one_pure_child
-        self.parameters = parameters
         self.rng = rng
 
-    def fit(self):
+    def fit(self, dataset: npt.NDArray) -> "MedilCausalModel":
         raise NotImplementedError
 
-    def sample(self):
+    def sample(self, sample_size: int) -> npt.NDArray:
         raise NotImplementedError
 
 
 class Parameters(object):
+    "Different parameterizations of MeDIL causal Models."
+
     def __init__(self, parameterization: str) -> None:
         self.parameterization = parameterization
 
@@ -70,10 +70,10 @@ class GaussianMCM(MedilCausalModel):
         super().__init__(**kwargs)
         self.parameters = Parameters("Gaussian")
 
-    def fit(self, dataset: npt.NDArray) -> "MedilCausalModel":
+    def fit(self, dataset: npt.NDArray) -> "GaussianMCM":
         """"""
         self.dataset = dataset
-        if self.biadj is None:
+        if self.biadj.size == 0:
             self._compute_biadj()
 
         self.parameters.error_means = self.dataset.mean(0)
@@ -106,7 +106,7 @@ class GaussianMCM(MedilCausalModel):
         return self
 
     def _compute_biadj(self):
-        if self.udg is None:
+        if self.udg.size == 0:
             self._estimate_udg()
         self.biadj = find_heuristic_1pc(self.udg)
 
