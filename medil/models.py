@@ -1,4 +1,5 @@
 """MeDIL causal model base class and a preconfigured NCFA class."""
+
 import warnings
 
 import numpy as np
@@ -7,6 +8,7 @@ from numpy.random import default_rng
 from scipy.optimize import minimize
 
 from .ecc_algorithms import find_heuristic_1pc
+from .independence_testing import estimate_UDG
 
 # from learning.vae import VariationalAutoencoder
 # from learning.params import train_dict
@@ -136,35 +138,87 @@ class GaussianMCM(MedilCausalModel):
 
 
 class NeuroCausalFactorAnalysis(MedilCausalModel):
-    def __init__(self):
-        raise (NotImplementedError)
+    def __init__(self, seed: int = 0, dof: int = 0, **kwargs):
+        super().__init__(**kwargs)
+        self.hyper_params = {
+            "seed": seed,
+            "heuristic": True,
+            "method": "xicor",
+            "alpha": 0.05,
+            "dof": dof,
+            "batch_size": 128,
+            "epoch": 200,
+            "lr": 0.005,
+            "beta": 1,
+            "num_valid": 1000,
+        }
 
-    def assign_dof(biadj_mat: npt.NDArray, deg_of_freedom: int = 0) -> npt.NDArray:
+        self.parameters = Parameters("vae")
+
+    def fit(self, dataset: npt.NDArray) -> "NeuroCausalFactorAnalysis":
+        self.dataset = dataset
+        self.doffed = self.assign_dof()
+
+        samples, valid_samples = dataset
+        train_loader = load_dataset_real(samples, batch_size)
+        valid_loader = load_dataset_real(valid_samples, batch_size)
+
+        np.random.seed(self.hyper_params["seed"])
+
+        run_vae_ablation(self.doffed, train_loader, valid_loader, path_ablation, seed)
+
+        # run_vae_ablation(biadj_mat_recon, train_loader, valid_loader, path, seed):
+        # train & validate heuristic MeDIL VAE
+        mh, nh = biadj_mat_recon.shape
+        model_recon, loss_recon, error_recon = self._train_vae(
+            mh, nh, biadj_mat_recon, train_loader, valid_loader, seed
+        )
+        torch.save(model_recon, os.path.join(path, "model_recon.pt"))
+        with open(os.path.join(path, "loss_recon.pkl"), "wb") as handle:
+            pickle.dump(loss_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        with open(os.path.join(path, "error_recon.pkl"), "wb") as handle:
+            pickle.dump(error_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def assign_dof(self) -> npt.NDArray:
         """Assign degrees of freedom (latent variables) of VAE to
         latent factors from causal structure learning.
         """
+        if self.biadj.size == 0:
+            self._compute_biadj()
 
-        num_cliques, num_meas = biadj_mat.shape
-        if deg_of_freedom == 0:
+        num_cliques, num_meas = self.biadj.shape
+        if self.dof == 0:
             # then default to 3x num_meas overcomplete
-            deg_of_freedom = num_meas * 3
-        elif deg_of_freedom < num_cliques:
+            self.dof = num_meas * 3
+        elif self.dof < num_cliques:
             warnings.warn(
-                f"Input `deg_of_freedom={deg_of_freedom}` is less than the {num_cliques} required for the estimated causal structure. `deg_of_freedom` increased to {num_cliques} to compensate."
+                f"Input `deg_of_freedom={self.dof}` is less than the {num_cliques} required for the estimated causal structure. `deg_of_freedom` increased to {num_cliques} to compensate."
             )
-        deg_of_freedom = num_cliques
+        self.dof = num_cliques
 
-        latents_per_clique = np.ones(num_cliques, int) * (deg_of_freedom // num_cliques)
+        latents_per_clique = np.ones(num_cliques, int) * (self.dof // num_cliques)
 
         for _ in range(2):
-            remainder = deg_of_freedom - latents_per_clique.sum()
+            remainder = self.dof - latents_per_clique.sum()
             latents_per_clique[np.argsort(latents_per_clique)[0:remainder]] += 1
 
-        redundant_biadj_mat = np.repeat(biadj_mat, latents_per_clique, axis=0)
+        redundant_biadj_mat = np.repeat(self.biadj, latents_per_clique, axis=0)
 
         return redundant_biadj_mat
 
-    def train_vae(m, n, biadj_mat, train_loader, valid_loader, seed):
+    def _compute_biadj(self):
+        if self.udg.size == 0:
+            self._estimate_udg()
+        self.biadj = find_heuristic_1pc(self.udg)
+
+    def _estimate_udg(self):
+        self.udg, pvals = estimate_UDG(
+            self.dataset,
+            method=self.hyper_params["method"],
+            significance_level=self.hyper_params["alpha"],
+        )
+
+    def _train_vae(m, n, biadj_mat, train_loader, valid_loader, seed):
         """Training VAE with the specified image dataset
         :param m: dimension of the latent variable
         :param n: dimension of the observed variable
@@ -209,7 +263,9 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
                 loss = elbo_gaussian(
                     x_batch, recon_batch, logcov_batch, mu_batch, logvar_batch, beta
                 )
-                error = recon_error(x_batch, recon_batch, logcov_batch, weighted=False)
+                error = self._recon_error(
+                    x_batch, recon_batch, logcov_batch, weighted=False
+                )
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -230,7 +286,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             )
 
             # append validation loss
-            valid_lb, valid_er = valid_vae(model, valid_loader)
+            valid_lb, valid_er = self._valid_vae(model, valid_loader)
             valid_elbo.append(valid_lb)
             valid_error.append(valid_er)
 
@@ -241,7 +297,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
         return model, elbo, error
 
-    def valid_vae(model, valid_loader):
+    def _valid_vae(model, valid_loader):
         """Training VAE with the specified image dataset
         :param model: trained VAE model
         :param valid_loader: validation image dataset loader
@@ -260,10 +316,12 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
                 batch_size = x_batch.shape[0]
                 x_batch = x_batch.to(device)
                 recon_batch, logcov_batch, mu_batch, logvar_batch = model(x_batch)
-                loss = elbo_gaussian(
+                loss = self._elbo_gaussian(
                     x_batch, recon_batch, logcov_batch, mu_batch, logvar_batch, beta
                 )
-                error = recon_error(x_batch, recon_batch, logcov_batch, weighted=False)
+                error = self._recon_error(
+                    x_batch, recon_batch, logcov_batch, weighted=False
+                )
 
                 # update loss and nbatch
                 valid_lb += loss.item() / batch_size
@@ -279,7 +337,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
         return valid_lb, valid_er
 
-    def elbo_gaussian(x, x_recon, logcov, mu, logvar, beta):
+    def _elbo_gaussian(x, x_recon, logcov, mu, logvar, beta):
         """Calculating loss for variational autoencoder
         :param x: original image
         :param x_recon: reconstruction in the output layer
@@ -298,7 +356,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
         # reconstruction loss
         cov = torch.exp(logcov)
-        cov = apply_along_axis(torch.diag, cov, axis=0)
+        cov = self._apply_along_axis(torch.diag, cov, axis=0)
         cov = cov.mean(axis=0)
 
         diff = x - x_recon
@@ -316,7 +374,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
         return -loss
 
-    def recon_error(x, x_recon, logcov, weighted):
+    def _recon_error(x, x_recon, logcov, weighted):
         """Reconstruction error given x and x_recon
         :param x: original image
         :param x_recon: reconstruction in the output layer
@@ -330,7 +388,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
         # reconstruction loss
         cov = torch.exp(logcov)
-        cov = apply_along_axis(torch.diag, cov, axis=0)
+        cov = self._apply_along_axis(torch.diag, cov, axis=0)
         cov = cov.mean(axis=0)
 
         diff = x - x_recon
@@ -348,7 +406,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
         return error
 
-    def apply_along_axis(function, x, axis=0):
+    def _apply_along_axis(function, x, axis=0):
         """Helper function to return along a particular axis
         Parameters
         ----------
@@ -363,68 +421,4 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
         return torch.stack(
             [function(x_i) for x_i in torch.unbind(x, dim=axis)], dim=axis
-        )
-
-    def run_vae_ablation(biadj_mat_recon, train_loader, valid_loader, path, seed):
-        """Run training loop for exact VAE
-        Parameters
-        ----------
-        biadj_mat_recon: adjacency matrix for heuristic graph
-        train_loader: loader for training data
-        valid_loader: loader for validation data
-        path: path to save the experiments
-        seed: random seed for the experiments
-        """
-
-        # train & validate heuristic MeDIL VAE
-        mh, nh = biadj_mat_recon.shape
-        model_recon, loss_recon, error_recon = train_vae(
-            mh, nh, biadj_mat_recon, train_loader, valid_loader, seed
-        )
-        torch.save(model_recon, os.path.join(path, "model_recon.pt"))
-        with open(os.path.join(path, "loss_recon.pkl"), "wb") as handle:
-            pickle.dump(loss_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        with open(os.path.join(path, "error_recon.pkl"), "wb") as handle:
-            pickle.dump(error_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    def pipeline_ablation(dataset, biadj_mat, dof, path, seed):
-        """ablation study of DoF for fixed data set and causal structure"""
-
-        # define paths
-        path_ablation = path + f"dof={dof}_run={seed}"
-        if not os.path.isdir(path):
-            os.mkdir(path)
-
-        if not os.path.isdir(path_ablation):
-            os.mkdir(path_ablation)
-
-        # load parameters
-        np.random.seed(seed)
-
-        batch_size = 251
-        # batch_size = params_dict["batch_size"]
-        # train_dict = {"epoch": 200, "lr": 0.005, "beta": 1}
-        # params_dict = {"batch_size": 251, "num_valid": 1000}
-
-        info = {
-            "heuristic": True,
-            "method": "xicor",
-            "alpha": 0.05,
-            "dof": dof,
-            "dof_method": "uniform",
-        }
-        with open(os.path.join(path_ablation, "info.pkl"), "wb") as f:
-            pickle.dump(info, f)
-
-        # define VAE training and validation sample
-        print(
-            f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Preparing training and validation data for VAE"
-        )
-        samples, valid_samples = dataset
-        train_loader = load_dataset_real(samples, batch_size)
-        valid_loader = load_dataset_real(valid_samples, batch_size)
-
-        doffed_biadj_mat = assign_DoF(biadj_mat, deg_of_freedom=dof)
-        run_vae_ablation(
-            doffed_biadj_mat, train_loader, valid_loader, path_ablation, seed
         )
