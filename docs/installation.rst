@@ -2,23 +2,40 @@
 Installation
 ============
 
-You can install the package using pip by running ``pip install medil`` in a terminal.
-The default only requires NumPy and only allows for limited data simulation, linear Pearson correlation independence testing, and structure learning.
+You can install the package from `PyPI <https://pypi.org/project/medil/>`_ with the command ``pip install medil``.
+The default only requires SciPy and allows for learning causal factor models from data, random generation of causal factor models, and sampling data from a given (or learned) causal factor model, all in the linear Gaussian setting.
 There are additional optional requirements for extra features:
 
-+----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Key      | Description                                                                                                                                                                                      | 
-+==========+==================================================================================================================================================================================================+
-| ``all``  | Installs all optional dependencies, for full functionality; equivalent to using all of the other keys below                                                                                      |
-+----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| ``dcor`` | Uses `dcor <https://dcor.readthedocs.io/>`_ to compute the (nonlinear) distance correlation.                                                                                                     |
-+----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| ``gan``  | Uses `PyTorch Lightning <https://pytorch-lightning.readthedocs.io>`_ to make generative adversarial networks (GANs) for advanced data simulation and learning the functional MeDIL causal model. |
-+----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| ``vis``  | Uses `NetworkX <https://networkx.github.io/>`_, `matplotlib <https://matplotlib.org/>`_ and `seaborn <https://seaborn.pydata.org/>`_ for graph visualization and various plots.                  |
-+----------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
++-------+--------------------------------+
+|Key    |Description                     |
++-------+--------------------------------+
+|``all``|Installs all                    |
+|       |optional                        |
+|       |dependencies,                   |
+|       |for full                        |
+|       |functionality;                  |
+|       |equivalent to                   |
+|       |using all of                    |
+|       |the other keys                  |
+|       |below.                          |
++-------+--------------------------------+
+|``dgm``|Uses deep generative models for |
+|       |the causal mechanisms (instead  |
+|       |of restricting to the linear    |
+|       |Gaussian setting), specifically |
+|       |using `PyTorch                  |
+|       |<https://pytorch.org/docs/>`_ to|
+|       |implement a variational         |
+|       |autoencoder.                    |
++-------+--------------------------------+
+|``vis``|Uses `NetworkX                  |
+|       |<https://networkx.github.io/>`_,|
+|       |`Matplotlib                     |
+|       |<https://matplotlib.org/>`_ and |
+|       |`seaborn                        |
+|       |<https://seaborn.pydata.org/>`_ |
+|       |for vizualize the causal factor |
+|       |graph and various plots.        |
++-------+--------------------------------+
 
-In order to use these features, simply append the corresponding comma-separated keys after the package name in brackets (with no spaces), e.g., ``pip install medil[vis,dcor]``.
-
-You may encounter problems with installation due to ``llvmlite`` which is required by ``numba`` which is required by ``dcor``.
-These can usually be resolved by using a fresh virtual environment and then installing ``medil`` (with the ``all`` or ``dcor`` key) before any other packages.
+In order to use these features, simply append the corresponding comma-separated keys after the package name in brackets (with no spaces), e.g., ``pip install medil[vis]``.

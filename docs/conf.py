@@ -39,7 +39,7 @@ with open("../setup.py") as f:
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "m2r2",
+    "sphinx_mdinclude",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
@@ -59,13 +59,15 @@ napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 
 autosummary_mock_imports = [
-    "numpy",
+    "dcor",
     "matplotlib",
-    "seaborn",
     "networkx",
-    "torch",
-    "pytorch_lightning",
+    "numpy",
+    "seaborn",
+    "sklearn",
     "scipy",
+    "torch",
+    "xicorrelation",
 ]
 autosummary_generate = True
 

@@ -2,13 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-### Unreleased ###
-- splitting package to focus MeDIL on MCMs; new package for kernel
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.0.0] - 2024-0X-XX ##
-### (to be) Added ###
+
+### Added ###
 - Chaterjee's xi correlation for independence testing
 - sampling from (given or randomly generated) linear Gaussian minMCM
 - random generation of UDGs satisfying 1-pure-child condition
@@ -27,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `gues`, `grues`, and `abstraction` submodules
 
 ## [0.7.0] - 2022-10-18 ##
+
 ### Changed ###
 - updated licence to CNPLv7+
 - updated description in `setup.py` and readme to reflect expanded focus of the package
@@ -35,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - `grues` submodule implementing an MCMC-based method for UEC learning
 
 ## [0.6.0] - 2021-06-07 ##
+
 ### Changed ###
 - licences from AGPLv3+ to CNPLv6+
 
@@ -43,6 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - numpy depricated boolean subtraction graph.py l269
 
 ## [0.5.0] - 2020-09-22 ##
+
 ### Added ###
 - can now learn functional MCM instead of just structure (using GAN architecture)
 - data simulation (using same GAN architecture)
@@ -61,6 +62,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - various small typo and bug fixes
 
 ## [0.4.0] - 2020-07-23 ##
+
 ### Added ###
 - package now available on pip
 
@@ -81,6 +83,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - updated README
 
 ## [0.3.0] - 2020-04-13 ##
+
 ### Added ###
 - installation via pip and git
 - rudimentary output to update on progress
@@ -100,6 +103,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - split up `ecc_algs.reducee()` internals for better testing/readability
 
 ## [0.2.0] - 2019-11-04 ##
+
 ### Added ###
 - references and better example to README
 - `graph.py` and `ecc_algorithms.py` modules---makes package more maintainable and extensible
@@ -115,5 +119,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - junk code in misc dir
 
 ## [0.1.0] - 2019-10-07 ##
+
 ### Added ###
 - code in its raw, disorganized, poorly documented, inefficient state
