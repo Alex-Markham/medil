@@ -8,7 +8,7 @@ def long_description():
 
 setup(
     name="medil",
-    version="0.7.0",
+    version="1.0.0",
     author="Alex Markham",
     author_email="alex.markham@causal.dev",
     description="MeDIL is a Python package for causal factor analysis with the (me)asurement (d)ependence (i)nducing (l)atent causal model framework.",
@@ -16,10 +16,17 @@ setup(
     long_description=long_description(),
     license="GNU Affero General Public License version 3 or later (AGPLv3+)",
     packages=["medil"],
-    install_requires=["numpy"],
+    install_requires=["numpy, scipy"],
     extras_require={
         "vis": ["matplotlib", "networkx"],
-        "dgm": ["dcor", "xicorrelation", "torch"],
-        "all": ["matplotlib", "networkx", "dcor", "dcor", "xicorrelation", "torch"],
+        "dgm": ["dcor", "scikit-learn", "torch", "xicorrelation"],
+        "all": [
+            "dcor",
+            "matplotlib",
+            "networkx",
+            "scikit-learn",
+            "torch",
+            "xicorrelation",
+        ],
     },
 )

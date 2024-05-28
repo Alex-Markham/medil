@@ -2,6 +2,7 @@
 
 from datetime import datetime
 import os
+from pathlib import Path
 import pickle
 import warnings
 
@@ -9,7 +10,7 @@ import numpy as np
 import numpy.typing as npt
 from numpy.random import default_rng
 from scipy.optimize import minimize
-from sklearn.model_selection import train_valid_split
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler as sc
 import torch
 from torch.utils.data import DataLoader, TensorDataset
@@ -137,11 +138,12 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         self,
         seed: int = 0,
         dof: int = 0,
-        path: str = "",
+        path: str = "trained_ncfa/",
         verbose: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
+        Path(path).mkdir(exist_ok=True)
         self.path = path
         self.verbose = verbose
         self.seed = seed
@@ -162,16 +164,16 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
     def log(self, entry: str) -> None:
         time_stamped_entry = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {entry}"
         with open(f"{self.path}training.log", "a") as log_file:
-            log_file.write(time_stamped_entry)
+            log_file.write(time_stamped_entry + "\n")
         if self.verbose:
             print(time_stamped_entry)
 
     def fit(self, dataset: npt.NDArray) -> "NeuroCausalFactorAnalysis":
-        self.doffed = self.assign_dof()
         self.dataset = dataset
+        self.doffed = self.assign_dof()
 
         standardized = sc().fit_transform(dataset)
-        train_split, valid_split = train_valid_split(
+        train_split, valid_split = train_test_split(
             standardized, train_size=0.7, random_state=self.seed
         )
 
@@ -198,7 +200,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             self._compute_biadj()
 
         num_cliques, num_meas = self.biadj.shape
-        if self.dof == 0:
+        if self.hyperparams["dof"] == 0:
             # then default to 3x num_meas overcomplete
             self.dof = num_meas * 3
         elif self.dof < num_cliques:
@@ -302,7 +304,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             train_er = train_er / nbatch
             train_elbo.append(train_lb)
             train_error.append(train_er)
-            print(f"Finish training epoch {idx} with loss {train_lb}")
+            self.log(f"Finish training epoch {idx} with loss {train_lb}")
 
             # append validation loss
             valid_lb, valid_er = self._valid_vae(model, valid_loader)
