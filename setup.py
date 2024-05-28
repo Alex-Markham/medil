@@ -16,7 +16,7 @@ setup(
     long_description=long_description(),
     license="GNU Affero General Public License version 3 or later (AGPLv3+)",
     packages=["medil"],
-    install_requires=["numpy, scipy"],
+    install_requires=["numpy", "scipy"],
     extras_require={
         "vis": ["matplotlib", "networkx"],
         "dgm": ["dcor", "scikit-learn", "torch", "xicorrelation"],
