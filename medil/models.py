@@ -1,27 +1,24 @@
 """MeDIL causal model base class and a preconfigured NCFA class."""
 
+from datetime import datetime
+import os
+import pickle
 import warnings
 
 import numpy as np
 import numpy.typing as npt
 from numpy.random import default_rng
 from scipy.optimize import minimize
+from sklearn.model_selection import train_valid_split
+from sklearn.preprocessing import StandardScaler as sc
+import torch
+from torch.utils.data import DataLoader, TensorDataset
 
 from .ecc_algorithms import find_heuristic_1pc
 from .independence_testing import estimate_UDG
 
 # from learning.vae import VariationalAutoencoder
-# from learning.params import train_dict
-# from datetime import datetime
-# import numpy as np
-# import torch
 # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-# from learning.train import train_vae
-# import torch
-# import numpy as np
-# import pickle
-# import os
 
 
 class MedilCausalModel(object):
@@ -138,16 +135,25 @@ class GaussianMCM(MedilCausalModel):
 
 
 class NeuroCausalFactorAnalysis(MedilCausalModel):
-    def __init__(self, seed: int = 0, dof: int = 0, **kwargs):
+    def __init__(
+        self,
+        seed: int = 0,
+        dof: int = 0,
+        path: str = "",
+        verbose: bool = False,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
-        self.hyper_params = {
-            "seed": seed,
+        self.path = path
+        self.verbose = verbose
+        self.seed = seed
+        self.hyperparams = {
             "heuristic": True,
             "method": "xicor",
             "alpha": 0.05,
             "dof": dof,
             "batch_size": 128,
-            "epoch": 200,
+            "num_epochs": 200,
             "lr": 0.005,
             "beta": 1,
             "num_valid": 1000,
@@ -155,28 +161,34 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
         self.parameters = Parameters("vae")
 
+    def log(self, entry: str) -> None:
+        time_stamped_entry = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {entry}"
+        with open(f"{self.path}training.log", "a") as log_file:
+            log_file.write(time_stamped_entry)
+        if self.verbose:
+            print(time_stamped_entry)
+
     def fit(self, dataset: npt.NDArray) -> "NeuroCausalFactorAnalysis":
-        self.dataset = dataset
         self.doffed = self.assign_dof()
+        self.dataset = dataset
 
-        samples, valid_samples = dataset
-        train_loader = load_dataset_real(samples, batch_size)
-        valid_loader = load_dataset_real(valid_samples, batch_size)
-
-        np.random.seed(self.hyper_params["seed"])
-
-        run_vae_ablation(self.doffed, train_loader, valid_loader, path_ablation, seed)
-
-        # run_vae_ablation(biadj_mat_recon, train_loader, valid_loader, path, seed):
-        # train & validate heuristic MeDIL VAE
-        mh, nh = biadj_mat_recon.shape
-        model_recon, loss_recon, error_recon = self._train_vae(
-            mh, nh, biadj_mat_recon, train_loader, valid_loader, seed
+        standardized = sc().fit_transform(dataset)
+        train_split, valid_split = train_valid_split(
+            standardized, train_size=0.7, random_state=self.seed
         )
-        torch.save(model_recon, os.path.join(path, "model_recon.pt"))
-        with open(os.path.join(path, "loss_recon.pkl"), "wb") as handle:
+
+        train_loader = self._data_loader(train_split)
+        valid_loader = self._data_loader(valid_split)
+
+        np.random.seed(self.seed)
+
+        model_recon, loss_recon, error_recon = self._train_vae(
+            train_loader, valid_loader
+        )
+        torch.save(model_recon, os.path.join(self.path, "model_recon.pt"))
+        with open(os.path.join(self.path, "loss_recon.pkl"), "wb") as handle:
             pickle.dump(loss_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        with open(os.path.join(path, "error_recon.pkl"), "wb") as handle:
+        with open(os.path.join(self.path, "error_recon.pkl"), "wb") as handle:
             pickle.dump(error_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     def assign_dof(self) -> npt.NDArray:
@@ -214,11 +226,20 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
     def _estimate_udg(self):
         self.udg, pvals = estimate_UDG(
             self.dataset,
-            method=self.hyper_params["method"],
-            significance_level=self.hyper_params["alpha"],
+            method=self.hyperparams["method"],
+            significance_level=self.hyperparams["alpha"],
         )
 
-    def _train_vae(m, n, biadj_mat, train_loader, valid_loader, seed):
+    def _data_loader(self, sample):
+        sample_x = sample.astype(np.float32)
+        sample_z = np.empty(shape=(sample_x.shape[0], 0)).astype(np.float32)
+        dataset = TensorDataset(torch.tensor(sample_x), torch.tensor(sample_z))
+        data_loader = DataLoader(
+            dataset, batch_size=self.hyperparams["batch_size"], shuffle=False
+        )
+        return data_loader
+
+    def _train_vae(self, train_loader, valid_loader):
         """Training VAE with the specified image dataset
         :param m: dimension of the latent variable
         :param n: dimension of the observed variable
@@ -229,39 +250,38 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         :return: trained model and training loss history
         """
 
-        # load parameters
-        np.random.seed(seed)
-        epoch, lr, beta = train_dict["epoch"], train_dict["lr"], train_dict["beta"]
+        m, n = self.doffed.shape
 
         # building VAE
-        mask = biadj_mat.T.astype("float32")
+        mask = self.doffed.T.astype("float32")
         mask = torch.tensor(mask).to(device)
         model = VariationalAutoencoder(m, n, mask)
         model = model.to(device)
         optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-5)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 50, gamma=0.90)
         num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-        print(
-            f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Number of parameters: {num_params}"
-        )
+        self.log(f"Number of parameters: {num_params}")
 
         # training loop
         model.train()
         train_elbo, train_error = [], []
         valid_elbo, valid_error = [], []
 
-        for epoch in range(epoch):
-            print(
-                f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Training on epoch {epoch}..."
-            )
+        for idx in range(self.hyperparams["num_epochs"]):
+            self.log(f"Training on epoch {idx}...")
             train_lb, train_er, nbatch = 0.0, 0.0, 0
 
             for x_batch, _ in train_loader:
                 batch_size = x_batch.shape[0]
                 x_batch = x_batch.to(device)
                 recon_batch, logcov_batch, mu_batch, logvar_batch = model(x_batch)
-                loss = elbo_gaussian(
-                    x_batch, recon_batch, logcov_batch, mu_batch, logvar_batch, beta
+                loss = self._elbo_gaussian(
+                    x_batch,
+                    recon_batch,
+                    logcov_batch,
+                    mu_batch,
+                    logvar_batch,
+                    self.hyperparams["beta"],
                 )
                 error = self._recon_error(
                     x_batch, recon_batch, logcov_batch, weighted=False
@@ -281,9 +301,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             train_er = train_er / nbatch
             train_elbo.append(train_lb)
             train_error.append(train_er)
-            print(
-                f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Finish training epoch {epoch} with loss {train_lb}"
-            )
+            print(f"Finish training epoch {epoch} with loss {train_lb}")
 
             # append validation loss
             valid_lb, valid_er = self._valid_vae(model, valid_loader)
@@ -297,7 +315,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
         return model, elbo, error
 
-    def _valid_vae(model, valid_loader):
+    def _valid_vae(self, model, valid_loader):
         """Training VAE with the specified image dataset
         :param model: trained VAE model
         :param valid_loader: validation image dataset loader
@@ -331,13 +349,11 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         # report validation loss
         valid_lb = valid_lb / nbatch
         valid_er = valid_er / nbatch
-        print(
-            f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Finish validation with loss {valid_lb}"
-        )
+        self.log(f"Finish validation with loss {valid_lb}")
 
         return valid_lb, valid_er
 
-    def _elbo_gaussian(x, x_recon, logcov, mu, logvar, beta):
+    def _elbo_gaussian(self, x, x_recon, logcov, mu, logvar, beta):
         """Calculating loss for variational autoencoder
         :param x: original image
         :param x_recon: reconstruction in the output layer
@@ -374,7 +390,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
         return -loss
 
-    def _recon_error(x, x_recon, logcov, weighted):
+    def _recon_error(self, x, x_recon, logcov, weighted):
         """Reconstruction error given x and x_recon
         :param x: original image
         :param x_recon: reconstruction in the output layer
@@ -406,6 +422,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
         return error
 
+    @staticmethod
     def _apply_along_axis(function, x, axis=0):
         """Helper function to return along a particular axis
         Parameters
