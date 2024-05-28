@@ -159,6 +159,16 @@ class TestGaussianMCM:
 
 
 class TestNeuroCausalFactorAnalysis:
-    def test_init(self):
-        with pytest.raises(NotImplementedError):
-            NeuroCausalFactorAnalysis()
+    def test_fit_m_gaussian(self):
+        """Simple "M" graph, with 2 latent and 3 measurement vars, sampled from GaussianMCM."""
+        biadj = np.zeros((2, 3), bool)
+        biadj[[0, 0, 1, 1], [0, 1, 1, 2]] = True
+        mcm = GaussianMCM(biadj=biadj)
+        params = mcm.parameters
+        params.biadj_weights = biadj.astype(float)
+        params.error_means = np.zeros(3)
+        params.error_variances = np.ones(3)
+
+        dataset = mcm.sample(10000)
+
+        NeuroCausalFactorAnalysis(verbose=True).fit(dataset)

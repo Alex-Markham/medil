@@ -16,9 +16,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from .ecc_algorithms import find_heuristic_1pc
 from .independence_testing import estimate_UDG
-
-# from learning.vae import VariationalAutoencoder
-# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+from .vae import VariationalAutoencoder
 
 
 class MedilCausalModel(object):
@@ -158,8 +156,8 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             "beta": 1,
             "num_valid": 1000,
         }
-
         self.parameters = Parameters("vae")
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def log(self, entry: str) -> None:
         time_stamped_entry = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {entry}"
@@ -190,6 +188,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             pickle.dump(loss_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
         with open(os.path.join(self.path, "error_recon.pkl"), "wb") as handle:
             pickle.dump(error_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        return self
 
     def assign_dof(self) -> npt.NDArray:
         """Assign degrees of freedom (latent variables) of VAE to
@@ -254,10 +253,12 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
         # building VAE
         mask = self.doffed.T.astype("float32")
-        mask = torch.tensor(mask).to(device)
+        mask = torch.tensor(mask).to(self.device)
         model = VariationalAutoencoder(m, n, mask)
-        model = model.to(device)
-        optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-5)
+        model = model.to(self.device)
+        optimizer = torch.optim.AdamW(
+            model.parameters(), lr=self.hyperparams["lr"], weight_decay=1e-5
+        )
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 50, gamma=0.90)
         num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         self.log(f"Number of parameters: {num_params}")
@@ -273,7 +274,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
             for x_batch, _ in train_loader:
                 batch_size = x_batch.shape[0]
-                x_batch = x_batch.to(device)
+                x_batch = x_batch.to(self.device)
                 recon_batch, logcov_batch, mu_batch, logvar_batch = model(x_batch)
                 loss = self._elbo_gaussian(
                     x_batch,
@@ -301,7 +302,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             train_er = train_er / nbatch
             train_elbo.append(train_lb)
             train_error.append(train_er)
-            print(f"Finish training epoch {epoch} with loss {train_lb}")
+            print(f"Finish training epoch {idx} with loss {train_lb}")
 
             # append validation loss
             valid_lb, valid_er = self._valid_vae(model, valid_loader)
@@ -321,10 +322,6 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         :param valid_loader: validation image dataset loader
         :return: validation loss
         """
-
-        # load parameters
-        beta = train_dict["beta"]
-
         # set to evaluation mode
         model.eval()
         valid_lb, valid_er, nbatch = 0.0, 0.0, 0
@@ -332,10 +329,15 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         for x_batch, _ in valid_loader:
             with torch.no_grad():
                 batch_size = x_batch.shape[0]
-                x_batch = x_batch.to(device)
+                x_batch = x_batch.to(self.device)
                 recon_batch, logcov_batch, mu_batch, logvar_batch = model(x_batch)
                 loss = self._elbo_gaussian(
-                    x_batch, recon_batch, logcov_batch, mu_batch, logvar_batch, beta
+                    x_batch,
+                    recon_batch,
+                    logcov_batch,
+                    mu_batch,
+                    logvar_batch,
+                    self.hyperparams["beta"],
                 )
                 error = self._recon_error(
                     x_batch, recon_batch, logcov_batch, weighted=False
