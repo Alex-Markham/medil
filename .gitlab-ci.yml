@@ -22,7 +22,7 @@ pages:
     - make html
     - cd ..
     - mv docs/_build/html/ public/
-    - wget https://gitlab.com/alex-markham/medil/-/jobs/artifacts/develop/download?job=pytest
+    - wget https://gitlab.com/alex-markham/medil/-/jobs/6970286118/artifacts/download?file_type=archive
     - unzip -o 'download?job=pytest'
     - mv htmlcov/ public/
   artifacts:
