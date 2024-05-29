@@ -13,7 +13,7 @@ pytest:
     - changes:
       - "*.py"
       - "tests/*.py"
-      - "medel/*.py"
+      - "medil/*.py"
 
 pages:
   image: alpine
