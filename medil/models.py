@@ -64,12 +64,14 @@ class Parameters(object):
 
 
 class GaussianMCM(MedilCausalModel):
+    """A linear MeDIL causal model with Gaussian random variables."""
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.parameters = Parameters("Gaussian")
 
     def fit(self, dataset: npt.NDArray) -> "GaussianMCM":
-        """"""
+        """Fit a Gaussian MCM to a dataset."""
         self.dataset = dataset
         if self.biadj.size == 0:
             self._compute_biadj()
@@ -134,6 +136,8 @@ class GaussianMCM(MedilCausalModel):
 
 
 class NeuroCausalFactorAnalysis(MedilCausalModel):
+    """A MeDIL causal model represented by a deep generative model."""
+
     def __init__(
         self,
         seed: int = 0,
