@@ -19,10 +19,10 @@ pages:
   image: alpine
   stage: deploy
   script:
-    - apk add make unzip py3-pip python3-dev py3-sphinx py3-sphinx_rtd_theme
+    - apk add make unzip py3-pip python3-dev
     - python3 -m venv .
     - . bin/activate
-    - pip install sphinx-mdinclude sphinxcontrib-bibtex
+    - pip install sphinx sphinx-rtd-theme sphinx-mdinclude sphinxcontrib-bibtex
     - cd docs
     - make html
     - cd ..

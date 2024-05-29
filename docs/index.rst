@@ -17,7 +17,7 @@ Features:
 
 * :math:`\ell_0`-penalized maximum likelihood estimation (BIC score-based search) for minimum MeDIL causal graphs in the linear Gaussian setting, as well as nonparametric constraint-based search using `distance covariance <https://dcor.readthedocs.io/en/stable/index.html>`_ or `xi correlation <https://pypi.org/project/xicorrelation/>`_
 
-* random generation and sampling from of linear Gaussian causal factor models
+* random generation of and sampling from linear Gaussian causal factor models
 
 * exact search for minimum edge clique cover (ECC) :cite:`Gramm_2009` as well as polynomial time heuristic using the one-pure-child assumption :cite:`markham2023neuro`
 
