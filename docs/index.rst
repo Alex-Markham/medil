@@ -11,8 +11,14 @@ The package is under active development---see the ``develop`` branch of the repo
 :Version: |version|
 :Date: |today|
 
+Installation:
+-------------
+You can install the package from `PyPI <https://pypi.org/project/medil/>`_ with the command ``pip install medil``.
+
 Features:
 ---------
+* `scikit-learn <https://scikit-learn.org/stable/developers/develop.html#apis-of-scikit-learn-objects>`_-style API
+
 * estimation of sparse causal factor structure and loadings in the linear Gaussian setting or more generally using a deep generative model :cite:`markham2023neuro`
 
 * :math:`\ell_0`-penalized maximum likelihood estimation (BIC score-based search) for minimum MeDIL causal graphs in the linear Gaussian setting, as well as nonparametric constraint-based search using `distance covariance <https://dcor.readthedocs.io/en/stable/index.html>`_ or `xi correlation <https://pypi.org/project/xicorrelation/>`_
@@ -21,20 +27,20 @@ Features:
 
 * exact search for minimum edge clique cover (ECC) :cite:`Gramm_2009` as well as polynomial time heuristic using the one-pure-child assumption :cite:`markham2023neuro`
 
-Design principles:
-------------------
-* `scikit-learn <https://scikit-learn.org/stable/developers/develop.html#apis-of-scikit-learn-objects>`_-style API
+..
+   Design principles:
+   ------------------
 
-* basic functionality with minimal dependencies (just `SciPy
-  <https://scipy.org>`_) and optional dependencies (`PyTorch
-  <https://pytorch.org>`_, `NetworkX <https://networkx.org/>`_, etc.) for more functionality
+   * basic functionality with minimal dependencies (just `SciPy
+     <https://scipy.org>`_) and optional dependencies (`PyTorch
+     <https://pytorch.org>`_, `NetworkX <https://networkx.org/>`_, etc.) for more functionality
 
 Further documentation:
 ----------------------
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   installation
+   self
    tutorial
    theory
    citing
@@ -42,3 +48,9 @@ Further documentation:
    apilist
    license
    changelog
+
+Indices and tables
+------------------
+
+* :ref:`genindex`
+* :ref:`modindex`

@@ -16,18 +16,13 @@ setup(
     long_description=long_description(),
     license="GNU Affero General Public License version 3 or later (AGPLv3+)",
     packages=["medil"],
-    install_requires=["scipy"],
-    extras_require={
-        "vis": ["matplotlib", "networkx", "seaborn"],
-        "dgm": ["dcor", "scikit-learn", "torch", "xicorrelation"],
-        "all": [
-            "dcor",
-            "matplotlib",
-            "networkx",
-            "seaborn",
-            "scikit-learn",
-            "torch",
-            "xicorrelation",
-        ],
-    },
+    install_requires=[
+        "dcor",
+        "matplotlib",
+        "networkx",
+        "seaborn",
+        "scikit-learn",
+        "torch",
+        "xicorrelation",
+    ],
 )

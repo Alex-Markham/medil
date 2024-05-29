@@ -4,7 +4,7 @@ pytest:
   script:
     - conda update conda
     - conda install pip
-    - pip install pytest-cov .[all]
+    - pip install pytest-cov .
     - python -m pytest --cov-report html --cov-report term --cov=medil
   artifacts:
     paths:

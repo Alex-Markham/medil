@@ -1,5 +1,5 @@
-MeDIL Causal Modelling Framework
-================================
+Theory
+======
 
 :cite:`Markham_2020_UAI` introduce measurement dependence inducing latent (MeDIL) causal models.
 These models have disjoint sets of (unobserved) latent variables and (observed) measurement variables.
