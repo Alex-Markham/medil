@@ -35,10 +35,10 @@ Further documentation:
    :maxdepth: 2
 
    installation
-   theory
    tutorial
-   apilist
+   theory
    citing
    references
-   changelog
+   apilist
    license
+   changelog
