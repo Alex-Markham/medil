@@ -9,6 +9,9 @@ pytest:
   artifacts:
     paths:
       - htmlcov/
+  rules:
+    - changes:
+      - "*.py"
 
 pages:
   image: alpine
