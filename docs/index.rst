@@ -23,7 +23,7 @@ Features:
 
 Design principles:
 ------------------
-* `scikit-learn <https://scikit-learn.org/stable/developers/develop.html#apis-of-scikit-learn-objects>`_ style API
+* `scikit-learn <https://scikit-learn.org/stable/developers/develop.html#apis-of-scikit-learn-objects>`_-style API
 
 * basic functionality with minimal dependencies (just `SciPy
   <https://scipy.org>`_) and optional dependencies (`PyTorch
