@@ -9,11 +9,6 @@ pytest:
   artifacts:
     paths:
       - htmlcov/
-  rules:
-    - changes:
-      - "*.py"
-      - "tests/*.py"
-      - "medil/*.py"
 
 pages:
   image: alpine
@@ -33,7 +28,3 @@ pages:
   artifacts:
     paths:
     - public
-  rules:
-    - changes:
-      - "*.md"
-      - "docs/*.rst"
