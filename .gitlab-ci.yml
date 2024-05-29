@@ -23,7 +23,7 @@ pages:
     - cd ..
     - mv docs/_build/html/ public/
     - wget https://gitlab.com/alex-markham/medil/-/jobs/6970286118/artifacts/download?file_type=archive
-    - unzip -o 'download?job=pytest'
+    - unzip -o 'download?file_type=archive'
     - mv htmlcov/ public/
   artifacts:
     paths:
