@@ -1,4 +1,4 @@
-[![PyPI version](https://badge.fury.io/py/medil.svg)](https://badge.fury.io/py/medil) ![Static Badge](https://img.shields.io/badge/docs-medil.causal.dev-%23b57edc)
+[![PyPI version](https://badge.fury.io/py/medil.svg)](https://badge.fury.io/py/medil) [![Static Badge](https://img.shields.io/badge/docs-medil.causal.dev-%23b57edc)](https://medil.causal.dev)
 
 ## MeDIL
 MeDIL is a Python package for causal factor analysis, using the measurement dependence inducing latent (MeDIL) causal model framework[<sup>1</sup>](#medil_paper).
