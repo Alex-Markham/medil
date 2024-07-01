@@ -1,3 +1,5 @@
+[![PyPI version](https://badge.fury.io/py/medil.svg)](https://badge.fury.io/py/medil) ![Static Badge](https://img.shields.io/badge/docs-medil.causal.dev-%23b57edc)
+
 ## MeDIL
 MeDIL is a Python package for causal factor analysis, using the measurement dependence inducing latent (MeDIL) causal model framework[<sup>1</sup>](#medil_paper).
 In addition to simple linear Gaussian models, MeDIL also supports deep generative models[<sup>2</sup>](#ncfa_paper).
