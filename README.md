@@ -7,7 +7,7 @@ More information can be found in the [documentation](https://medil.causal.dev).
 ### Support, Bugs, and Contributing
 If you have any questions, suggestions, feedback, or bugs to report, please [open an issue on Gitlab](https://gitlab.com/alex-markham/medil/issues/new) or [on Github](https://github.com/Alex-Markham/medil/issues/new) or [contact me](https://causal.dev/#contact).
 
-Thanks to contributors [Aditya Chivukula](https://github.com/adityachivu/) and [Mingyu Liu](https://github.com/JerryLiuMY)!
+Thanks to contributors An Hui Chang, [Aditya Chivukula](https://github.com/adityachivu/), and [Mingyu Liu](https://github.com/JerryLiuMY)!
 
 ### License
 See [LICENSE](https://gitlab.com/alex-markham/medil/blob/master/LICENSE.md), which is the GNU Affero General Public License version 3 or later (AGPLv3+).
