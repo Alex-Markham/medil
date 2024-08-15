@@ -2,6 +2,7 @@ import numpy as np
 from medil.sample import mcm, biadj
 import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.ticker as ticker
 
 
 # Set the random variable generator seed
@@ -123,3 +124,48 @@ for lambda_reg in lambda_values:
         except Exception as e:
             lse_failure_count += 1
             print(f"Exception encountered during LSE with lambda_reg={lambda_reg}, mu_reg={mu_reg}: {e}")
+
+print(f"Total MLE optimization failures: {mle_failure_count}")
+print(f"Total LSE optimization failures: {lse_failure_count}")
+print(f"Total RuntimeWarnings encountered during MLE: {runtime_warning_count_mle}")
+print(f"Total RuntimeWarnings encountered during LSE: {runtime_warning_count_lse}")
+
+# Plot heatmap for Squared Distance (MLE)
+plt.figure(figsize=(10, 8))
+sns.heatmap(squared_distance_results_mle, xticklabels=[f'{x:.2g}' for x in mu_values], yticklabels=[f'{y:.2g}' for y in lambda_values], cmap="Reds")
+plt.title('Squared Distance for Penalized MLE')
+plt.xlabel('mu_reg')
+plt.ylabel('lambda_reg')
+plt.show()
+
+# Plot heatmap for SFD Value (MLE)
+plt.figure(figsize=(10, 8))
+sns.heatmap(sfd_results_mle, xticklabels=[f'{x:.2g}' for x in mu_values], yticklabels=[f'{y:.2g}' for y in lambda_values], cmap="Blues")
+plt.title('SFD Value for Penalized MLE')
+plt.xlabel('mu_reg')
+plt.ylabel('lambda_reg')
+plt.show()
+
+# Plot heatmap for Squared Distance (LSE)
+plt.figure(figsize=(10, 8))
+sns.heatmap(squared_distance_results_lse, xticklabels=[f'{x:.2g}' for x in mu_values], yticklabels=[f'{y:.2g}' for y in lambda_values], cmap="Reds")
+plt.title('Squared Distance for Penalized LSE')
+plt.xlabel('mu_reg')
+plt.ylabel('lambda_reg')
+plt.show()
+
+# Plot heatmap for SFD Value (LSE)
+plt.figure(figsize=(10, 8))
+sns.heatmap(sfd_results_lse, xticklabels=[f'{x:.2g}' for x in mu_values], yticklabels=[f'{y:.2g}' for y in lambda_values], cmap="Blues")
+plt.title('SFD Value for Penalized LSE')
+plt.xlabel('mu_reg')
+plt.ylabel('lambda_reg')
+plt.show()
+
+print(f"Best lambda_reg for MLE: {best_lambda_mle}")
+print(f"Best mu_reg for MLE: {best_mu_mle}")
+print(f"Minimum squared distance (MLE): {min_squared_distance_mle}\n")
+
+print(f"Best lambda_reg for LSE: {best_lambda_lse}")
+print(f"Best mu_reg for LSE: {best_mu_lse}")
+print(f"Minimum squared distance (LSE): {min_squared_distance_lse}")
