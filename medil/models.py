@@ -573,3 +573,24 @@ class DevMedil(MedilCausalModel):
             return self.fit_penalized_lse(dataset)
         else:
             raise ValueError("Method must be either 'mle' or 'lse'")
+
+# define a function for model fitting and metric calculation
+def calculate_metrics(model, method, threshold, W_star):
+    # mle and lse
+    if method == 'mle':
+        W_hat = model.W_hat_mle
+    else:
+        W_hat = model.W_hat_lse
+    # metric A
+    squared_dist = lambda perm: np.sum((W_hat[perm] - W_star) ** 2)
+    perms = list(itertools.permutations(range(len(W_hat))))
+    dists = np.fromiter((squared_dist(perm) for perm in perms), dtype=float)
+    opt_idx = np.argmin(dists)
+    squared_distance = dists[opt_idx]
+    perm = perms[opt_idx]
+
+    # metric B
+    W_hat_zero_pattern = (np.abs(W_hat) > threshold).astype(int)
+    sfd_value, ushd_value = sfd(biadj_matrix, W_hat_zero_pattern)
+
+    return squared_distance, perm, sfd_value, ushd_value
