@@ -15,6 +15,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler as sc
 import torch
 from torch.utils.data import DataLoader, TensorDataset
+from scipy.linalg import sqrtm
 
 from .ecc_algorithms import find_heuristic_1pc
 from .independence_testing import estimate_UDG
@@ -542,7 +543,8 @@ class DevMedil(MedilCausalModel):
     # ρ(W), the nuclear norm defined as tr(√(W⊤W))
     def rho(self, W: npt.NDArray) -> float:
         WWt = np.dot(W.T, W)  # Compute W^T times W
-        sqrt_WWt = np.linalg.sqrtm(WWt)  # Compute the matrix square root of W^T times W
+        sqrt_WWt = sqrtm(WWt)  # Compute the matrix square root of W^T times W
+        sqrt_WWt = np.real(sqrt_WWt) # Take only the real part
         return np.trace(sqrt_WWt)  # Take the trace of the resulting matrix
 
     # σ(W), the sum of absolute values of elements (L1 norm)
