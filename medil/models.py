@@ -453,7 +453,121 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             [function(x_i) for x_i in torch.unbind(x, dim=axis)], dim=axis
         )
 
-
+# implement penalized mle and penalized lse with a new class
 class DevMedil(MedilCausalModel):
-    # fill in
-    # test
+    def __init__(
+        self,
+        biadj: npt.NDArray = np.array([]),
+        udg: npt.NDArray = np.array([]),
+        one_pure_child: bool = True,
+        rng=np.random.default_rng(0),
+        lambda_reg: float = 0.1,
+        mu_reg: float = 0.1
+    ) -> None:
+        super().__init__(biadj, udg, one_pure_child, rng)
+        self.lambda_reg = lambda_reg
+        self.mu_reg = mu_reg
+
+    # penalized MLE
+    def fit_penalized_mle(self, dataset: npt.NDArray) -> "TestMedilModel":
+        k, n = self.biadj.shape
+        Sigma_hat = np.cov(dataset.T)
+
+        def penalized_mle_loss(params):
+            W = params[:k*n].reshape(k, n)
+            D = np.diag(params[k*n:])
+
+            Sigma = self.compute_sigma(W, D)
+            Sigma_inv = np.linalg.inv(Sigma)
+            sign, logdet = np.linalg.slogdet(Sigma_inv)
+
+            if sign <= 0:
+                return np.inf
+
+            loss = np.trace(np.dot(Sigma_hat, Sigma_inv)) - logdet
+            loss += self.lambda_reg * self.rho(W) + self.mu_reg * self.sigma(W)
+
+            return loss
+
+        initial_W = self.rng.standard_normal((k, n))
+        initial_D = self.rng.random(n)
+        initial_params = np.hstack([initial_W.flatten(), initial_D])
+
+        result = minimize(penalized_mle_loss, initial_params, method='BFGS')
+        self.result = result
+        self.W_hat_mle = result.x[:k*n].reshape(k, n)
+        self.D_hat_mle = np.diag(result.x[k*n:])
+        self.convergence_success_mle = result.success
+        self.convergence_message_mle = result.message
+
+        return self
+
+    # penalized LSE
+    def fit_penalized_lse(self, dataset: npt.NDArray) -> "TestMedilModel":
+        k, n = self.biadj.shape
+        Sigma_hat = np.cov(dataset.T)
+
+
+        def penalized_lse_loss(params):
+            W = params[:k*n].reshape(k, n)
+            D = np.diag(params[k*n:])
+
+            loss = norm(Sigma_hat - W.T @ W - D, 'fro')**2
+            # nuclear norm for the first penalty term
+            loss += self.lambda_reg * self.rho(W)
+            # the second penalty function (e.g., L0 approximation or nuclear norm)
+            loss += self.mu_reg * self.sigma(W)
+
+            return loss
+
+        initial_W = self.rng.standard_normal((k, n))
+        initial_D = np.abs(self.rng.standard_normal(n))
+        initial_params = np.concatenate([initial_W.flatten(), initial_D])
+
+        result = minimize(penalized_lse_loss, initial_params, method='BFGS')
+        self.result = result
+        self.W_hat_lse = result.x[:k*n].reshape(k, n)
+        self.D_hat_lse = np.diag(np.abs(result.x[k*n:]))
+        self.convergence_success_lse = result.success
+        self.convergence_message_lse = result.message
+
+        return self
+
+    # compute sigma 
+    def compute_sigma(self, W: npt.NDArray, D: npt.NDArray) -> npt.NDArray:
+        Sigma = np.dot(W.T, W) + D 
+        return Sigma
+
+    # ρ(W), the sum of the singular values of a matrix
+    def rho(self, W: npt.NDArray) -> float:
+        return np.sum(np.linalg.svd(W, compute_uv=False))
+
+    # σ(W), the number of non-zero elements
+    def sigma(self, W: npt.NDArray) -> float:
+        return np.sum(W != 0)
+
+    def sample(self, sample_size: int, method: str = 'mle') -> npt.NDArray:
+        if method not in ['mle', 'lse']:
+            raise ValueError("Method must be either 'mle' or 'lse'")
+
+        if method == 'mle':
+            if not hasattr(self, 'W_hat_mle') or not hasattr(self, 'D_hat_mle'):
+                raise ValueError("MLE model must be fitted before sampling")
+            W_hat, D_hat = self.W_hat_mle, self.D_hat_mle
+        else:
+            if not hasattr(self, 'W_hat_lse') or not hasattr(self, 'D_hat_lse'):
+                raise ValueError("LSE model must be fitted before sampling")
+            W_hat, D_hat = self.W_hat_lse, self.D_hat_lse
+
+        k, n = W_hat.shape
+        L = self.rng.standard_normal((sample_size, k))
+        epsilon = self.rng.multivariate_normal(np.zeros(n), D_hat, sample_size)
+        return np.dot(L, W_hat) + epsilon
+
+    def fit(self, dataset: npt.NDArray, method: str = 'mle') -> "TestMedilModel":
+        if method == 'mle':
+            return self.fit_penalized_mle(dataset)
+        elif method == 'lse':
+            return self.fit_penalized_lse(dataset)
+        else:
+            raise ValueError("Method must be either 'mle' or 'lse'")
