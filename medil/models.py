@@ -469,7 +469,7 @@ class DevMedil(MedilCausalModel):
         self.mu_reg = mu_reg
 
     # penalized MLE
-    def fit_penalized_mle(self, dataset: npt.NDArray) -> "DevMedil:
+    def fit_penalized_mle(self, dataset: npt.NDArray) -> "DevMedil":
         k, n = self.biadj.shape
         Sigma_hat = np.cov(dataset.T)
 
