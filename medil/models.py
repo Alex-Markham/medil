@@ -469,7 +469,7 @@ class DevMedil(MedilCausalModel):
         self.mu_reg = mu_reg
 
     # penalized MLE
-    def fit_penalized_mle(self, dataset: npt.NDArray) -> "TestMedilModel":
+    def fit_penalized_mle(self, dataset: npt.NDArray) -> "DevMedil:
         k, n = self.biadj.shape
         Sigma_hat = np.cov(dataset.T)
 
@@ -503,7 +503,7 @@ class DevMedil(MedilCausalModel):
         return self
 
     # penalized LSE
-    def fit_penalized_lse(self, dataset: npt.NDArray) -> "TestMedilModel":
+    def fit_penalized_lse(self, dataset: npt.NDArray) -> "DevMedil":
         k, n = self.biadj.shape
         Sigma_hat = np.cov(dataset.T)
 
@@ -564,7 +564,7 @@ class DevMedil(MedilCausalModel):
         epsilon = self.rng.multivariate_normal(np.zeros(n), D_hat, sample_size)
         return np.dot(L, W_hat) + epsilon
 
-    def fit(self, dataset: npt.NDArray, method: str = 'mle') -> "TestMedilModel":
+    def fit(self, dataset: npt.NDArray, method: str = 'mle') -> "DevMedil":
         if method == 'mle':
             return self.fit_penalized_mle(dataset)
         elif method == 'lse':
