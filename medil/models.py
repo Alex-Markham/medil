@@ -544,9 +544,9 @@ class DevMedil(MedilCausalModel):
         sqrt_WWt = np.linalg.sqrtm(WWt)  # Compute the matrix square root of W^T times W
         return np.trace(sqrt_WWt)  # Take the trace of the resulting matrix
 
-    # σ(W), the number of non-zero elements
+    # σ(W), the sum of absosulte values of elements
     def sigma(self, W: npt.NDArray) -> float:
-        return np.sum(W != 0)
+        return np.sum(np.abs(W))
 
     def sample(self, sample_size: int, method: str = 'mle') -> npt.NDArray:
         if method not in ['mle', 'lse']:
