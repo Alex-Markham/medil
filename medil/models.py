@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import pickle
 import warnings
+import itertools
 
 import numpy as np
 import numpy.typing as npt
