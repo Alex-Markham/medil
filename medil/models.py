@@ -71,7 +71,8 @@ class GaussianMCM(MedilCausalModel):
         self.parameters = Parameters("Gaussian")
 
     def fit(self, dataset: npt.NDArray) -> "GaussianMCM":
-        """Fit a Gaussian MCM to a dataset."""
+        """Fit a Gaussian MCM to a dataset with constraint-based
+        structure learning and least squares parameter estimation."""
         self.dataset = dataset
         if self.biadj.size == 0:
             self._compute_biadj()
@@ -106,11 +107,13 @@ class GaussianMCM(MedilCausalModel):
         return self
 
     def _compute_biadj(self):
+        """Constraint-based structure learning."""
         if self.udg.size == 0:
             self._estimate_udg()
         self.biadj = find_heuristic_1pc(self.udg)
 
     def _estimate_udg(self):
+        """Constraint-based structure learning."""
         samp_size = len(self.dataset)
         cov = np.cov(self.dataset, rowvar=False)
         corr = np.corrcoef(self.dataset, rowvar=False)
@@ -122,6 +125,8 @@ class GaussianMCM(MedilCausalModel):
         self.udg = udg
 
     def sample(self, sample_size: int) -> npt.NDArray:
+        """Sample a dataset from a GaussianMCM, after structure and
+        parameters have been specified or estimated."""
         num_latent = len(self.biadj)
         latent_sample = self.rng.multivariate_normal(
             np.zeros(num_latent), np.eye(num_latent), sample_size
@@ -447,3 +452,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         return torch.stack(
             [function(x_i) for x_i in torch.unbind(x, dim=axis)], dim=axis
         )
+
+
+class DevMedil(MedilCausalModel):
+    # fill in
