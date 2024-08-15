@@ -515,7 +515,7 @@ class DevMedil(MedilCausalModel):
             loss = norm(Sigma_hat - W.T @ W - D, 'fro')**2
             # nuclear norm for the first penalty term
             loss += self.lambda_reg * self.rho(W)
-            # the second penalty function (e.g., L0 approximation or nuclear norm)
+            # L1 norm for the second penalty function
             loss += self.mu_reg * self.sigma(W)
 
             return loss
@@ -538,13 +538,13 @@ class DevMedil(MedilCausalModel):
         Sigma = np.dot(W.T, W) + D 
         return Sigma
 
-    # ρ(W), the sum of the singular values of a matrix
+    # ρ(W), the nuclear norm defined as tr(√(W⊤W))
     def rho(self, W: npt.NDArray) -> float:
         WWt = np.dot(W.T, W)  # Compute W^T times W
         sqrt_WWt = np.linalg.sqrtm(WWt)  # Compute the matrix square root of W^T times W
         return np.trace(sqrt_WWt)  # Take the trace of the resulting matrix
 
-    # σ(W), the sum of absosulte values of elements
+    # σ(W), the sum of absolute values of elements (L1 norm)
     def sigma(self, W: npt.NDArray) -> float:
         return np.sum(np.abs(W))
 
