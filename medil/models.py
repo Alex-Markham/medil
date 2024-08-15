@@ -540,7 +540,9 @@ class DevMedil(MedilCausalModel):
 
     # ρ(W), the sum of the singular values of a matrix
     def rho(self, W: npt.NDArray) -> float:
-        return np.sum(np.linalg.svd(W, compute_uv=False))
+        WWt = np.dot(W.T, W)  # Compute W^T times W
+        sqrt_WWt = np.linalg.sqrtm(WWt)  # Compute the matrix square root of W^T times W
+        return np.trace(sqrt_WWt)  # Take the trace of the resulting matrix
 
     # σ(W), the number of non-zero elements
     def sigma(self, W: npt.NDArray) -> float:
