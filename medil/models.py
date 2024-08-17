@@ -5,17 +5,17 @@ import os
 from pathlib import Path
 import pickle
 import warnings
-import itertools
 
 import numpy as np
-import numpy.typing as npt
 from numpy.random import default_rng
+import numpy.typing as npt
+from scipy.linalg import sqrtm
 from scipy.optimize import minimize
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler as sc
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-from scipy.linalg import sqrtm
+
 
 from .ecc_algorithms import find_heuristic_1pc
 from .independence_testing import estimate_UDG
@@ -455,6 +455,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             [function(x_i) for x_i in torch.unbind(x, dim=axis)], dim=axis
         )
 
+
 # implement penalized mle and penalized lse with a new class
 class DevMedil(MedilCausalModel):
     def __init__(
@@ -464,7 +465,7 @@ class DevMedil(MedilCausalModel):
         one_pure_child: bool = True,
         rng=np.random.default_rng(0),
         lambda_reg: float = 0.1,
-        mu_reg: float = 0.1
+        mu_reg: float = 0.1,
     ) -> None:
         super().__init__(biadj, udg, one_pure_child, rng)
         self.lambda_reg = lambda_reg
@@ -476,8 +477,8 @@ class DevMedil(MedilCausalModel):
         Sigma_hat = np.cov(dataset.T)
 
         def penalized_mle_loss(params):
-            W = params[:k*n].reshape(k, n)
-            D = np.diag(params[k*n:])
+            W = params[: k * n].reshape(k, n)
+            D = np.diag(params[k * n :])
 
             Sigma = self.compute_sigma(W, D)
             Sigma_inv = np.linalg.inv(Sigma)
@@ -495,10 +496,10 @@ class DevMedil(MedilCausalModel):
         initial_D = self.rng.random(n)
         initial_params = np.hstack([initial_W.flatten(), initial_D])
 
-        result = minimize(penalized_mle_loss, initial_params, method='BFGS')
+        result = minimize(penalized_mle_loss, initial_params, method="BFGS")
         self.result = result
-        self.W_hat_mle = result.x[:k*n].reshape(k, n)
-        self.D_hat_mle = np.diag(result.x[k*n:])
+        self.W_hat_mle = result.x[: k * n].reshape(k, n)
+        self.D_hat_mle = np.diag(result.x[k * n :])
         self.convergence_success_mle = result.success
         self.convergence_message_mle = result.message
 
@@ -509,12 +510,11 @@ class DevMedil(MedilCausalModel):
         k, n = self.biadj.shape
         Sigma_hat = np.cov(dataset.T)
 
-
         def penalized_lse_loss(params):
-            W = params[:k*n].reshape(k, n)
-            D = np.diag(params[k*n:])
+            W = params[: k * n].reshape(k, n)
+            D = np.diag(params[k * n :])
 
-            loss = norm(Sigma_hat - W.T @ W - D, 'fro')**2
+            loss = norm(Sigma_hat - W.T @ W - D, "fro") ** 2
             # nuclear norm for the first penalty term
             loss += self.lambda_reg * self.rho(W)
             # L1 norm for the second penalty function
@@ -526,41 +526,41 @@ class DevMedil(MedilCausalModel):
         initial_D = np.abs(self.rng.standard_normal(n))
         initial_params = np.concatenate([initial_W.flatten(), initial_D])
 
-        result = minimize(penalized_lse_loss, initial_params, method='BFGS')
+        result = minimize(penalized_lse_loss, initial_params, method="BFGS")
         self.result = result
-        self.W_hat_lse = result.x[:k*n].reshape(k, n)
-        self.D_hat_lse = np.diag(np.abs(result.x[k*n:]))
+        self.W_hat_lse = result.x[: k * n].reshape(k, n)
+        self.D_hat_lse = np.diag(np.abs(result.x[k * n :]))
         self.convergence_success_lse = result.success
         self.convergence_message_lse = result.message
 
         return self
 
-    # compute sigma 
+    # compute sigma
     def compute_sigma(self, W: npt.NDArray, D: npt.NDArray) -> npt.NDArray:
-        Sigma = np.dot(W.T, W) + D 
+        Sigma = np.dot(W.T, W) + D
         return Sigma
 
     # ρ(W), the nuclear norm defined as tr(√(W⊤W))
     def rho(self, W: npt.NDArray) -> float:
         WWt = np.dot(W.T, W)  # Compute W^T times W
         sqrt_WWt = sqrtm(WWt)  # Compute the matrix square root of W^T times W
-        sqrt_WWt = np.real(sqrt_WWt) # Take only the real part
+        sqrt_WWt = np.real(sqrt_WWt)  # Take only the real part
         return np.trace(sqrt_WWt)  # Take the trace of the resulting matrix
 
     # σ(W), the sum of absolute values of elements (L1 norm)
     def sigma(self, W: npt.NDArray) -> float:
         return np.sum(np.abs(W))
 
-    def sample(self, sample_size: int, method: str = 'mle') -> npt.NDArray:
-        if method not in ['mle', 'lse']:
+    def sample(self, sample_size: int, method: str = "mle") -> npt.NDArray:
+        if method not in ["mle", "lse"]:
             raise ValueError("Method must be either 'mle' or 'lse'")
 
-        if method == 'mle':
-            if not hasattr(self, 'W_hat_mle') or not hasattr(self, 'D_hat_mle'):
+        if method == "mle":
+            if not hasattr(self, "W_hat_mle") or not hasattr(self, "D_hat_mle"):
                 raise ValueError("MLE model must be fitted before sampling")
             W_hat, D_hat = self.W_hat_mle, self.D_hat_mle
         else:
-            if not hasattr(self, 'W_hat_lse') or not hasattr(self, 'D_hat_lse'):
+            if not hasattr(self, "W_hat_lse") or not hasattr(self, "D_hat_lse"):
                 raise ValueError("LSE model must be fitted before sampling")
             W_hat, D_hat = self.W_hat_lse, self.D_hat_lse
 
@@ -569,31 +569,10 @@ class DevMedil(MedilCausalModel):
         epsilon = self.rng.multivariate_normal(np.zeros(n), D_hat, sample_size)
         return np.dot(L, W_hat) + epsilon
 
-    def fit(self, dataset: npt.NDArray, method: str = 'mle') -> "DevMedil":
-        if method == 'mle':
+    def fit(self, dataset: npt.NDArray, method: str = "mle") -> "DevMedil":
+        if method == "mle":
             return self.fit_penalized_mle(dataset)
-        elif method == 'lse':
+        elif method == "lse":
             return self.fit_penalized_lse(dataset)
         else:
             raise ValueError("Method must be either 'mle' or 'lse'")
-
-# define a function for model fitting and metric calculation
-def calculate_metrics(model, method, threshold, W_star):
-    # mle and lse
-    if method == 'mle':
-        W_hat = model.W_hat_mle
-    else:
-        W_hat = model.W_hat_lse
-    # metric A
-    squared_dist = lambda perm: np.sum((W_hat[perm] - W_star) ** 2)
-    perms = list(itertools.permutations(range(len(W_hat))))
-    dists = np.fromiter((squared_dist(perm) for perm in perms), dtype=float)
-    opt_idx = np.argmin(dists)
-    squared_distance = dists[opt_idx]
-    perm = perms[opt_idx]
-
-    # metric B
-    W_hat_zero_pattern = (np.abs(W_hat) > threshold).astype(int)
-    sfd_value, ushd_value = sfd(biadj_matrix, W_hat_zero_pattern)
-
-    return squared_distance, perm, sfd_value, ushd_value

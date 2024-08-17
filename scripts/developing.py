@@ -10,6 +10,28 @@ def rng():
     return np.random.default_rng(3)
 
 
+# define a function for model fitting and metric calculation
+def calculate_metrics(model, method, threshold, W_star):
+    # mle and lse
+    if method == "mle":
+        W_hat = model.W_hat_mle
+    else:
+        W_hat = model.W_hat_lse
+    # metric A
+    squared_dist = lambda perm: np.sum((W_hat[perm] - W_star) ** 2)
+    perms = list(itertools.permutations(range(len(W_hat))))
+    dists = np.fromiter((squared_dist(perm) for perm in perms), dtype=float)
+    opt_idx = np.argmin(dists)
+    squared_distance = dists[opt_idx]
+    perm = perms[opt_idx]
+
+    # metric B
+    W_hat_zero_pattern = (np.abs(W_hat) > threshold).astype(int)
+    sfd_value, ushd_value = sfd(biadj_matrix, W_hat_zero_pattern)
+
+    return squared_distance, perm, sfd_value, ushd_value
+
+
 # Set up the parameters
 num_meas = 3
 density = 0.6
@@ -34,8 +56,8 @@ best_lambda_mle = None
 best_mu_mle = None
 best_lambda_lse = None
 best_mu_lse = None
-min_squared_distance_mle = float('inf')
-min_squared_distance_lse = float('inf')
+min_squared_distance_mle = float("inf")
+min_squared_distance_lse = float("inf")
 
 # initialize counter for RuntimeWarnings
 runtime_warning_count_mle = 0
@@ -68,17 +90,21 @@ for lambda_reg in lambda_values:
         mu_idx = mu_indices[mu_reg]
 
         # Penalized MLE
-        model = DevMedil(biadj=biadj_matrix, rng=rng(), lambda_reg=lambda_reg, mu_reg=mu_reg)
+        model = DevMedil(
+            biadj=biadj_matrix, rng=rng(), lambda_reg=lambda_reg, mu_reg=mu_reg
+        )
         try:
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always", category=RuntimeWarning)
-                model.fit(dataset, method='mle')
+                model.fit(dataset, method="mle")
 
                 # Check if any RuntimeWarnings were raised
                 if any(issubclass(warning.category, RuntimeWarning) for warning in w):
                     runtime_warning_count_mle += 1
 
-            squared_distance_mle, perm, sfd_value_mle, ushd_value_mle = calculate_metrics(model, 'mle', 0.5, W_star)
+            squared_distance_mle, perm, sfd_value_mle, ushd_value_mle = (
+                calculate_metrics(model, "mle", 0.5, W_star)
+            )
 
             # Store results in arrays
             squared_distance_results_mle[lambda_idx, mu_idx] = squared_distance_mle
@@ -90,24 +116,32 @@ for lambda_reg in lambda_values:
                 best_lambda_mle = lambda_reg
                 best_mu_mle = mu_reg
 
-            print(f"lambda_reg={lambda_reg}, mu_reg={mu_reg}, squared_distance_mle={squared_distance_mle}, best_perm={best_perm}")
+            print(
+                f"lambda_reg={lambda_reg}, mu_reg={mu_reg}, squared_distance_mle={squared_distance_mle}, best_perm={best_perm}"
+            )
 
         except Exception as e:
             mle_failure_count += 1
-            print(f"Exception encountered during MLE with lambda_reg={lambda_reg}, mu_reg={mu_reg}: {e}")
+            print(
+                f"Exception encountered during MLE with lambda_reg={lambda_reg}, mu_reg={mu_reg}: {e}"
+            )
 
         # Penalized LSE
-        model = DevMedil(biadj=biadj_matrix, rng=rng(), lambda_reg=lambda_reg, mu_reg=mu_reg)
+        model = DevMedil(
+            biadj=biadj_matrix, rng=rng(), lambda_reg=lambda_reg, mu_reg=mu_reg
+        )
         try:
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always", category=RuntimeWarning)
-                model.fit(dataset, method='lse')
+                model.fit(dataset, method="lse")
 
                 # Check if any RuntimeWarnings were raised
                 if any(issubclass(warning.category, RuntimeWarning) for warning in w):
                     runtime_warning_count_lse += 1
 
-            squared_distance_lse, perm, sfd_value_lse, ushd_value_lse = calculate_metrics(model, 'lse', 0.5, W_star)
+            squared_distance_lse, perm, sfd_value_lse, ushd_value_lse = (
+                calculate_metrics(model, "lse", 0.5, W_star)
+            )
 
             # Store results in arrays
             squared_distance_results_lse[lambda_idx, mu_idx] = squared_distance_lse
@@ -119,11 +153,15 @@ for lambda_reg in lambda_values:
                 best_lambda_lse = lambda_reg
                 best_mu_lse = mu_reg
 
-            print(f"lambda_reg={lambda_reg}, mu_reg={mu_reg}, squared_distance_lse={squared_distance_lse}, best_perm={best_perm}")
+            print(
+                f"lambda_reg={lambda_reg}, mu_reg={mu_reg}, squared_distance_lse={squared_distance_lse}, best_perm={best_perm}"
+            )
 
         except Exception as e:
             lse_failure_count += 1
-            print(f"Exception encountered during LSE with lambda_reg={lambda_reg}, mu_reg={mu_reg}: {e}")
+            print(
+                f"Exception encountered during LSE with lambda_reg={lambda_reg}, mu_reg={mu_reg}: {e}"
+            )
 
 print(f"Total MLE optimization failures: {mle_failure_count}")
 print(f"Total LSE optimization failures: {lse_failure_count}")
@@ -132,34 +170,54 @@ print(f"Total RuntimeWarnings encountered during LSE: {runtime_warning_count_lse
 
 # Plot heatmap for Squared Distance (MLE)
 plt.figure(figsize=(10, 8))
-sns.heatmap(squared_distance_results_mle, xticklabels=[f'{x:.2g}' for x in mu_values], yticklabels=[f'{y:.2g}' for y in lambda_values], cmap="Reds")
-plt.title('Squared Distance for Penalized MLE')
-plt.xlabel('mu_reg')
-plt.ylabel('lambda_reg')
+sns.heatmap(
+    squared_distance_results_mle,
+    xticklabels=[f"{x:.2g}" for x in mu_values],
+    yticklabels=[f"{y:.2g}" for y in lambda_values],
+    cmap="Reds",
+)
+plt.title("Squared Distance for Penalized MLE")
+plt.xlabel("mu_reg")
+plt.ylabel("lambda_reg")
 plt.show()
 
 # Plot heatmap for SFD Value (MLE)
 plt.figure(figsize=(10, 8))
-sns.heatmap(sfd_results_mle, xticklabels=[f'{x:.2g}' for x in mu_values], yticklabels=[f'{y:.2g}' for y in lambda_values], cmap="Blues")
-plt.title('SFD Value for Penalized MLE')
-plt.xlabel('mu_reg')
-plt.ylabel('lambda_reg')
+sns.heatmap(
+    sfd_results_mle,
+    xticklabels=[f"{x:.2g}" for x in mu_values],
+    yticklabels=[f"{y:.2g}" for y in lambda_values],
+    cmap="Blues",
+)
+plt.title("SFD Value for Penalized MLE")
+plt.xlabel("mu_reg")
+plt.ylabel("lambda_reg")
 plt.show()
 
 # Plot heatmap for Squared Distance (LSE)
 plt.figure(figsize=(10, 8))
-sns.heatmap(squared_distance_results_lse, xticklabels=[f'{x:.2g}' for x in mu_values], yticklabels=[f'{y:.2g}' for y in lambda_values], cmap="Reds")
-plt.title('Squared Distance for Penalized LSE')
-plt.xlabel('mu_reg')
-plt.ylabel('lambda_reg')
+sns.heatmap(
+    squared_distance_results_lse,
+    xticklabels=[f"{x:.2g}" for x in mu_values],
+    yticklabels=[f"{y:.2g}" for y in lambda_values],
+    cmap="Reds",
+)
+plt.title("Squared Distance for Penalized LSE")
+plt.xlabel("mu_reg")
+plt.ylabel("lambda_reg")
 plt.show()
 
 # Plot heatmap for SFD Value (LSE)
 plt.figure(figsize=(10, 8))
-sns.heatmap(sfd_results_lse, xticklabels=[f'{x:.2g}' for x in mu_values], yticklabels=[f'{y:.2g}' for y in lambda_values], cmap="Blues")
-plt.title('SFD Value for Penalized LSE')
-plt.xlabel('mu_reg')
-plt.ylabel('lambda_reg')
+sns.heatmap(
+    sfd_results_lse,
+    xticklabels=[f"{x:.2g}" for x in mu_values],
+    yticklabels=[f"{y:.2g}" for y in lambda_values],
+    cmap="Blues",
+)
+plt.title("SFD Value for Penalized LSE")
+plt.xlabel("mu_reg")
+plt.ylabel("lambda_reg")
 plt.show()
 
 print(f"Best lambda_reg for MLE: {best_lambda_mle}")
