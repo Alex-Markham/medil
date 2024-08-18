@@ -1,8 +1,10 @@
-import numpy as np
-from medil.sample import mcm, biadj
 import matplotlib.pyplot as plt
-import seaborn as sns
 import matplotlib.ticker as ticker
+import numpy as np
+import seaborn as sns
+
+from medil.evaluate import sfd, min_perm_squared_l2_dist
+from medil.sample import mcm, biadj
 
 
 # Set the random variable generator seed
@@ -18,12 +20,7 @@ def calculate_metrics(model, method, threshold, W_star):
     else:
         W_hat = model.W_hat_lse
     # metric A
-    squared_dist = lambda perm: np.sum((W_hat[perm] - W_star) ** 2)
-    perms = list(itertools.permutations(range(len(W_hat))))
-    dists = np.fromiter((squared_dist(perm) for perm in perms), dtype=float)
-    opt_idx = np.argmin(dists)
-    squared_distance = dists[opt_idx]
-    perm = perms[opt_idx]
+    perm, squared_distance = min_perm_squared_l2_dist(W_hat, W_star)
 
     # metric B
     W_hat_zero_pattern = (np.abs(W_hat) > threshold).astype(int)
