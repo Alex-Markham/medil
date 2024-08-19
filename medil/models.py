@@ -540,12 +540,9 @@ class DevMedil(MedilCausalModel):
         Sigma = np.dot(W.T, W) + D
         return Sigma
 
-    # ρ(W), the nuclear norm defined as tr(√(W⊤W))
+    # ρ(W)
     def rho(self, W: npt.NDArray) -> float:
-        WWt = np.dot(W.T, W)  # Compute W^T times W
-        sqrt_WWt = sqrtm(WWt)  # Compute the matrix square root of W^T times W
-        sqrt_WWt = np.real(sqrt_WWt)  # Take only the real part
-        return np.trace(sqrt_WWt)  # Take the trace of the resulting matrix
+        return np.sum(np.linalg.svd(W, compute_uv=False))
 
     # σ(W), the sum of absolute values of elements (L1 norm)
     def sigma(self, W: npt.NDArray) -> float:
