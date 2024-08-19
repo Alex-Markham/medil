@@ -8,7 +8,7 @@ def long_description():
 
 setup(
     name="medil",
-    version="1.0.0",
+    version="1.1.0",
     author="Alex Markham",
     author_email="alex.markham@causal.dev",
     description="MeDIL is a Python package for causal factor analysis with the (me)asurement (d)ependence (i)nducing (l)atent causal model framework.",
@@ -23,6 +23,5 @@ setup(
         "seaborn",
         "scikit-learn",
         "torch",
-        "xicorrelation",
     ],
 )
