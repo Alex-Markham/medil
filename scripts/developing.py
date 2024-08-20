@@ -1,8 +1,11 @@
+import warnings
+
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 import seaborn as sns
 
+from medil.models import DevMedil
 from medil.evaluate import sfd, min_perm_squared_l2_dist
 from medil.sample import mcm, biadj
 
@@ -45,8 +48,8 @@ generated_sample = mcm(rng=rng(), parameterization="Gaussian", biadj=biadj_matri
 dataset = generated_sample.sample(1000)
 
 # define the log scale grid for lambda_reg and mu_reg
-lambda_values = np.logspace(-5, 1, num=50)
-mu_values = np.logspace(-5, 1, num=50)
+lambda_values = np.logspace(-5, 1, num=20)
+mu_values = np.logspace(-5, 1, num=20)
 
 # initialize variables to store the best parameters and the minimum squared distance
 best_lambda_mle = None
@@ -176,7 +179,7 @@ sns.heatmap(
 plt.title("Squared Distance for Penalized MLE")
 plt.xlabel("mu_reg")
 plt.ylabel("lambda_reg")
-plt.show()
+plt.savefig("dist_mle.png")
 
 # Plot heatmap for SFD Value (MLE)
 plt.figure(figsize=(10, 8))
@@ -189,7 +192,7 @@ sns.heatmap(
 plt.title("SFD Value for Penalized MLE")
 plt.xlabel("mu_reg")
 plt.ylabel("lambda_reg")
-plt.show()
+plt.savefig("sfd_mle.png")
 
 # Plot heatmap for Squared Distance (LSE)
 plt.figure(figsize=(10, 8))
@@ -202,7 +205,7 @@ sns.heatmap(
 plt.title("Squared Distance for Penalized LSE")
 plt.xlabel("mu_reg")
 plt.ylabel("lambda_reg")
-plt.show()
+plt.savefig("dist_lse.png")
 
 # Plot heatmap for SFD Value (LSE)
 plt.figure(figsize=(10, 8))
@@ -215,7 +218,7 @@ sns.heatmap(
 plt.title("SFD Value for Penalized LSE")
 plt.xlabel("mu_reg")
 plt.ylabel("lambda_reg")
-plt.show()
+plt.savefig("sfd_lse.png")
 
 print(f"Best lambda_reg for MLE: {best_lambda_mle}")
 print(f"Best mu_reg for MLE: {best_mu_mle}")
@@ -224,3 +227,44 @@ print(f"Minimum squared distance (MLE): {min_squared_distance_mle}\n")
 print(f"Best lambda_reg for LSE: {best_lambda_lse}")
 print(f"Best mu_reg for LSE: {best_mu_lse}")
 print(f"Minimum squared distance (LSE): {min_squared_distance_lse}")
+
+## Examine param values from best run:
+# best penalized LSE
+model = DevMedil(
+    biadj=biadj_matrix, rng=rng(), lambda_reg=best_lambda_lse, mu_reg=best_mu_lse
+)
+model.fit(dataset, method="lse")
+W_hat_lse = model.W_hat_lse
+D_hat_lse = model.D_hat_lse
+
+model = DevMedil(
+    biadj=biadj_matrix, rng=rng(), lambda_reg=best_lambda_mle, mu_reg=best_mu_mle
+)
+model.fit(dataset, method="mle")
+W_hat_mle = model.W_hat_mle
+D_hat_mle = model.D_hat_mle
+
+# Set a threshold
+threshold = 0.5
+
+# the w_hat and the zero patterns by lse
+W_hat_lse_zero_pattern = (np.abs(W_hat_lse) > threshold).astype(int)
+print("W_hat_lse Zero Pattern:")
+print(W_hat_lse_zero_pattern)
+
+# Compute the squared distance as the evaluation metric
+lse_order, squared_distance_lse = min_perm_squared_l2_dist(W_hat_lse, W_star)
+print("Squared distance between W_hat_lse and W_star:\n", squared_distance_lse)
+mle_order, squared_distance_mle = min_perm_squared_l2_dist(W_hat_mle, W_star)
+print("Squared distance between W_hat_mle and W_star:\n", squared_distance_mle)
+
+W_star = generated_sample.parameters.biadj_weights
+print("True weights matrix W_star:\n", W_star)
+print("Estimated W (LSE):\n", W_hat_lse[np.array(lse_order)])
+print("Estimated W (MLE):\n", W_hat_mle[np.array(mle_order)])
+
+
+D_star = generated_sample.parameters.error_variances
+print("\nTrue variances D_star:\n", D_star)
+print("D_hat_lse:\n", D_hat_lse)
+print("D_hat_mle:\n", D_hat_mle)
