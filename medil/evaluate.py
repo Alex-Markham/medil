@@ -54,6 +54,7 @@ def recover_ug(biadj_mat):
 
 def min_perm_squared_l2_dist(predicted_W: npt.NDArray, true_W: npt.NDArray):
     def perm_squared_l2_dist(perm):
+        perm = np.array(perm)
         return np.sum((predicted_W[perm] - true_W) ** 2)
 
     def pair(perm):
@@ -65,4 +66,4 @@ def min_perm_squared_l2_dist(predicted_W: npt.NDArray, true_W: npt.NDArray):
 
     opt_perm, min_dist = min(pairs, key=lambda pair: pair[1])
 
-    return opt_perm, min_dist
+    return np.array(opt_perm), min_dist
