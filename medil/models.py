@@ -9,7 +9,7 @@ import warnings
 import numpy as np
 from numpy.random import default_rng
 import numpy.typing as npt
-from scipy.linalg import sqrtm
+from scipy.linalg import norm
 from scipy.optimize import minimize
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler as sc
@@ -542,7 +542,7 @@ class DevMedil(MedilCausalModel):
 
     # ρ(W)
     def rho(self, W: npt.NDArray) -> float:
-        return np.sum(np.linalg.svd(W, compute_uv=False))
+        return norm(W, "nuc")
 
     # σ(W), the sum of absolute values of elements (L1 norm)
     def sigma(self, W: npt.NDArray) -> float:
