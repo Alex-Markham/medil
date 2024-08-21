@@ -222,6 +222,18 @@ def toy_model_deep_dive():
         min_squared_distance_mle,
     ) = grid_search(true_model, dataset, verbose=False)
 
+    # Fit the GaussianMCM model
+    model = GaussianMCM(biadj=biadj_matrix, rng=rng())
+    model.fit(dataset)
+
+    # Calculate W_hat from the GaussianMCM model
+    W_hat_gaussian = model.parameters.biadj_weights
+    
+    # Calculate the squared distance between W_hat_gaussian and W_star
+    _, squared_distance_gaussian = min_perm_squared_l2_dist(W_hat_gaussian, W_star)
+        
+    print(f"Squared distance between W_hat_gaussian and W_star (Graph {idx + 1}): {squared_distance_gaussian}\n")
+
     # Plot heatmap for Squared Distance (LSE)
     plt.figure(figsize=(10, 8))
     sns.heatmap(
