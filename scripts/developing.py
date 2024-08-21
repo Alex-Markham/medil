@@ -186,150 +186,186 @@ def grid_search(true_model, dataset, verbose=False):
         min_squared_distance_mle,
     )
 
+# define fixed_biadj_mat_list
+fixed_biadj_mat_list = [
+    np.array([[True, True]]),
+    np.array([[True, True, True]]),
+    np.array([[True, True, True, True]]),
+    np.array([[True, True, False], [False, True, True]]),
+    np.array([[True, True, True, False, False], [False, False, True, True, True]]),
+    np.array(
+        [
+            [True, True, True, False, False, False, False],
+            [False, False, True, True, True, False, False],
+            [False, False, False, False, True, True, True],
+        ]
+    ),
+    np.array(
+        [
+            [True, True, True, False, False, False, False, False, False],
+            [False, False, True, True, True, False, False, False, False],
+            [False, False, False, False, True, True, True, False, False],
+            [False, False, False, False, False, False, True, True, True],
+        ]
+    ),
+    np.array(
+        [
+            [True, True, True, False, False, False, False, False, False, False, False],
+            [False, False, True, True, True, False, False, False, False, False, False],
+            [False, False, False, False, True, True, True, False, False, False, False],
+            [False, False, False, False, False, False, True, True, True, False, False],
+            [False, False, False, False, False, False, False, False, True, True, True],
+        ]
+    ),
+    np.array(
+        [
+            [1, 1, 1, 0, 0, 0],
+            [1, 1, 0, 1, 0, 0],
+            [1, 1, 0, 0, 1, 0],
+            [1, 1, 0, 0, 0, 1],
+        ],
+        dtype=bool,
+    ),
+]
 
 # examine weight matrix recovery, regularizers, and optimization
-# results for toy model
-def toy_model_deep_dive():
-    # Set up the parameters
-    num_meas = 3
-    density = 0.6
-    num_latent = 2
-    # Generate the bipartite adjacency matrix
-    biadj_matrix = biadj(
-        num_meas=num_meas, density=density, num_latent=num_latent, rng=rng()
-    )
+# results for benchmark graphs (toy model is the 4th graph)
+def benchmark_graphs_deep_dive(fixed_biadj_mat_list):
+    for idx, biadj_matrix in enumerate(fixed_biadj_mat_list):
+        print(f"\nTesting Graph {idx + 1} with shape {biadj_matrix.shape}")
+        num_meas, num_latent = biadj_matrix.shape
 
-    # Generate the MCM sample
-    true_model = mcm(rng=rng(), parameterization="Gaussian", biadj=biadj_matrix)
+        # Generate the MCM sample
+        true_model = mcm(rng=rng(), parameterization="Gaussian", biadj=biadj_matrix)
 
-    # Generate the dataset
-    dataset = true_model.sample(1000)
+        # Generate the dataset
+        dataset = true_model.sample(1000)
 
-    # Run grid search
-    (
-        W_star,
-        squared_distance_results_lse,
-        squared_distance_results_mle,
-        sfd_results_lse,
-        sfd_results_mle,
-        mu_values,
-        lambda_values,
-        best_mu_lse,
-        best_mu_mle,
-        best_lambda_mle,
-        best_lambda_lse,
-        min_squared_distance_lse,
-        min_squared_distance_mle,
-    ) = grid_search(true_model, dataset, verbose=False)
+        # Run grid search
+        (
+            W_star,
+            squared_distance_results_lse,
+            squared_distance_results_mle,
+            sfd_results_lse,
+            sfd_results_mle,
+            mu_values,
+            lambda_values,
+            best_mu_lse,
+            best_mu_mle,
+            best_lambda_mle,
+            best_lambda_lse,
+            min_squared_distance_lse,
+            min_squared_distance_mle,
+        ) = grid_search(true_model, dataset, verbose=False)
 
-    # Fit the GaussianMCM model
-    model = GaussianMCM(biadj=biadj_matrix, rng=rng())
-    model.fit(dataset)
+        # Fit the GaussianMCM model
+        model = GaussianMCM(biadj=biadj_matrix, rng=rng())
+        model.fit(dataset)
 
-    # Calculate W_hat from the GaussianMCM model
-    W_hat_gaussian = model.parameters.biadj_weights
-    
-    # Calculate the squared distance between W_hat_gaussian and W_star
-    _, squared_distance_gaussian = min_perm_squared_l2_dist(W_hat_gaussian, W_star)
+        # Calculate W_hat from the GaussianMCM model
+        W_hat_gaussian = model.parameters.biadj_weights
         
-    print(f"Squared distance between W_hat_gaussian and W_star (Graph {idx + 1}): {squared_distance_gaussian}\n")
+        # Calculate the squared distance between W_hat_gaussian and W_star
+        _, squared_distance_gaussian = min_perm_squared_l2_dist(W_hat_gaussian, W_star)
+            
+        print(f"Squared distance between W_hat_gaussian and W_star (Graph {idx + 1}): {squared_distance_gaussian}\n")
 
-    # Plot heatmap for Squared Distance (LSE)
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(
-        squared_distance_results_lse,
-        xticklabels=[f"{x:.2g}" for x in mu_values],
-        yticklabels=[f"{y:.2g}" for y in lambda_values],
-        cmap="Reds",
-    )
-    plt.title("Squared Distance for Penalized LSE")
-    plt.xlabel("mu_reg")
-    plt.ylabel("lambda_reg")
-    plt.savefig("lse_dist.png")
+        # Plot heatmap for Squared Distance (LSE)
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(
+            squared_distance_results_lse,
+            xticklabels=[f"{x:.2g}" for x in mu_values],
+            yticklabels=[f"{y:.2g}" for y in lambda_values],
+            cmap="Reds",
+        )
+        plt.title("Squared Distance for Penalized LSE")
+        plt.xlabel("mu_reg")
+        plt.ylabel("lambda_reg")
+        plt.savefig("lse_dist.png")
 
-    # Plot heatmap for SFD Value (LSE)
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(
-        sfd_results_lse,
-        xticklabels=[f"{x:.2g}" for x in mu_values],
-        yticklabels=[f"{y:.2g}" for y in lambda_values],
-        cmap="Blues",
-    )
-    plt.title("SFD Value for Penalized LSE")
-    plt.xlabel("mu_reg")
-    plt.ylabel("lambda_reg")
-    plt.savefig("lse_sfd.png")
+        # Plot heatmap for SFD Value (LSE)
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(
+            sfd_results_lse,
+            xticklabels=[f"{x:.2g}" for x in mu_values],
+            yticklabels=[f"{y:.2g}" for y in lambda_values],
+            cmap="Blues",
+        )
+        plt.title("SFD Value for Penalized LSE")
+        plt.xlabel("mu_reg")
+        plt.ylabel("lambda_reg")
+        plt.savefig("lse_sfd.png")
 
-    # Plot heatmap for Squared Distance (MLE)
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(
-        squared_distance_results_mle,
-        xticklabels=[f"{x:.2g}" for x in mu_values],
-        yticklabels=[f"{y:.2g}" for y in lambda_values],
-        cmap="Reds",
-    )
-    plt.title("Squared Distance for Penalized MLE")
-    plt.xlabel("mu_reg")
-    plt.ylabel("lambda_reg")
-    plt.savefig("mle_dist.png")
+        # Plot heatmap for Squared Distance (MLE)
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(
+            squared_distance_results_mle,
+            xticklabels=[f"{x:.2g}" for x in mu_values],
+            yticklabels=[f"{y:.2g}" for y in lambda_values],
+            cmap="Reds",
+        )
+        plt.title("Squared Distance for Penalized MLE")
+        plt.xlabel("mu_reg")
+        plt.ylabel("lambda_reg")
+        plt.savefig("mle_dist.png")
 
-    # Plot heatmap for SFD Value (MLE)
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(
-        sfd_results_mle,
-        xticklabels=[f"{x:.2g}" for x in mu_values],
-        yticklabels=[f"{y:.2g}" for y in lambda_values],
-        cmap="Blues",
-    )
-    plt.title("SFD Value for Penalized MLE")
-    plt.xlabel("mu_reg")
-    plt.ylabel("lambda_reg")
-    plt.savefig("mle_sfd.png")
+        # Plot heatmap for SFD Value (MLE)
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(
+            sfd_results_mle,
+            xticklabels=[f"{x:.2g}" for x in mu_values],
+            yticklabels=[f"{y:.2g}" for y in lambda_values],
+            cmap="Blues",
+        )
+        plt.title("SFD Value for Penalized MLE")
+        plt.xlabel("mu_reg")
+        plt.ylabel("lambda_reg")
+        plt.savefig("mle_sfd.png")
 
-    print(f"Best lambda_reg for LSE: {best_lambda_lse}")
-    print(f"Best mu_reg for LSE: {best_mu_lse}")
-    print(f"Minimum squared distance (LSE): {min_squared_distance_lse}")
+        print(f"Best lambda_reg for LSE: {best_lambda_lse}")
+        print(f"Best mu_reg for LSE: {best_mu_lse}")
+        print(f"Minimum squared distance (LSE): {min_squared_distance_lse}")
 
-    print(f"Best lambda_reg for MLE: {best_lambda_mle}")
-    print(f"Best mu_reg for MLE: {best_mu_mle}")
-    print(f"Minimum squared distance (MLE): {min_squared_distance_mle}\n")
+        print(f"Best lambda_reg for MLE: {best_lambda_mle}")
+        print(f"Best mu_reg for MLE: {best_mu_mle}")
+        print(f"Minimum squared distance (MLE): {min_squared_distance_mle}\n")
 
-    ## Examine param values from best run:
-    # best penalized LSE
-    model = DevMedil(
-        biadj=biadj_matrix, rng=rng(), lambda_reg=best_lambda_lse, mu_reg=best_mu_lse
-    )
-    model.fit(dataset, method="lse")
-    W_hat_lse = model.W_hat_lse
-    D_hat_lse = model.D_hat_lse
+        ## Examine param values from best run:
+        # best penalized LSE
+        model = DevMedil(
+            biadj=biadj_matrix, rng=rng(), lambda_reg=best_lambda_lse, mu_reg=best_mu_lse
+        )
+        model.fit(dataset, method="lse")
+        W_hat_lse = model.W_hat_lse
+        D_hat_lse = model.D_hat_lse
 
-    model = DevMedil(
-        biadj=biadj_matrix, rng=rng(), lambda_reg=best_lambda_mle, mu_reg=best_mu_mle
-    )
-    model.fit(dataset, method="mle")
-    W_hat_mle = model.W_hat_mle
-    D_hat_mle = model.D_hat_mle
+        model = DevMedil(
+            biadj=biadj_matrix, rng=rng(), lambda_reg=best_lambda_mle, mu_reg=best_mu_mle
+        )
+        model.fit(dataset, method="mle")
+        W_hat_mle = model.W_hat_mle
+        D_hat_mle = model.D_hat_mle
 
-    # # Set a threshold
-    # threshold = 0.5
+        # # Set a threshold
+        # threshold = 0.5
 
-    # # the w_hat and the zero patterns by lse
-    # W_hat_lse_zero_pattern = (np.abs(W_hat_lse) > threshold).astype(int)
-    # print("W_hat_lse Zero Pattern:")
-    # print(W_hat_lse_zero_pattern)
+        # # the w_hat and the zero patterns by lse
+        # W_hat_lse_zero_pattern = (np.abs(W_hat_lse) > threshold).astype(int)
+        # print("W_hat_lse Zero Pattern:")
+        # print(W_hat_lse_zero_pattern)
 
-    # Compute the squared distance as the evaluation metric
-    lse_order, squared_distance_lse = min_perm_squared_l2_dist(W_hat_lse, W_star)
-    print("Squared distance between W_hat_lse and W_star:\n", squared_distance_lse)
-    mle_order, squared_distance_mle = min_perm_squared_l2_dist(W_hat_mle, W_star)
-    print("Squared distance between W_hat_mle and W_star:\n", squared_distance_mle)
+        # Compute the squared distance as the evaluation metric
+        lse_order, squared_distance_lse = min_perm_squared_l2_dist(W_hat_lse, W_star)
+        print("Squared distance between W_hat_lse and W_star:\n", squared_distance_lse)
+        mle_order, squared_distance_mle = min_perm_squared_l2_dist(W_hat_mle, W_star)
+        print("Squared distance between W_hat_mle and W_star:\n", squared_distance_mle)
 
-    W_star = true_model.parameters.biadj_weights
-    print("\nTrue weight matrix W_star:\n", W_star)
-    print("Estimated W_hat (LSE):\n", W_hat_lse[np.array(lse_order)])
-    print("Estimated W_hat (MLE):\n", W_hat_mle[np.array(mle_order)])
+        W_star = true_model.parameters.biadj_weights
+        print("\nTrue weight matrix W_star:\n", W_star)
+        print("Estimated W_hat (LSE):\n", W_hat_lse[np.array(lse_order)])
+        print("Estimated W_hat (MLE):\n", W_hat_mle[np.array(mle_order)])
 
-    D_star = true_model.parameters.error_variances
-    print("\nTrue variances D_star:\n", D_star)
-    print("Estimated variances D_hat (LSE):\n", D_hat_lse)
-    print("Estimated variances D_hat (MLE):\n", D_hat_mle)
+        D_star = true_model.parameters.error_variances
+        print("\nTrue variances D_star:\n", D_star)
+        print("Estimated variances D_hat (LSE):\n", D_hat_lse)
+        print("Estimated variances D_hat (MLE):\n", D_hat_mle)
