@@ -5,7 +5,7 @@ import matplotlib.ticker as ticker
 import numpy as np
 import seaborn as sns
 
-from medil.models import DevMedil
+from medil.models import DevMedil, GaussianMCM
 from medil.evaluate import sfd, min_perm_squared_l2_dist
 from medil.sample import mcm, biadj
 
