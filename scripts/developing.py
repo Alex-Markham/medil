@@ -201,23 +201,23 @@ fixed_biadj_mat_list = [
             [False, False, False, False, True, True, True],
         ]
     ),
-    np.array(
-        [
-            [True, True, True, False, False, False, False, False, False],
-            [False, False, True, True, True, False, False, False, False],
-            [False, False, False, False, True, True, True, False, False],
-            [False, False, False, False, False, False, True, True, True],
-        ]
-    ),
-    np.array(
-        [
-            [True, True, True, False, False, False, False, False, False, False, False],
-            [False, False, True, True, True, False, False, False, False, False, False],
-            [False, False, False, False, True, True, True, False, False, False, False],
-            [False, False, False, False, False, False, True, True, True, False, False],
-            [False, False, False, False, False, False, False, False, True, True, True],
-        ]
-    ),
+    # np.array(
+    #     [
+    #         [True, True, True, False, False, False, False, False, False],
+    #         [False, False, True, True, True, False, False, False, False],
+    #         [False, False, False, False, True, True, True, False, False],
+    #         [False, False, False, False, False, False, True, True, True],
+    #     ]
+    # ),
+    # np.array(
+    #     [
+    #         [True, True, True, False, False, False, False, False, False, False, False],
+    #         [False, False, True, True, True, False, False, False, False, False, False],
+    #         [False, False, False, False, True, True, True, False, False, False, False],
+    #         [False, False, False, False, False, False, True, True, True, False, False],
+    #         [False, False, False, False, False, False, False, False, True, True, True],
+    #     ]
+    # ),
     np.array(
         [
             [1, 1, 1, 0, 0, 0],
@@ -274,57 +274,57 @@ def benchmark_graphs_deep_dive(fixed_biadj_mat_list, verbose=False):
             f"Squared distance between W_hat_gaussian and W_star (Graph {idx + 1}): {squared_distance_gaussian}\n"
         )
 
-        # Plot heatmap for Squared Distance (LSE)
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(
-            squared_distance_results_lse,
-            xticklabels=[f"{x:.2g}" for x in mu_values],
-            yticklabels=[f"{y:.2g}" for y in lambda_values],
-            cmap="Reds",
-        )
-        plt.title("Squared Distance for Penalized LSE")
-        plt.xlabel("mu_reg")
-        plt.ylabel("lambda_reg")
-        plt.savefig("lse_dist.png")
+        # # Plot heatmap for Squared Distance (LSE)
+        # plt.figure(figsize=(10, 8))
+        # sns.heatmap(
+        #     squared_distance_results_lse,
+        #     xticklabels=[f"{x:.2g}" for x in mu_values],
+        #     yticklabels=[f"{y:.2g}" for y in lambda_values],
+        #     cmap="Reds",
+        # )
+        # plt.title("Squared Distance for Penalized LSE")
+        # plt.xlabel("mu_reg")
+        # plt.ylabel("lambda_reg")
+        # plt.savefig("lse_dist.png")
 
-        # Plot heatmap for SFD Value (LSE)
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(
-            sfd_results_lse,
-            xticklabels=[f"{x:.2g}" for x in mu_values],
-            yticklabels=[f"{y:.2g}" for y in lambda_values],
-            cmap="Blues",
-        )
-        plt.title("SFD Value for Penalized LSE")
-        plt.xlabel("mu_reg")
-        plt.ylabel("lambda_reg")
-        plt.savefig("lse_sfd.png")
+        # # Plot heatmap for SFD Value (LSE)
+        # plt.figure(figsize=(10, 8))
+        # sns.heatmap(
+        #     sfd_results_lse,
+        #     xticklabels=[f"{x:.2g}" for x in mu_values],
+        #     yticklabels=[f"{y:.2g}" for y in lambda_values],
+        #     cmap="Blues",
+        # )
+        # plt.title("SFD Value for Penalized LSE")
+        # plt.xlabel("mu_reg")
+        # plt.ylabel("lambda_reg")
+        # plt.savefig("lse_sfd.png")
 
-        # Plot heatmap for Squared Distance (MLE)
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(
-            squared_distance_results_mle,
-            xticklabels=[f"{x:.2g}" for x in mu_values],
-            yticklabels=[f"{y:.2g}" for y in lambda_values],
-            cmap="Reds",
-        )
-        plt.title("Squared Distance for Penalized MLE")
-        plt.xlabel("mu_reg")
-        plt.ylabel("lambda_reg")
-        plt.savefig("mle_dist.png")
+        # # Plot heatmap for Squared Distance (MLE)
+        # plt.figure(figsize=(10, 8))
+        # sns.heatmap(
+        #     squared_distance_results_mle,
+        #     xticklabels=[f"{x:.2g}" for x in mu_values],
+        #     yticklabels=[f"{y:.2g}" for y in lambda_values],
+        #     cmap="Reds",
+        # )
+        # plt.title("Squared Distance for Penalized MLE")
+        # plt.xlabel("mu_reg")
+        # plt.ylabel("lambda_reg")
+        # plt.savefig("mle_dist.png")
 
-        # Plot heatmap for SFD Value (MLE)
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(
-            sfd_results_mle,
-            xticklabels=[f"{x:.2g}" for x in mu_values],
-            yticklabels=[f"{y:.2g}" for y in lambda_values],
-            cmap="Blues",
-        )
-        plt.title("SFD Value for Penalized MLE")
-        plt.xlabel("mu_reg")
-        plt.ylabel("lambda_reg")
-        plt.savefig("mle_sfd.png")
+        # # Plot heatmap for SFD Value (MLE)
+        # plt.figure(figsize=(10, 8))
+        # sns.heatmap(
+        #     sfd_results_mle,
+        #     xticklabels=[f"{x:.2g}" for x in mu_values],
+        #     yticklabels=[f"{y:.2g}" for y in lambda_values],
+        #     cmap="Blues",
+        # )
+        # plt.title("SFD Value for Penalized MLE")
+        # plt.xlabel("mu_reg")
+        # plt.ylabel("lambda_reg")
+        # plt.savefig("mle_sfd.png")
 
         print(f"Best lambda_reg for LSE: {best_lambda_lse}")
         print(f"Best mu_reg for LSE: {best_mu_lse}")
@@ -370,3 +370,6 @@ def benchmark_graphs_deep_dive(fixed_biadj_mat_list, verbose=False):
             print("\nTrue variances D_star:\n", D_star)
             print("Estimated variances D_hat (LSE):\n", D_hat_lse)
             print("Estimated variances D_hat (MLE):\n", D_hat_mle)
+
+
+benchmark_graphs_deep_dive(fixed_biadj_mat_list)
