@@ -53,6 +53,11 @@ def recover_ug(biadj_mat):
 
 
 def min_perm_squared_l2_dist(predicted_W: npt.NDArray, true_W: npt.NDArray):
+    zeros = np.zeros_like(predicted_W)
+    num_latents = len(true_W)
+    zeros[:num_latents] = true_W
+    true_W = zeros
+
     def perm_squared_l2_dist(perm):
         perm = np.array(perm)
         return np.sum((predicted_W[perm] - true_W) ** 2)

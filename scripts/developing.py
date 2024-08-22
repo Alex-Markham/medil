@@ -27,17 +27,17 @@ def calculate_metrics(model, method, threshold, W_star):
 
     # metric B
     W_hat_zero_pattern = (np.abs(W_hat) > threshold).astype(int)
-    sfd_value, ushd_value = sfd(model.biadj, W_hat_zero_pattern)
+    true_zero_pattern = W_star.astype(bool)
+    sfd_value, ushd_value = sfd(W_hat_zero_pattern, true_zero_pattern)
 
     return squared_distance, perm, sfd_value, ushd_value
 
 
 # hyperparameter tuning
 def grid_search(true_model, dataset, verbose=False):
-    biadj_matrix = true_model.biadj
     # define the log scale grid for lambda_reg and mu_reg
-    lambda_values = np.logspace(-5, 1, num=20)
-    mu_values = np.logspace(-5, 1, num=20)
+    lambda_values = np.logspace(-5, 1, num=5)
+    mu_values = np.logspace(-5, 1, num=5)
 
     # initialize variables to store the best parameters and the minimum squared distance
     best_lambda_lse = None
@@ -80,13 +80,13 @@ def grid_search(true_model, dataset, verbose=False):
             mu_idx = mu_indices[mu_reg]
 
             # Penalized MLE
-            model = DevMedil(
-                biadj=biadj_matrix, rng=rng(), lambda_reg=lambda_reg, mu_reg=mu_reg
-            )
+            model = DevMedil(rng=rng())
             try:
                 with warnings.catch_warnings(record=True) as w:
                     warnings.simplefilter("always", category=RuntimeWarning)
-                    model.fit(dataset, method="mle")
+                    model.fit(
+                        dataset, method="mle", lambda_reg=lambda_reg, mu_reg=mu_reg
+                    )
 
                     # Check if any RuntimeWarnings were raised
                     if any(
@@ -121,13 +121,13 @@ def grid_search(true_model, dataset, verbose=False):
                     )
 
             # Penalized LSE
-            model = DevMedil(
-                biadj=biadj_matrix, rng=rng(), lambda_reg=lambda_reg, mu_reg=mu_reg
-            )
+            model = DevMedil(rng=rng())
             try:
                 with warnings.catch_warnings(record=True) as w:
                     warnings.simplefilter("always", category=RuntimeWarning)
-                    model.fit(dataset, method="lse")
+                    model.fit(
+                        dataset, method="lse", lambda_reg=lambda_reg, mu_reg=mu_reg
+                    )
 
                     # Check if any RuntimeWarnings were raised
                     if any(
@@ -186,6 +186,7 @@ def grid_search(true_model, dataset, verbose=False):
         min_squared_distance_mle,
     )
 
+
 # define fixed_biadj_mat_list
 fixed_biadj_mat_list = [
     np.array([[True, True]]),
@@ -228,9 +229,10 @@ fixed_biadj_mat_list = [
     ),
 ]
 
+
 # examine weight matrix recovery, regularizers, and optimization
 # results for benchmark graphs (toy model is the 4th graph)
-def benchmark_graphs_deep_dive(fixed_biadj_mat_list):
+def benchmark_graphs_deep_dive(fixed_biadj_mat_list, verbose=False):
     for idx, biadj_matrix in enumerate(fixed_biadj_mat_list):
         print(f"\nTesting Graph {idx + 1} with shape {biadj_matrix.shape}")
         num_meas, num_latent = biadj_matrix.shape
@@ -256,7 +258,7 @@ def benchmark_graphs_deep_dive(fixed_biadj_mat_list):
             best_lambda_lse,
             min_squared_distance_lse,
             min_squared_distance_mle,
-        ) = grid_search(true_model, dataset, verbose=False)
+        ) = grid_search(true_model, dataset, verbose=verbose)
 
         # Fit the GaussianMCM model
         model = GaussianMCM(biadj=biadj_matrix, rng=rng())
@@ -264,11 +266,13 @@ def benchmark_graphs_deep_dive(fixed_biadj_mat_list):
 
         # Calculate W_hat from the GaussianMCM model
         W_hat_gaussian = model.parameters.biadj_weights
-        
+
         # Calculate the squared distance between W_hat_gaussian and W_star
         _, squared_distance_gaussian = min_perm_squared_l2_dist(W_hat_gaussian, W_star)
-            
-        print(f"Squared distance between W_hat_gaussian and W_star (Graph {idx + 1}): {squared_distance_gaussian}\n")
+
+        print(
+            f"Squared distance between W_hat_gaussian and W_star (Graph {idx + 1}): {squared_distance_gaussian}\n"
+        )
 
         # Plot heatmap for Squared Distance (LSE)
         plt.figure(figsize=(10, 8))
@@ -332,40 +336,37 @@ def benchmark_graphs_deep_dive(fixed_biadj_mat_list):
 
         ## Examine param values from best run:
         # best penalized LSE
-        model = DevMedil(
-            biadj=biadj_matrix, rng=rng(), lambda_reg=best_lambda_lse, mu_reg=best_mu_lse
-        )
-        model.fit(dataset, method="lse")
+        model = DevMedil(rng=rng())
+        model.fit(dataset, method="lse", lambda_reg=best_lambda_lse, mu_reg=best_mu_lse)
         W_hat_lse = model.W_hat_lse
         D_hat_lse = model.D_hat_lse
 
-        model = DevMedil(
-            biadj=biadj_matrix, rng=rng(), lambda_reg=best_lambda_mle, mu_reg=best_mu_mle
-        )
-        model.fit(dataset, method="mle")
+        model = DevMedil(rng=rng())
+        model.fit(dataset, method="mle", lambda_reg=best_lambda_mle, mu_reg=best_mu_mle)
         W_hat_mle = model.W_hat_mle
         D_hat_mle = model.D_hat_mle
 
-        # # Set a threshold
-        # threshold = 0.5
-
-        # # the w_hat and the zero patterns by lse
-        # W_hat_lse_zero_pattern = (np.abs(W_hat_lse) > threshold).astype(int)
-        # print("W_hat_lse Zero Pattern:")
-        # print(W_hat_lse_zero_pattern)
-
         # Compute the squared distance as the evaluation metric
-        lse_order, squared_distance_lse = min_perm_squared_l2_dist(W_hat_lse, W_star)
-        print("Squared distance between W_hat_lse and W_star:\n", squared_distance_lse)
-        mle_order, squared_distance_mle = min_perm_squared_l2_dist(W_hat_mle, W_star)
-        print("Squared distance between W_hat_mle and W_star:\n", squared_distance_mle)
+        with np.printoptions(precision=4, suppress=True):
+            lse_order, squared_distance_lse = min_perm_squared_l2_dist(
+                W_hat_lse, W_star
+            )
+            print(
+                "Squared distance between W_hat_lse and W_star:\n", squared_distance_lse
+            )
+            mle_order, squared_distance_mle = min_perm_squared_l2_dist(
+                W_hat_mle, W_star
+            )
+            print(
+                "Squared distance between W_hat_mle and W_star:\n", squared_distance_mle
+            )
 
-        W_star = true_model.parameters.biadj_weights
-        print("\nTrue weight matrix W_star:\n", W_star)
-        print("Estimated W_hat (LSE):\n", W_hat_lse[np.array(lse_order)])
-        print("Estimated W_hat (MLE):\n", W_hat_mle[np.array(mle_order)])
+            W_star = true_model.parameters.biadj_weights
+            print("\nTrue weight matrix W_star:\n", W_star)
+            print("Estimated W_hat (LSE):\n", W_hat_lse[np.array(lse_order)])
+            print("Estimated W_hat (MLE):\n", W_hat_mle[np.array(mle_order)])
 
-        D_star = true_model.parameters.error_variances
-        print("\nTrue variances D_star:\n", D_star)
-        print("Estimated variances D_hat (LSE):\n", D_hat_lse)
-        print("Estimated variances D_hat (MLE):\n", D_hat_mle)
+            D_star = true_model.parameters.error_variances
+            print("\nTrue variances D_star:\n", D_star)
+            print("Estimated variances D_hat (LSE):\n", D_hat_lse)
+            print("Estimated variances D_hat (MLE):\n", D_hat_mle)

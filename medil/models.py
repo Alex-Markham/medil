@@ -16,7 +16,6 @@ from sklearn.preprocessing import StandardScaler as sc
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
-
 from .ecc_algorithms import find_heuristic_1pc
 from .independence_testing import estimate_UDG
 from .vae import VariationalAutoencoder
@@ -458,27 +457,26 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
 # implement penalized mle and penalized lse with a new class
 class DevMedil(MedilCausalModel):
-    def __init__(
-        self,
-        biadj: npt.NDArray = np.array([]),
-        udg: npt.NDArray = np.array([]),
-        one_pure_child: bool = True,
-        rng=np.random.default_rng(0),
-        lambda_reg: float = 0.1,
-        mu_reg: float = 0.1,
-    ) -> None:
-        super().__init__(biadj, udg, one_pure_child, rng)
-        self.lambda_reg = lambda_reg
-        self.mu_reg = mu_reg
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     # penalized MLE
-    def fit_penalized_mle(self, dataset: npt.NDArray) -> "DevMedil":
-        k, n = self.biadj.shape
+    def fit_penalized_mle(
+        self,
+        dataset: npt.NDArray,
+        lambda_reg: float = 0.1,
+        mu_reg: float = 0.1,
+    ) -> "DevMedil":
+        num_meas = dataset.shape[1]
+        if self.one_pure_child:
+            num_latent = num_meas
+        else:
+            num_latent = (num_meas**2) // 4
         Sigma_hat = np.cov(dataset.T)
 
-        def penalized_mle_loss(params):
-            W = params[: k * n].reshape(k, n)
-            D = np.diag(params[k * n :])
+        def penalized_mle_loss(W_and_D):
+            W = W_and_D[: num_latent * num_meas].reshape(num_latent, num_meas)
+            D = np.diag(W_and_D[num_latent * num_meas :])
 
             Sigma = self.compute_sigma(W, D)
             Sigma_inv = np.linalg.inv(Sigma)
@@ -488,48 +486,57 @@ class DevMedil(MedilCausalModel):
                 return np.inf
 
             loss = np.trace(np.dot(Sigma_hat, Sigma_inv)) - logdet
-            loss += self.lambda_reg * self.rho(W) + self.mu_reg * self.sigma(W)
+            loss += lambda_reg * self.rho(W) + mu_reg * self.sigma(W)
 
             return loss
 
-        initial_W = self.rng.standard_normal((k, n))
-        initial_D = self.rng.random(n)
-        initial_params = np.hstack([initial_W.flatten(), initial_D])
+        initial_W = self.rng.standard_normal((num_latent, num_meas))
+        initial_D = self.rng.random(num_meas)
+        initial_W_and_D = np.hstack([initial_W.flatten(), initial_D])
 
-        result = minimize(penalized_mle_loss, initial_params, method="BFGS")
+        result = minimize(penalized_mle_loss, initial_W_and_D, method="BFGS")
         self.result = result
-        self.W_hat_mle = result.x[: k * n].reshape(k, n)
-        self.D_hat_mle = np.diag(result.x[k * n :])
+        self.W_hat_mle = result.x[: num_latent * num_meas].reshape(num_latent, num_meas)
+        self.D_hat_mle = np.diag(result.x[num_latent * num_meas :])
         self.convergence_success_mle = result.success
         self.convergence_message_mle = result.message
 
         return self
 
     # penalized LSE
-    def fit_penalized_lse(self, dataset: npt.NDArray) -> "DevMedil":
-        k, n = self.biadj.shape
+    def fit_penalized_lse(
+        self,
+        dataset: npt.NDArray,
+        lambda_reg: float = 0.1,
+        mu_reg: float = 0.1,
+    ) -> "DevMedil":
+        num_meas = dataset.shape[1]
+        if self.one_pure_child:
+            num_latent = num_meas
+        else:
+            num_latent = (num_meas**2) // 4
         Sigma_hat = np.cov(dataset.T)
 
-        def penalized_lse_loss(params):
-            W = params[: k * n].reshape(k, n)
-            D = np.diag(params[k * n :])
+        def penalized_lse_loss(W_and_D):
+            W = W_and_D[: num_latent * num_meas].reshape(num_latent, num_meas)
+            D = np.diag(W_and_D[num_latent * num_meas :])
 
             loss = norm(Sigma_hat - W.T @ W - D, "fro") ** 2
             # nuclear norm for the first penalty term
-            loss += self.lambda_reg * self.rho(W)
+            loss += lambda_reg * self.rho(W)
             # L1 norm for the second penalty function
-            loss += self.mu_reg * self.sigma(W)
+            loss += mu_reg * self.sigma(W)
 
             return loss
 
-        initial_W = self.rng.standard_normal((k, n))
-        initial_D = np.abs(self.rng.standard_normal(n))
+        initial_W = self.rng.standard_normal((num_latent, num_meas))
+        initial_D = np.abs(self.rng.standard_normal(num_meas))
         initial_params = np.concatenate([initial_W.flatten(), initial_D])
 
         result = minimize(penalized_lse_loss, initial_params, method="BFGS")
         self.result = result
-        self.W_hat_lse = result.x[: k * n].reshape(k, n)
-        self.D_hat_lse = np.diag(np.abs(result.x[k * n :]))
+        self.W_hat_lse = result.x[: num_latent * num_meas].reshape(num_latent, num_meas)
+        self.D_hat_lse = np.diag(np.abs(result.x[num_latent * num_meas :]))
         self.convergence_success_lse = result.success
         self.convergence_message_lse = result.message
 
@@ -566,10 +573,12 @@ class DevMedil(MedilCausalModel):
         epsilon = self.rng.multivariate_normal(np.zeros(n), D_hat, sample_size)
         return np.dot(L, W_hat) + epsilon
 
-    def fit(self, dataset: npt.NDArray, method: str = "mle") -> "DevMedil":
+    def fit(
+        self, dataset: npt.NDArray, method: str = "mle", lambda_reg=0.1, mu_reg=0.1
+    ) -> "DevMedil":
         if method == "mle":
-            return self.fit_penalized_mle(dataset)
+            return self.fit_penalized_mle(dataset, lambda_reg, mu_reg)
         elif method == "lse":
-            return self.fit_penalized_lse(dataset)
+            return self.fit_penalized_lse(dataset, lambda_reg, mu_reg)
         else:
             raise ValueError("Method must be either 'mle' or 'lse'")
