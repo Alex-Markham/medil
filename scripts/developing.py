@@ -6,7 +6,7 @@ import numpy as np
 import seaborn as sns
 
 from medil.models import DevMedil, GaussianMCM
-from medil.evaluate import sfd, min_perm_squared_l2_dist
+from medil.evaluate import sfd, min_perm_squared_l2_dist_abs
 from medil.sample import mcm, biadj
 
 
@@ -23,7 +23,7 @@ def calculate_metrics(model, method, threshold, W_star):
     else:
         W_hat = model.W_hat_lse
     # metric A
-    perm, squared_distance = min_perm_squared_l2_dist(W_hat, W_star)
+    perm, squared_distance = min_perm_squared_l2_dist_abs(W_hat, W_star)
 
     # metric B
     W_hat_zero_pattern = (np.abs(W_hat) > threshold).astype(int)
@@ -36,8 +36,8 @@ def calculate_metrics(model, method, threshold, W_star):
 # hyperparameter tuning
 def grid_search(true_model, dataset, verbose=False):
     # define the log scale grid for lambda_reg and mu_reg
-    lambda_values = np.logspace(-5, 1, num=5)
-    mu_values = np.logspace(-5, 1, num=5)
+    lambda_values = np.logspace(-6, 1, num=6)
+    mu_values = np.logspace(-6, 1, num=6)
 
     # initialize variables to store the best parameters and the minimum squared distance
     best_lambda_lse = None
@@ -241,7 +241,7 @@ def benchmark_graphs_deep_dive(fixed_biadj_mat_list, verbose=False):
         true_model = mcm(rng=rng(), parameterization="Gaussian", biadj=biadj_matrix)
 
         # Generate the dataset
-        dataset = true_model.sample(1000)
+        dataset = true_model.sample(5000)
 
         # Run grid search
         (
@@ -268,11 +268,15 @@ def benchmark_graphs_deep_dive(fixed_biadj_mat_list, verbose=False):
         W_hat_gaussian = model.parameters.biadj_weights
 
         # Calculate the squared distance between W_hat_gaussian and W_star
-        _, squared_distance_gaussian = min_perm_squared_l2_dist(W_hat_gaussian, W_star)
+        _, squared_distance_gaussian = min_perm_squared_l2_dist_abs(
+            W_hat_gaussian, W_star
+        )
 
         print(
-            f"Squared distance between W_hat_gaussian and W_star (Graph {idx + 1}): {squared_distance_gaussian}\n"
+            f"Squared distance between W_hat_gaussian and W_star (Graph {idx + 1}):\n {squared_distance_gaussian}"
         )
+        print(f"True weights:\n {true_model.parameters.biadj_weights}")
+        print(f"GaussianMCM learned weights:\n {W_hat_gaussian}")
 
         # # Plot heatmap for Squared Distance (LSE)
         # plt.figure(figsize=(10, 8))
@@ -348,13 +352,13 @@ def benchmark_graphs_deep_dive(fixed_biadj_mat_list, verbose=False):
 
         # Compute the squared distance as the evaluation metric
         with np.printoptions(precision=4, suppress=True):
-            lse_order, squared_distance_lse = min_perm_squared_l2_dist(
+            lse_order, squared_distance_lse = min_perm_squared_l2_dist_abs(
                 W_hat_lse, W_star
             )
             print(
                 "Squared distance between W_hat_lse and W_star:\n", squared_distance_lse
             )
-            mle_order, squared_distance_mle = min_perm_squared_l2_dist(
+            mle_order, squared_distance_mle = min_perm_squared_l2_dist_abs(
                 W_hat_mle, W_star
             )
             print(

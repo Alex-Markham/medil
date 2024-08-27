@@ -72,3 +72,25 @@ def min_perm_squared_l2_dist(predicted_W: npt.NDArray, true_W: npt.NDArray):
     opt_perm, min_dist = min(pairs, key=lambda pair: pair[1])
 
     return np.array(opt_perm), min_dist
+
+
+def min_perm_squared_l2_dist_abs(predicted_W: npt.NDArray, true_W: npt.NDArray):
+    zeros = np.zeros_like(predicted_W)
+    num_latents = len(true_W)
+    zeros[:num_latents] = true_W
+    true_W = zeros
+
+    def perm_squared_l2_dist(perm):
+        perm = np.array(perm)
+        return np.sum((np.abs(predicted_W[perm]) - np.abs(true_W)) ** 2)
+
+    def pair(perm):
+        return perm, perm_squared_l2_dist(perm)
+
+    perms = itertools.permutations(range(len(predicted_W)))
+
+    pairs = map(pair, perms)
+
+    opt_perm, min_dist = min(pairs, key=lambda pair: pair[1])
+
+    return np.array(opt_perm), min_dist

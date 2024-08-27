@@ -459,6 +459,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 class DevMedil(MedilCausalModel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.init_W = None
 
     # penalized MLE
     def fit_penalized_mle(
@@ -485,12 +486,16 @@ class DevMedil(MedilCausalModel):
             if sign <= 0:
                 return np.inf
 
-            loss = np.trace(np.dot(Sigma_hat, Sigma_inv)) - logdet
+            loss = np.trace(np.dot(Sigma_hat, Sigma_inv)) - sign * logdet
             loss += lambda_reg * self.rho(W) + mu_reg * self.sigma(W)
 
             return loss
 
-        initial_W = self.rng.standard_normal((num_latent, num_meas))
+        initial_W = (
+            self.rng.standard_normal((num_latent, num_meas))
+            if self.init_W is None
+            else self.init_W
+        )
         initial_D = self.rng.random(num_meas)
         initial_W_and_D = np.hstack([initial_W.flatten(), initial_D])
 
