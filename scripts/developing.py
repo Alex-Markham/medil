@@ -490,5 +490,38 @@ def benchmark_graphs_deep_dive(fixed_biadj_mat_list, verbose=False):
             print("Estimated variances D_hat (LSE):\n", D_hat_lse)
             print("Estimated variances D_hat (MLE):\n", D_hat_mle)
 
+# K-Fold Cross-Validation
+def benchmark_graphs_deep_dive_kfold(fixed_biadj_mat_list, k=5, verbose=False):
+    for idx, biadj_matrix in enumerate(fixed_biadj_mat_list):
+        print(f"\nTesting Graph {idx + 1} with shape {biadj_matrix.shape}")
+        num_meas, num_latent = biadj_matrix.shape
+
+        # Generate the MCM sample
+        true_model = mcm(rng=rng(), parameterization="Gaussian", biadj=biadj_matrix)
+
+        # Generate the dataset
+        dataset = true_model.sample(5000)
+
+        # Run grid search with K-Fold cross-validation
+        (
+            W_star,
+            best_mu_lse,
+            best_mu_mle,
+            best_lambda_mle,
+            best_lambda_lse,
+            min_squared_distance_lse,
+            min_squared_distance_mle,
+        ) = grid_search_kfold(true_model, dataset, k=k, verbose=verbose)
+
+        print(f"Best lambda_reg for LSE: {best_lambda_lse}")
+        print(f"Best mu_reg for LSE: {best_mu_lse}")
+        print(f"Minimum squared distance (LSE): {min_squared_distance_lse}")
+
+        print(f"Best lambda_reg for MLE: {best_lambda_mle}")
+        print(f"Best mu_reg for MLE: {best_mu_mle}")
+        print(f"Minimum squared distance (MLE): {min_squared_distance_mle}\n")
+
+
 
 benchmark_graphs_deep_dive(fixed_biadj_mat_list)
+benchmark_graphs_deep_dive_kfold(fixed_biadj_mat_list, k=5, verbose=True)
