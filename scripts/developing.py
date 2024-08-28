@@ -9,6 +9,7 @@ from medil.models import DevMedil, GaussianMCM
 from medil.evaluate import sfd, min_perm_squared_l2_dist_abs
 from medil.sample import mcm, biadj
 
+from sklearn.model_selection import KFold
 
 # Set the random variable generator seed
 def rng():
@@ -33,7 +34,7 @@ def calculate_metrics(model, method, threshold, W_star):
     return squared_distance, perm, sfd_value, ushd_value
 
 
-# hyperparameter tuning
+# Hyperparameter tuning 
 def grid_search(true_model, dataset, verbose=False):
     # define the log scale grid for lambda_reg and mu_reg
     lambda_values = np.logspace(-6, 1, num=6)
@@ -185,6 +186,120 @@ def grid_search(true_model, dataset, verbose=False):
         min_squared_distance_lse,
         min_squared_distance_mle,
     )
+
+# Hyperparameter tuning with K-fold cross-validation
+def grid_search_kfold(true_model, dataset, k=5, verbose=False):
+    # Define the log scale grid for lambda_reg and mu_reg
+    lambda_values = np.logspace(-6, 1, num=6)
+    mu_values = np.logspace(-6, 1, num=6)
+
+    # Initialize variables to store the best parameters and the minimum squared distance
+    best_lambda_lse = None
+    best_mu_lse = None
+    best_perm_lse = None
+    best_lambda_mle = None
+    best_mu_mle = None
+    best_perm_mle = None
+    min_squared_distance_mle = float("inf")
+    min_squared_distance_lse = float("inf")
+
+    # Real value of w
+    W_star = true_model.parameters.biadj_weights
+
+    # K-Fold cross-validation
+    kf = KFold(n_splits=k, shuffle=True, random_state=3)
+
+    for lambda_reg in lambda_values:
+        for mu_reg in mu_values:
+            # Initialize metrics for averaging over folds
+            fold_squared_distance_mle = []
+            fold_squared_distance_lse = []
+            fold_sfd_value_mle = []
+            fold_sfd_value_lse = []
+
+            for train_index, val_index in kf.split(dataset):
+                train_data = dataset[train_index]
+                val_data = dataset[val_index]
+
+                # Penalized MLE
+                model = DevMedil(rng=rng())
+                try:
+                    with warnings.catch_warnings(record=True) as w:
+                        warnings.simplefilter("always", category=RuntimeWarning)
+                        model.fit(
+                            train_data, method="mle", lambda_reg=lambda_reg, mu_reg=mu_reg
+                        )
+
+                    squared_distance_mle, perm, sfd_value_mle, ushd_value_mle = (
+                        calculate_metrics(model, "mle", 0.5, W_star)
+                    )
+
+                    fold_squared_distance_mle.append(squared_distance_mle)
+                    fold_sfd_value_mle.append(sfd_value_mle)
+
+                except Exception as e:
+                    if verbose:
+                        print(
+                            f"Exception encountered during MLE with lambda_reg={lambda_reg}, mu_reg={mu_reg}: {e}"
+                        )
+
+                # Penalized LSE
+                model = DevMedil(rng=rng())
+                try:
+                    with warnings.catch_warnings(record=True) as w:
+                        warnings.simplefilter("always", category=RuntimeWarning)
+                        model.fit(
+                            train_data, method="lse", lambda_reg=lambda_reg, mu_reg=mu_reg
+                        )
+
+                    squared_distance_lse, perm, sfd_value_lse, ushd_value_lse = (
+                        calculate_metrics(model, "lse", 0.5, W_star)
+                    )
+
+                    fold_squared_distance_lse.append(squared_distance_lse)
+                    fold_sfd_value_lse.append(sfd_value_lse)
+
+                except Exception as e:
+                    if verbose:
+                        print(
+                            f"Exception encountered during LSE with lambda_reg={lambda_reg}, mu_reg={mu_reg}: {e}"
+                        )
+
+            # Average metrics over all folds
+            avg_squared_distance_mle = np.mean(fold_squared_distance_mle)
+            avg_squared_distance_lse = np.mean(fold_squared_distance_lse)
+            avg_sfd_value_mle = np.mean(fold_sfd_value_mle)
+            avg_sfd_value_lse = np.mean(fold_sfd_value_lse)
+
+            # Update the best parameters if a better score is found
+            if avg_squared_distance_mle < min_squared_distance_mle:
+                min_squared_distance_mle = avg_squared_distance_mle
+                best_perm_mle = perm
+                best_lambda_mle = lambda_reg
+                best_mu_mle = mu_reg
+
+            if avg_squared_distance_lse < min_squared_distance_lse:
+                min_squared_distance_lse = avg_squared_distance_lse
+                best_perm_lse = perm
+                best_lambda_lse = lambda_reg
+                best_mu_lse = mu_reg
+
+            if verbose:
+                print(
+                    f"lambda_reg={lambda_reg}, mu_reg={mu_reg}, avg_squared_distance_mle={avg_squared_distance_mle}, avg_squared_distance_lse={avg_squared_distance_lse}"
+                )
+
+    return (
+        W_star,
+        best_mu_lse,
+        best_mu_mle,
+        best_lambda_mle,
+        best_lambda_lse,
+        min_squared_distance_lse,
+        min_squared_distance_mle,
+    )
+
+
 
 
 # define fixed_biadj_mat_list
