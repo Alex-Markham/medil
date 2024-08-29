@@ -33,6 +33,15 @@ def calculate_metrics(model, method, threshold, W_star):
 
     return squared_distance, perm, sfd_value, ushd_value
 
+# calculate validation error using sample covariance matrix
+def calculate_validation_error(model, method, held_out_data):
+    sample_cov_matrix = np.cov(held_out_data, rowvar=False)
+    if method == "mle":
+        W_hat = model.W_hat_mle
+    else:
+        W_hat = model.W_hat_lse
+    loss = np.linalg.norm(sample_cov_matrix - W_hat @ W_hat.T)
+    return loss
 
 # Hyperparameter tuning 
 def grid_search(true_model, dataset, verbose=False):
