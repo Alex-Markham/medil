@@ -198,31 +198,27 @@ def grid_search(true_model, dataset, verbose=False):
 
 # Hyperparameter tuning with K-fold cross-validation
 def grid_search_kfold(true_model, dataset, k=5, verbose=False):
-    # Define the log scale grid for lambda_reg and mu_reg
     lambda_values = np.logspace(-6, 1, num=6)
     mu_values = np.logspace(-6, 1, num=6)
-
-    # Initialize variables to store the best parameters and the minimum squared distance
-    best_lambda_lse = None
-    best_mu_lse = None
-    best_perm_lse = None
-    best_lambda_mle = None
-    best_mu_mle = None
-    best_perm_mle = None
-    min_squared_distance_mle = float("inf")
-    min_squared_distance_lse = float("inf")
-
-    # Real value of w
     W_star = true_model.parameters.biadj_weights
-
-    # K-Fold cross-validation
     kf = KFold(n_splits=k, shuffle=True, random_state=3)
+
+    validation_error_results_mle = np.zeros((len(lambda_values), len(mu_values)))
+    validation_error_results_lse = np.zeros((len(lambda_values), len(mu_values)))
+    squared_distance_results_mle = np.zeros((len(lambda_values), len(mu_values)))
+    squared_distance_results_lse = np.zeros((len(lambda_values), len(mu_values)))
+    sfd_results_mle = np.zeros((len(lambda_values), len(mu_values)))
+    sfd_results_lse = np.zeros((len(lambda_values), len(mu_values)))
+
+    lambda_indices = {v: i for i, v in enumerate(lambda_values)}
+    mu_indices = {v: i for i, v in enumerate(mu_values)}
 
     for lambda_reg in lambda_values:
         for mu_reg in mu_values:
-            # Initialize metrics for averaging over folds
-            fold_squared_distance_mle = []
-            fold_squared_distance_lse = []
+            fold_validation_errors_mle = []
+            fold_validation_errors_lse = []
+            fold_true_errors_mle = []
+            fold_true_errors_lse = []
             fold_sfd_value_mle = []
             fold_sfd_value_lse = []
 
@@ -235,81 +231,66 @@ def grid_search_kfold(true_model, dataset, k=5, verbose=False):
                 try:
                     with warnings.catch_warnings(record=True) as w:
                         warnings.simplefilter("always", category=RuntimeWarning)
-                        model.fit(
-                            train_data, method="mle", lambda_reg=lambda_reg, mu_reg=mu_reg
-                        )
+                        model.fit(train_data, method="mle", lambda_reg=lambda_reg, mu_reg=mu_reg)
 
-                    squared_distance_mle, perm, sfd_value_mle, ushd_value_mle = (
-                        calculate_metrics(model, "mle", 0.5, W_star)
-                    )
+                    val_error_mle = calculate_validation_error(model, "mle", val_data)
+                    fold_validation_errors_mle.append(val_error_mle)
 
-                    fold_squared_distance_mle.append(squared_distance_mle)
+                    true_error_mle, _, sfd_value_mle, _ = calculate_metrics(model, "mle", 0.5, W_star)
+                    fold_true_errors_mle.append(true_error_mle)
                     fold_sfd_value_mle.append(sfd_value_mle)
 
                 except Exception as e:
                     if verbose:
-                        print(
-                            f"Exception encountered during MLE with lambda_reg={lambda_reg}, mu_reg={mu_reg}: {e}"
-                        )
+                        print(f"Exception during MLE with lambda_reg={lambda_reg}, mu_reg={mu_reg}: {e}")
 
                 # Penalized LSE
                 model = DevMedil(rng=rng())
                 try:
                     with warnings.catch_warnings(record=True) as w:
                         warnings.simplefilter("always", category=RuntimeWarning)
-                        model.fit(
-                            train_data, method="lse", lambda_reg=lambda_reg, mu_reg=mu_reg
-                        )
+                        model.fit(train_data, method="lse", lambda_reg=lambda_reg, mu_reg=mu_reg)
 
-                    squared_distance_lse, perm, sfd_value_lse, ushd_value_lse = (
-                        calculate_metrics(model, "lse", 0.5, W_star)
-                    )
+                    val_error_lse = calculate_validation_error(model, "lse", val_data)
+                    fold_validation_errors_lse.append(val_error_lse)
 
-                    fold_squared_distance_lse.append(squared_distance_lse)
+                    true_error_lse, _, sfd_value_lse, _ = calculate_metrics(model, "lse", 0.5, W_star)
+                    fold_true_errors_lse.append(true_error_lse)
                     fold_sfd_value_lse.append(sfd_value_lse)
 
                 except Exception as e:
                     if verbose:
-                        print(
-                            f"Exception encountered during LSE with lambda_reg={lambda_reg}, mu_reg={mu_reg}: {e}"
-                        )
+                        print(f"Exception during LSE with lambda_reg={lambda_reg}, mu_reg={mu_reg}: {e}")
 
-            # Average metrics over all folds
-            avg_squared_distance_mle = np.mean(fold_squared_distance_mle)
-            avg_squared_distance_lse = np.mean(fold_squared_distance_lse)
+            avg_val_error_mle = np.mean(fold_validation_errors_mle)
+            avg_true_error_mle = np.mean(fold_true_errors_mle)
             avg_sfd_value_mle = np.mean(fold_sfd_value_mle)
+
+            avg_val_error_lse = np.mean(fold_validation_errors_lse)
+            avg_true_error_lse = np.mean(fold_true_errors_lse)
             avg_sfd_value_lse = np.mean(fold_sfd_value_lse)
 
-            # Update the best parameters if a better score is found
-            if avg_squared_distance_mle < min_squared_distance_mle:
-                min_squared_distance_mle = avg_squared_distance_mle
-                best_perm_mle = perm
-                best_lambda_mle = lambda_reg
-                best_mu_mle = mu_reg
-
-            if avg_squared_distance_lse < min_squared_distance_lse:
-                min_squared_distance_lse = avg_squared_distance_lse
-                best_perm_lse = perm
-                best_lambda_lse = lambda_reg
-                best_mu_lse = mu_reg
+            validation_error_results_mle[lambda_indices[lambda_reg], mu_indices[mu_reg]] = avg_val_error_mle
+            validation_error_results_lse[lambda_indices[lambda_reg], mu_indices[mu_reg]] = avg_val_error_lse
+            squared_distance_results_mle[lambda_indices[lambda_reg], mu_indices[mu_reg]] = avg_true_error_mle
+            squared_distance_results_lse[lambda_indices[lambda_reg], mu_indices[mu_reg]] = avg_true_error_lse
+            sfd_results_mle[lambda_indices[lambda_reg], mu_indices[mu_reg]] = avg_sfd_value_mle
+            sfd_results_lse[lambda_indices[lambda_reg], mu_indices[mu_reg]] = avg_sfd_value_lse
 
             if verbose:
-                print(
-                    f"lambda_reg={lambda_reg}, mu_reg={mu_reg}, avg_squared_distance_mle={avg_squared_distance_mle}, avg_squared_distance_lse={avg_squared_distance_lse}"
-                )
+                print(f"lambda_reg={lambda_reg}, mu_reg={mu_reg}, avg_val_error_mle={avg_val_error_mle}, avg_true_error_mle={avg_true_error_mle}")
+                print(f"lambda_reg={lambda_reg}, mu_reg={mu_reg}, avg_val_error_lse={avg_val_error_lse}, avg_true_error_lse={avg_true_error_lse}")
 
     return (
-        W_star,
-        best_mu_lse,
-        best_mu_mle,
-        best_lambda_mle,
-        best_lambda_lse,
-        min_squared_distance_lse,
-        min_squared_distance_mle,
+        validation_error_results_lse,
+        validation_error_results_mle,
+        squared_distance_results_lse,
+        squared_distance_results_mle,
+        sfd_results_lse,
+        sfd_results_mle,
+        mu_values,
+        lambda_values
     )
-
-
-
 
 # define fixed_biadj_mat_list
 fixed_biadj_mat_list = [
