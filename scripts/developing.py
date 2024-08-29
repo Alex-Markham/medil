@@ -484,33 +484,23 @@ def benchmark_graphs_deep_dive(fixed_biadj_mat_list, verbose=False):
 def benchmark_graphs_deep_dive_kfold(fixed_biadj_mat_list, k=5, verbose=False):
     for idx, biadj_matrix in enumerate(fixed_biadj_mat_list):
         print(f"\nTesting Graph {idx + 1} with shape {biadj_matrix.shape}")
-        num_meas, num_latent = biadj_matrix.shape
-
-        # Generate the MCM sample
         true_model = mcm(rng=rng(), parameterization="Gaussian", biadj=biadj_matrix)
-
-        # Generate the dataset
         dataset = true_model.sample(5000)
 
-        # Run grid search with K-Fold cross-validation
         (
-            W_star,
-            best_mu_lse,
-            best_mu_mle,
-            best_lambda_mle,
-            best_lambda_lse,
-            min_squared_distance_lse,
-            min_squared_distance_mle,
+            validation_error_results_lse,
+            validation_error_results_mle,
+            squared_distance_results_lse,
+            squared_distance_results_mle,
+            sfd_results_lse,
+            sfd_results_mle,
+            mu_values,
+            lambda_values
         ) = grid_search_kfold(true_model, dataset, k=k, verbose=verbose)
 
-        print(f"Best lambda_reg for LSE: {best_lambda_lse}")
-        print(f"Best mu_reg for LSE: {best_mu_lse}")
-        print(f"Minimum squared distance (LSE): {min_squared_distance_lse}")
-
-        print(f"Best lambda_reg for MLE: {best_lambda_mle}")
-        print(f"Best mu_reg for MLE: {best_mu_mle}")
-        print(f"Minimum squared distance (MLE): {min_squared_distance_mle}\n")
-
+        print(f"Plotting heatmaps for Graph {idx + 1}")
+        plot_heatmaps(lambda_values, mu_values, validation_error_results_lse, squared_distance_results_lse, sfd_results_lse, method_name="LSE")
+        plot_heatmaps(lambda_values, mu_values, validation_error_results_mle, squared_distance_results_mle, sfd_results_mle, method_name="MLE")
 
 
 benchmark_graphs_deep_dive(fixed_biadj_mat_list)
