@@ -502,6 +502,27 @@ def benchmark_graphs_deep_dive_kfold(fixed_biadj_mat_list, k=5, verbose=False):
         plot_heatmaps(lambda_values, mu_values, validation_error_results_lse, squared_distance_results_lse, sfd_results_lse, method_name="LSE")
         plot_heatmaps(lambda_values, mu_values, validation_error_results_mle, squared_distance_results_mle, sfd_results_mle, method_name="MLE")
 
+def plot_heatmaps(lambda_values, mu_values, validation_error_results, squared_distance_results, sfd_results, method_name):
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(validation_error_results, xticklabels=[f"{x:.2g}" for x in mu_values], yticklabels=[f"{y:.2g}" for y in lambda_values], cmap="Reds")
+    plt.title(f"Validation Error for Penalized {method_name}")
+    plt.xlabel("mu_reg")
+    plt.ylabel("lambda_reg")
+    plt.show()
+
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(squared_distance_results, xticklabels=[f"{x:.2g}" for x in mu_values], yticklabels=[f"{y:.2g}" for y in lambda_values], cmap="Reds")
+    plt.title(f"Squared Distance for Penalized {method_name}")
+    plt.xlabel("mu_reg")
+    plt.ylabel("lambda_reg")
+    plt.show()
+
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(sfd_results, xticklabels=[f"{x:.2g}" for x in mu_values], yticklabels=[f"{y:.2g}" for y in lambda_values], cmap="Blues")
+    plt.title(f"SFD Value for Penalized {method_name}")
+    plt.xlabel("mu_reg")
+    plt.ylabel("lambda_reg")
+    plt.show()
 
 benchmark_graphs_deep_dive(fixed_biadj_mat_list)
 benchmark_graphs_deep_dive_kfold(fixed_biadj_mat_list, k=5, verbose=True)
