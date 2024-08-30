@@ -11,6 +11,7 @@ from medil.sample import mcm, biadj
 
 from sklearn.model_selection import KFold
 
+
 # Set the random variable generator seed
 def rng():
     return np.random.default_rng(3)
@@ -33,17 +34,21 @@ def calculate_metrics(model, method, threshold, W_star):
 
     return squared_distance, perm, sfd_value, ushd_value
 
+
 # calculate validation error using sample covariance matrix
 def calculate_validation_error(model, method, held_out_data):
     sample_cov_matrix = np.cov(held_out_data, rowvar=False)
     if method == "mle":
         W_hat = model.W_hat_mle
+        D_hat = model.D_hat_mle
     else:
         W_hat = model.W_hat_lse
-    loss = np.linalg.norm(sample_cov_matrix - W_hat @ W_hat.T)
+        D_hat = model.D_hat_lse
+    loss = np.linalg.norm(sample_cov_matrix - W_hat @ W_hat.T - D_hat, "fro") ** 2
     return loss
 
-# Hyperparameter tuning 
+
+# Hyperparameter tuning
 def grid_search(true_model, dataset, verbose=False):
     # define the log scale grid for lambda_reg and mu_reg
     lambda_values = np.logspace(-6, 1, num=6)
@@ -196,6 +201,7 @@ def grid_search(true_model, dataset, verbose=False):
         min_squared_distance_mle,
     )
 
+
 # Hyperparameter tuning with K-fold cross-validation
 def grid_search_kfold(true_model, dataset, k=5, verbose=False):
     lambda_values = np.logspace(-6, 1, num=6)
@@ -231,36 +237,54 @@ def grid_search_kfold(true_model, dataset, k=5, verbose=False):
                 try:
                     with warnings.catch_warnings(record=True) as w:
                         warnings.simplefilter("always", category=RuntimeWarning)
-                        model.fit(train_data, method="mle", lambda_reg=lambda_reg, mu_reg=mu_reg)
+                        model.fit(
+                            train_data,
+                            method="mle",
+                            lambda_reg=lambda_reg,
+                            mu_reg=mu_reg,
+                        )
 
                     val_error_mle = calculate_validation_error(model, "mle", val_data)
                     fold_validation_errors_mle.append(val_error_mle)
 
-                    true_error_mle, _, sfd_value_mle, _ = calculate_metrics(model, "mle", 0.5, W_star)
+                    true_error_mle, _, sfd_value_mle, _ = calculate_metrics(
+                        model, "mle", 0.5, W_star
+                    )
                     fold_true_errors_mle.append(true_error_mle)
                     fold_sfd_value_mle.append(sfd_value_mle)
 
                 except Exception as e:
                     if verbose:
-                        print(f"Exception during MLE with lambda_reg={lambda_reg}, mu_reg={mu_reg}: {e}")
+                        print(
+                            f"Exception during MLE with lambda_reg={lambda_reg}, mu_reg={mu_reg}: {e}"
+                        )
 
                 # Penalized LSE
                 model = DevMedil(rng=rng())
                 try:
                     with warnings.catch_warnings(record=True) as w:
                         warnings.simplefilter("always", category=RuntimeWarning)
-                        model.fit(train_data, method="lse", lambda_reg=lambda_reg, mu_reg=mu_reg)
+                        model.fit(
+                            train_data,
+                            method="lse",
+                            lambda_reg=lambda_reg,
+                            mu_reg=mu_reg,
+                        )
 
                     val_error_lse = calculate_validation_error(model, "lse", val_data)
                     fold_validation_errors_lse.append(val_error_lse)
 
-                    true_error_lse, _, sfd_value_lse, _ = calculate_metrics(model, "lse", 0.5, W_star)
+                    true_error_lse, _, sfd_value_lse, _ = calculate_metrics(
+                        model, "lse", 0.5, W_star
+                    )
                     fold_true_errors_lse.append(true_error_lse)
                     fold_sfd_value_lse.append(sfd_value_lse)
 
                 except Exception as e:
                     if verbose:
-                        print(f"Exception during LSE with lambda_reg={lambda_reg}, mu_reg={mu_reg}: {e}")
+                        print(
+                            f"Exception during LSE with lambda_reg={lambda_reg}, mu_reg={mu_reg}: {e}"
+                        )
 
             avg_val_error_mle = np.mean(fold_validation_errors_mle)
             avg_true_error_mle = np.mean(fold_true_errors_mle)
@@ -270,16 +294,32 @@ def grid_search_kfold(true_model, dataset, k=5, verbose=False):
             avg_true_error_lse = np.mean(fold_true_errors_lse)
             avg_sfd_value_lse = np.mean(fold_sfd_value_lse)
 
-            validation_error_results_mle[lambda_indices[lambda_reg], mu_indices[mu_reg]] = avg_val_error_mle
-            validation_error_results_lse[lambda_indices[lambda_reg], mu_indices[mu_reg]] = avg_val_error_lse
-            squared_distance_results_mle[lambda_indices[lambda_reg], mu_indices[mu_reg]] = avg_true_error_mle
-            squared_distance_results_lse[lambda_indices[lambda_reg], mu_indices[mu_reg]] = avg_true_error_lse
-            sfd_results_mle[lambda_indices[lambda_reg], mu_indices[mu_reg]] = avg_sfd_value_mle
-            sfd_results_lse[lambda_indices[lambda_reg], mu_indices[mu_reg]] = avg_sfd_value_lse
+            validation_error_results_mle[
+                lambda_indices[lambda_reg], mu_indices[mu_reg]
+            ] = avg_val_error_mle
+            validation_error_results_lse[
+                lambda_indices[lambda_reg], mu_indices[mu_reg]
+            ] = avg_val_error_lse
+            squared_distance_results_mle[
+                lambda_indices[lambda_reg], mu_indices[mu_reg]
+            ] = avg_true_error_mle
+            squared_distance_results_lse[
+                lambda_indices[lambda_reg], mu_indices[mu_reg]
+            ] = avg_true_error_lse
+            sfd_results_mle[lambda_indices[lambda_reg], mu_indices[mu_reg]] = (
+                avg_sfd_value_mle
+            )
+            sfd_results_lse[lambda_indices[lambda_reg], mu_indices[mu_reg]] = (
+                avg_sfd_value_lse
+            )
 
             if verbose:
-                print(f"lambda_reg={lambda_reg}, mu_reg={mu_reg}, avg_val_error_mle={avg_val_error_mle}, avg_true_error_mle={avg_true_error_mle}")
-                print(f"lambda_reg={lambda_reg}, mu_reg={mu_reg}, avg_val_error_lse={avg_val_error_lse}, avg_true_error_lse={avg_true_error_lse}")
+                print(
+                    f"lambda_reg={lambda_reg}, mu_reg={mu_reg}, avg_val_error_mle={avg_val_error_mle}, avg_true_error_mle={avg_true_error_mle}"
+                )
+                print(
+                    f"lambda_reg={lambda_reg}, mu_reg={mu_reg}, avg_val_error_lse={avg_val_error_lse}, avg_true_error_lse={avg_true_error_lse}"
+                )
 
     return (
         validation_error_results_lse,
@@ -289,8 +329,9 @@ def grid_search_kfold(true_model, dataset, k=5, verbose=False):
         sfd_results_lse,
         sfd_results_mle,
         mu_values,
-        lambda_values
+        lambda_values,
     )
+
 
 # define fixed_biadj_mat_list
 fixed_biadj_mat_list = [
@@ -480,6 +521,7 @@ def benchmark_graphs_deep_dive(fixed_biadj_mat_list, verbose=False):
             print("Estimated variances D_hat (LSE):\n", D_hat_lse)
             print("Estimated variances D_hat (MLE):\n", D_hat_mle)
 
+
 # K-Fold Cross-Validation
 def benchmark_graphs_deep_dive_kfold(fixed_biadj_mat_list, k=5, verbose=False):
     for idx, biadj_matrix in enumerate(fixed_biadj_mat_list):
@@ -495,34 +537,72 @@ def benchmark_graphs_deep_dive_kfold(fixed_biadj_mat_list, k=5, verbose=False):
             sfd_results_lse,
             sfd_results_mle,
             mu_values,
-            lambda_values
+            lambda_values,
         ) = grid_search_kfold(true_model, dataset, k=k, verbose=verbose)
 
         print(f"Plotting heatmaps for Graph {idx + 1}")
-        plot_heatmaps(lambda_values, mu_values, validation_error_results_lse, squared_distance_results_lse, sfd_results_lse, method_name="LSE")
-        plot_heatmaps(lambda_values, mu_values, validation_error_results_mle, squared_distance_results_mle, sfd_results_mle, method_name="MLE")
+        plot_heatmaps(
+            lambda_values,
+            mu_values,
+            validation_error_results_lse,
+            squared_distance_results_lse,
+            sfd_results_lse,
+            method_name="LSE",
+        )
+        plot_heatmaps(
+            lambda_values,
+            mu_values,
+            validation_error_results_mle,
+            squared_distance_results_mle,
+            sfd_results_mle,
+            method_name="MLE",
+        )
 
-def plot_heatmaps(lambda_values, mu_values, validation_error_results, squared_distance_results, sfd_results, method_name):
+
+def plot_heatmaps(
+    lambda_values,
+    mu_values,
+    validation_error_results,
+    squared_distance_results,
+    sfd_results,
+    method_name,
+):
     plt.figure(figsize=(10, 8))
-    sns.heatmap(validation_error_results, xticklabels=[f"{x:.2g}" for x in mu_values], yticklabels=[f"{y:.2g}" for y in lambda_values], cmap="Reds")
+    sns.heatmap(
+        validation_error_results,
+        xticklabels=[f"{x:.2g}" for x in mu_values],
+        yticklabels=[f"{y:.2g}" for y in lambda_values],
+        cmap="Reds",
+    )
     plt.title(f"Validation Error for Penalized {method_name}")
     plt.xlabel("mu_reg")
     plt.ylabel("lambda_reg")
     plt.show()
 
     plt.figure(figsize=(10, 8))
-    sns.heatmap(squared_distance_results, xticklabels=[f"{x:.2g}" for x in mu_values], yticklabels=[f"{y:.2g}" for y in lambda_values], cmap="Reds")
+    sns.heatmap(
+        squared_distance_results,
+        xticklabels=[f"{x:.2g}" for x in mu_values],
+        yticklabels=[f"{y:.2g}" for y in lambda_values],
+        cmap="Reds",
+    )
     plt.title(f"Squared Distance for Penalized {method_name}")
     plt.xlabel("mu_reg")
     plt.ylabel("lambda_reg")
     plt.show()
 
     plt.figure(figsize=(10, 8))
-    sns.heatmap(sfd_results, xticklabels=[f"{x:.2g}" for x in mu_values], yticklabels=[f"{y:.2g}" for y in lambda_values], cmap="Blues")
+    sns.heatmap(
+        sfd_results,
+        xticklabels=[f"{x:.2g}" for x in mu_values],
+        yticklabels=[f"{y:.2g}" for y in lambda_values],
+        cmap="Blues",
+    )
     plt.title(f"SFD Value for Penalized {method_name}")
     plt.xlabel("mu_reg")
     plt.ylabel("lambda_reg")
     plt.show()
+
 
 benchmark_graphs_deep_dive(fixed_biadj_mat_list)
 benchmark_graphs_deep_dive_kfold(fixed_biadj_mat_list, k=5, verbose=True)
