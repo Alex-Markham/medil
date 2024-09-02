@@ -508,6 +508,21 @@ class DevMedil(MedilCausalModel):
 
         return self
 
+    def validation_mle(self, lambda_reg, mu_reg, data):
+        W = self.W_hat_mle
+        D = self.D_hat_mle
+        Sigma_hat = np.cov(data, rowvar=False)
+        Sigma = self.compute_sigma(W, D)
+        Sigma_inv = np.linalg.inv(Sigma)
+        sign, logdet = np.linalg.slogdet(Sigma_inv)
+
+        if sign <= 0:
+            return np.inf
+
+        loss = np.trace(np.dot(Sigma_hat, Sigma_inv)) - sign * logdet
+        loss += lambda_reg * self.rho(W) + mu_reg * self.sigma(W)
+        return loss
+
     # penalized LSE
     def fit_penalized_lse(
         self,
@@ -546,6 +561,15 @@ class DevMedil(MedilCausalModel):
         self.convergence_message_lse = result.message
 
         return self
+
+    def validation_lse(self, lambda_reg, mu_reg, data):
+        W = self.W_hat_lse
+        D = self.D_hat_lse
+        Sigma_hat = np.cov(data, rowvar=False)
+        loss = norm(Sigma_hat - W.T @ W - D, "fro") ** 2
+        loss += lambda_reg * self.rho(W)
+        loss += mu_reg * self.sigma(W)
+        return loss
 
     # compute sigma
     def compute_sigma(self, W: npt.NDArray, D: npt.NDArray) -> npt.NDArray:

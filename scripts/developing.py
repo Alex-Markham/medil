@@ -36,16 +36,11 @@ def calculate_metrics(model, method, threshold, W_star):
 
 
 # calculate validation error using sample covariance matrix
-def calculate_validation_error(model, method, held_out_data):
-    sample_cov_matrix = np.cov(held_out_data, rowvar=False)
-    if method == "mle":
-        W_hat = model.W_hat_mle
-        D_hat = model.D_hat_mle
-    else:
-        W_hat = model.W_hat_lse
-        D_hat = model.D_hat_lse
-    loss = np.linalg.norm(sample_cov_matrix - W_hat @ W_hat.T - D_hat, "fro") ** 2
-    return loss
+def calculate_validation_error(model, method, held_out_data, lambda_reg, mu_reg):
+    if method == "lse":
+        return model.validation_lse(lambda_reg, mu_reg, held_out_data)
+    elif method == "mle":
+        return model.validation_mle(lambda_reg, mu_reg, held_out_data)
 
 
 # Hyperparameter tuning
@@ -244,7 +239,9 @@ def grid_search_kfold(true_model, dataset, k=5, verbose=False):
                             mu_reg=mu_reg,
                         )
 
-                    val_error_mle = calculate_validation_error(model, "mle", val_data)
+                    val_error_mle = calculate_validation_error(
+                        model, "mle", val_data, lambda_reg, mu_reg
+                    )
                     fold_validation_errors_mle.append(val_error_mle)
 
                     true_error_mle, _, sfd_value_mle, _ = calculate_metrics(
@@ -271,7 +268,9 @@ def grid_search_kfold(true_model, dataset, k=5, verbose=False):
                             mu_reg=mu_reg,
                         )
 
-                    val_error_lse = calculate_validation_error(model, "lse", val_data)
+                    val_error_lse = calculate_validation_error(
+                        model, "lse", val_data, lambda_reg, mu_reg
+                    )
                     fold_validation_errors_lse.append(val_error_lse)
 
                     true_error_lse, _, sfd_value_lse, _ = calculate_metrics(
@@ -548,6 +547,7 @@ def benchmark_graphs_deep_dive_kfold(fixed_biadj_mat_list, k=5, verbose=False):
             squared_distance_results_lse,
             sfd_results_lse,
             method_name="LSE",
+            fig_name=f"Graph {idx} ",
         )
         plot_heatmaps(
             lambda_values,
@@ -556,6 +556,7 @@ def benchmark_graphs_deep_dive_kfold(fixed_biadj_mat_list, k=5, verbose=False):
             squared_distance_results_mle,
             sfd_results_mle,
             method_name="MLE",
+            fig_name=f"Graph {idx} ",
         )
 
 
@@ -566,43 +567,46 @@ def plot_heatmaps(
     squared_distance_results,
     sfd_results,
     method_name,
+    fig_name,
 ):
-    plt.figure(figsize=(10, 8))
+    fig, axs = plt.subplots(1, 3, figsize=(10, 3.7))
     sns.heatmap(
         validation_error_results,
         xticklabels=[f"{x:.2g}" for x in mu_values],
         yticklabels=[f"{y:.2g}" for y in lambda_values],
-        cmap="Reds",
+        square=True,
+        cmap="Greens",
+        ax=axs[0],
     )
-    plt.title(f"Validation Error for Penalized {method_name}")
-    plt.xlabel("mu_reg")
-    plt.ylabel("lambda_reg")
-    plt.show()
+    axs[0].set_title(f"{method_name} validation")
+    axs[0].set_ylabel(r"$\lambda$")
+    # plt.show()
 
-    plt.figure(figsize=(10, 8))
     sns.heatmap(
         squared_distance_results,
         xticklabels=[f"{x:.2g}" for x in mu_values],
-        yticklabels=[f"{y:.2g}" for y in lambda_values],
+        yticklabels=[],
+        square=True,
         cmap="Reds",
+        ax=axs[1],
     )
-    plt.title(f"Squared Distance for Penalized {method_name}")
-    plt.xlabel("mu_reg")
-    plt.ylabel("lambda_reg")
-    plt.show()
+    axs[1].set_title(f"{method_name} $l_2$")
 
-    plt.figure(figsize=(10, 8))
     sns.heatmap(
         sfd_results,
         xticklabels=[f"{x:.2g}" for x in mu_values],
-        yticklabels=[f"{y:.2g}" for y in lambda_values],
+        yticklabels=[],
+        square=True,
         cmap="Blues",
+        ax=axs[2],
     )
-    plt.title(f"SFD Value for Penalized {method_name}")
-    plt.xlabel("mu_reg")
-    plt.ylabel("lambda_reg")
-    plt.show()
+    axs[2].set_title(f"{method_name} SFD")
+
+    for ax in axs:
+        ax.set_xlabel(r"$\mu$")
+
+    plt.savefig(fig_name + method_name + ".png")
 
 
-benchmark_graphs_deep_dive(fixed_biadj_mat_list)
+# benchmark_graphs_deep_dive(fixed_biadj_mat_list)
 benchmark_graphs_deep_dive_kfold(fixed_biadj_mat_list, k=5, verbose=True)
