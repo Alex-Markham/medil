@@ -575,7 +575,7 @@ def plot_heatmaps(
         xticklabels=[f"{x:.2g}" for x in mu_values],
         yticklabels=[f"{y:.2g}" for y in lambda_values],
         square=True,
-        cmap="Greens",
+        cmap="Reds",
         ax=axs[0],
     )
     axs[0].set_title(f"{method_name} validation")
@@ -587,7 +587,7 @@ def plot_heatmaps(
         xticklabels=[f"{x:.2g}" for x in mu_values],
         yticklabels=[],
         square=True,
-        cmap="Reds",
+        cmap="Greens",
         ax=axs[1],
     )
     axs[1].set_title(f"{method_name} $l_2$")
@@ -605,6 +605,7 @@ def plot_heatmaps(
     for ax in axs:
         ax.set_xlabel(r"$\mu$")
 
+    fig.suptitle(fig_name + method_name)
     plt.savefig(fig_name + method_name + ".png")
 
 
