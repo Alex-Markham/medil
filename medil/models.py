@@ -501,16 +501,16 @@ class DevMedil(MedilCausalModel):
 
         result = minimize(penalized_mle_loss, initial_W_and_D, method="BFGS")
         self.result = result
-        self.W_hat_mle = result.x[: num_latent * num_meas].reshape(num_latent, num_meas)
-        self.D_hat_mle = np.diag(result.x[num_latent * num_meas :])
+        self.W_hat = result.x[: num_latent * num_meas].reshape(num_latent, num_meas)
+        self.D_hat = np.diag(result.x[num_latent * num_meas :])
         self.convergence_success_mle = result.success
         self.convergence_message_mle = result.message
 
         return self
 
     def validation_mle(self, lambda_reg, mu_reg, data):
-        W = self.W_hat_mle
-        D = self.D_hat_mle
+        W = self.W_hat
+        D = self.D_hat
         Sigma_hat = np.cov(data, rowvar=False)
         Sigma = self.compute_sigma(W, D)
         Sigma_inv = np.linalg.inv(Sigma)
@@ -555,16 +555,16 @@ class DevMedil(MedilCausalModel):
 
         result = minimize(penalized_lse_loss, initial_params, method="BFGS")
         self.result = result
-        self.W_hat_lse = result.x[: num_latent * num_meas].reshape(num_latent, num_meas)
-        self.D_hat_lse = np.diag(np.abs(result.x[num_latent * num_meas :]))
+        self.W_hat = result.x[: num_latent * num_meas].reshape(num_latent, num_meas)
+        self.D_hat = np.diag(np.abs(result.x[num_latent * num_meas :]))
         self.convergence_success_lse = result.success
         self.convergence_message_lse = result.message
 
         return self
 
     def validation_lse(self, lambda_reg, mu_reg, data):
-        W = self.W_hat_lse
-        D = self.D_hat_lse
+        W = self.W_hat
+        D = self.D_hat
         Sigma_hat = np.cov(data, rowvar=False)
         loss = norm(Sigma_hat - W.T @ W - D, "fro") ** 2
         loss += lambda_reg * self.rho(W)
