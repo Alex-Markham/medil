@@ -611,3 +611,138 @@ def plot_heatmaps(
 
 # benchmark_graphs_deep_dive(fixed_biadj_mat_list)
 benchmark_graphs_deep_dive_kfold(fixed_biadj_mat_list, k=5, verbose=True)
+
+
+# add GP model code
+from scipy.spatial.distance import pdist, squareform
+from scipy.stats import multivariate_normal
+
+def compute_gauss_kernel(x, sigmay, sigmax):
+    if not isinstance(x, np.ndarray):
+        x = np.array(x)
+    n = x.shape[0]
+    xnorm = squareform(pdist(x, 'euclidean')) ** 2
+    kx = sigmay * np.exp(-xnorm / (2 * sigmax ** 2))
+    return kx
+
+def compute_caus_order(biadj):
+    m, n = biadj.shape
+    total_nodes = m + n
+    remaining = list(range(total_nodes))
+    caus_order = []
+    adj = biadj_to_adj(biadj)
+    
+    while len(remaining) > 0:
+        col_sums = np.sum(adj[remaining][:, remaining], axis=0)
+        min_sum_index = np.argmin(col_sums)
+        root = remaining[min_sum_index]
+        caus_order.append(root)
+        remaining.remove(root)
+    
+    return caus_order
+
+def random_B(biadj):
+    m, n = biadj.shape
+    num_coeff = int(np.sum(biadj))
+    B = biadj.T.copy()
+    if num_coeff == 1:
+        coeffs = np.random.choice([-1, 1]) * np.random.uniform(0.1, 0.9)
+    else:
+        coeffs = np.diag(np.random.choice([-1, 1], size=num_coeff)) @ np.random.uniform(0.1, 0.9, size=num_coeff)
+    B[B == 1] = coeffs
+    return B
+
+def sample_data_from_G(n, biadj, func_type="GAM", noise_type="normalRandomVariances"):
+    pars_func_type = {
+        "B": random_B(biadj),
+        "kap": 1,
+        "sigmax": 1,
+        "sigmay": 1,
+        "output": False
+    }
+    pars_noise = {
+        "noiseExp": 1,
+        "varMin": 1,
+        "varMax": 2,
+        "noiseExpVarMin": 2,
+        "noiseExpVarMax": 4,
+        "bound": [1] * (biadj.shape[0] + biadj.shape[1])
+    }
+
+    return sample_data_from_GAM_GP(n, biadj, pars_func_type, noise_type, pars_noise)
+
+def sample_data_from_GAM_GP(n, biadj, pars_func_type, noise_type, pars_noise):
+    m, n_vars = biadj.shape
+    X = np.empty((n, m+n_vars))
+    caus_order = compute_caus_order(biadj)
+    noise_var = np.random.uniform(pars_noise["varMin"], pars_noise["varMax"], m+n_vars)
+    
+    for node in caus_order:
+        # Latent variable
+        if node < m:  
+            X[:, node] = np.random.randn(n)
+        # Observed variable
+        else: 
+            pa_of_node = np.where(biadj[:, node-m] == 1)[0]
+            X[:, node] = np.zeros(n)
+            
+            for pa in pa_of_node:
+                X[:, node] += pars_func_type["B"][node-m, pa] * X[:, pa]
+            
+            ran = np.random.randn(n)
+            noisetmp = (np.sqrt(noise_var[node]) * np.abs(ran)) ** (pars_noise["noiseExp"]) * np.sign(ran)
+            X[:, node] += noisetmp
+    
+    return X[:, m:]  # Return only the observed variables
+
+def biadj_to_adj(biadj):
+    m, n = biadj.shape
+    adj = np.zeros((m+n, m+n))
+    adj[:m, m:] = biadj
+    adj[m:, :m] = biadj.T
+    return adj
+
+def generate_dataset(biadj, n):
+    adj = biadj_to_adj(biadj)
+    
+    pars_func_type = {
+        "B": random_B(adj),
+        "kap": 1,
+        "sigmax": 1,
+        "sigmay": 1,
+        "output": False
+    }
+    pars_noise = {
+        "noiseExp": 1,
+        "varMin": 1,
+        "varMax": 2,
+        "noiseExpVarMin": 2,
+        "noiseExpVarMax": 4,
+        "bound": [1] * adj.shape[1]
+    }
+    noise_type = "normalRandomVariances"
+    
+    return sample_data_from_G(n, adj, pars_func_type, noise_type, pars_noise)
+
+def generate_dataset(biadj, n):
+    return sample_data_from_G(n, biadj)
+
+# Example usage
+biadj = np.array([
+    [1, 1, 0],
+    [0, 1, 1]
+], dtype=float)
+
+# Number of samples
+n = 1000
+
+# Generate dataset
+dataset = generate_dataset(biadj, n)
+
+print("Generated dataset (first 10 rows):")
+print(dataset[:10])
+
+
+
+
+
