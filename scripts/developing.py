@@ -647,9 +647,9 @@ def random_B(biadj):
     num_coeff = int(np.sum(biadj))
     B = biadj.T.copy()
     if num_coeff == 1:
-        coeffs = np.random.choice([-1, 1]) * np.random.uniform(0.1, 0.9)
+        coeffs = np.random.uniform(0.1, 0.9) * np.random.choice([-1, 1])
     else:
-        coeffs = np.diag(np.random.choice([-1, 1], size=num_coeff)) @ np.random.uniform(0.1, 0.9, size=num_coeff)
+        coeffs = np.random.uniform(0.1, 0.9, size=num_coeff) * np.random.choice([-1, 1], size=num_coeff)
     B[B == 1] = coeffs
     return B
 
@@ -677,24 +677,27 @@ def sample_data_from_GAM_GP(n, biadj, pars_func_type, noise_type, pars_noise):
     X = np.empty((n, m+n_vars))
     caus_order = compute_caus_order(biadj)
     noise_var = np.random.uniform(pars_noise["varMin"], pars_noise["varMax"], m+n_vars)
-    
+
     for node in caus_order:
-        # Latent variable
-        if node < m:  
+        if node < m:  # Latent variable
             X[:, node] = np.random.randn(n)
-        # Observed variable
-        else: 
+        else:  # Observed variable
             pa_of_node = np.where(biadj[:, node-m] == 1)[0]
             X[:, node] = np.zeros(n)
             
             for pa in pa_of_node:
-                X[:, node] += pars_func_type["B"][node-m, pa] * X[:, pa]
+                # Non-linear relationship
+                contribution = pars_func_type["B"][node-m, pa] * np.sin(X[:, pa])
+                if np.any(np.isnan(contribution)) or np.any(np.isinf(contribution)):
+                    print(f"Warning: Invalid values in contribution for node {node}, parent {pa}")
+                    contribution = np.nan_to_num(contribution, nan=0.0, posinf=1e10, neginf=-1e10)
+                X[:, node] += contribution
             
             ran = np.random.randn(n)
             noisetmp = (np.sqrt(noise_var[node]) * np.abs(ran)) ** (pars_noise["noiseExp"]) * np.sign(ran)
             X[:, node] += noisetmp
     
-    return X[:, m:]  # Return only the observed variables
+    return X[:, m:]
 
 def biadj_to_adj(biadj):
     m, n = biadj.shape
