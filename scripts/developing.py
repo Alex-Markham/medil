@@ -616,6 +616,7 @@ benchmark_graphs_deep_dive_kfold(fixed_biadj_mat_list, k=5, verbose=True)
 # add GP model code
 from scipy.spatial.distance import pdist, squareform
 from scipy.stats import multivariate_normal
+from medil.independence_testing import estimate_UDG
 
 def compute_gauss_kernel(x, sigmay, sigmax):
     if not isinstance(x, np.ndarray):
@@ -722,6 +723,31 @@ def generate_dataset(biadj, n_samples, noise_scale=0.1):
         X[:, i] += noise_scale * np.random.randn(n_samples)
     
     return X
+
+def verify_independence_pattern(biadj, n_samples=5000, noise_scale=0.1):
+    # Generate data
+    X = generate_dataset(biadj, n_samples, noise_scale)
+    
+    # Estimate UDG
+    udg, p_vals = estimate_UDG(X, method='xicor')
+    
+    # Compute expected dependency structure
+    expected_dep = (biadj.T @ biadj) > 0
+    np.fill_diagonal(expected_dep, False)  # Remove self-dependencies
+    
+    # Compare UDG with expected dependency structure
+    matches = (udg == expected_dep)
+    match_rate = np.sum(matches) / (udg.shape[0] * udg.shape[1])
+    
+    print(f"Match rate: {match_rate:.2f}")
+    print("UDG:")
+    print(udg)
+    print("Expected dependency structure:")
+    print(expected_dep)
+    print("P-values:")
+    print(p_vals)
+    
+    return udg, expected_dep, match_rate, p_vals
 
 # Example usage
 biadj = np.array([
