@@ -758,15 +758,18 @@ biadj = np.array([
     [0, 1, 1]
 ], dtype=float)
 
-# Number of samples
-n = 1000
+# parameters
+n_samples = 5000
+noise_scale = 0.1
 
-# Generate dataset
-dataset = generate_dataset(biadj, n)
+# generate dataset
+X = generate_dataset(biadj, n_samples, noise_scale)
 
-print("Generated dataset (first 10 rows):")
-print(dataset[:10])
+# print part of the dataset
+print(X[:10])
 
+# verify
+udg, expected_dep, match_rate, p_vals = verify_independence_pattern(biadj, n_samples=5000, noise_scale=0.1)
 
 
 
