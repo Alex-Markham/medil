@@ -702,30 +702,26 @@ def biadj_to_adj(biadj):
     adj[m:, :m] = biadj.T
     return adj
 
-def generate_dataset(biadj, n):
-    adj = biadj_to_adj(biadj)
+def generate_dataset(biadj, n_samples, noise_scale=0.1):
+    m, n_vars = biadj.shape
+    X = np.empty((n_samples, n_vars))
     
-    pars_func_type = {
-        "B": random_B(adj),
-        "kap": 1,
-        "sigmax": 1,
-        "sigmay": 1,
-        "output": False
-    }
-    pars_noise = {
-        "noiseExp": 1,
-        "varMin": 1,
-        "varMax": 2,
-        "noiseExpVarMin": 2,
-        "noiseExpVarMax": 4,
-        "bound": [1] * adj.shape[1]
-    }
-    noise_type = "normalRandomVariances"
+    # Generate latent variables
+    latent = np.random.randn(n_samples, m)
     
-    return sample_data_from_G(n, adj, pars_func_type, noise_type, pars_noise)
-
-def generate_dataset(biadj, n):
-    return sample_data_from_G(n, biadj)
+    # Generate observed variables
+    for i in range(n_vars):
+        parents = np.where(biadj[:, i] == 1)[0]
+        if len(parents) == 0:
+            X[:, i] = np.random.randn(n_samples)
+        else:
+            # Use a non-linear function to combine parent influences
+            X[:, i] = np.tanh(latent[:, parents].dot(np.random.randn(len(parents))))
+        
+        # Add noise
+        X[:, i] += noise_scale * np.random.randn(n_samples)
+    
+    return X
 
 # Example usage
 biadj = np.array([
