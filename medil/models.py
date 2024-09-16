@@ -288,6 +288,10 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
                 batch_size = x_batch.shape[0]
                 x_batch = x_batch.to(self.device)
                 recon_batch, logcov_batch, mu_batch, logvar_batch = model(x_batch)
+                # probably here or maybe outside one/both loop?? use
+                # model.decoder.fc_logcov.weight to get weights for
+                # regularization; add hyperparams mu and lambda (or
+                # other names) and feed to _elbo_gaussian
                 loss = self._elbo_gaussian(
                     x_batch,
                     recon_batch,
