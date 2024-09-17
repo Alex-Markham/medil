@@ -752,6 +752,90 @@ def verify_independence_pattern(biadj, n_samples=5000, noise_scale=0.1):
     
     return udg, expected_dep, match_rate, p_vals
 
+# Define a verification function for GP
+def verify_independence_pattern_GP(
+    biadj: np.ndarray, 
+    n_samples: int = 5000, 
+    method: str = 'xicor'
+) -> Tuple[np.ndarray, np.ndarray, float, np.ndarray]:
+    """
+    parameters:
+    -biadj (np.ndarray): shape = (num_latent, num_meas)
+    -n_samples (int)
+    -method (str):'xicor'
+    
+    return:
+    -udg (np.ndarray)
+    -expected_dep (np.ndarray)
+    -match_rate (float)
+    -p_vals (np.ndarray)
+    """
+    # Define G
+    num_latent, num_meas = biadj.shape
+    G = np.zeros((num_latent + num_meas, num_latent + num_meas), dtype=int)
+    G[:num_latent, num_latent:] = biadj.astype(int)
+
+    # Generate dataset
+    X = sample_data_from_G(n_samples, G, func_type="GAM", noise_type="normalRandomVariances")
+
+    # Estimate udg
+    estimated = estimate_UDG(X, method=method)
+    if isinstance(estimated, tuple):
+        udg, p_vals = estimated
+    else:
+        udg = estimated
+        p_vals = None  
+
+    # Compute expected dependency structure
+    expected_dep = (biadj.T @ biadj) > 0
+    np.fill_diagonal(expected_dep, False)  
+
+    print("biadj.T @ biadj:")
+    print(biadj.T @ biadj)
+
+    print("expected_dep:")
+    print(expected_dep)
+
+    # Upper triangle
+    triu_indices = np.triu_indices(num_meas, k=1)
+    expected_dep_triu = expected_dep[triu_indices].astype(int)
+    udg_triu = udg[triu_indices].astype(int)
+
+    # Calculte true positive, negative positive, false positive and false positive
+    TP = np.sum((expected_dep_triu == 1) & (udg_triu == 1))
+    TN = np.sum((expected_dep_triu == 0) & (udg_triu == 0))
+    FP = np.sum((expected_dep_triu == 0) & (udg_triu == 1))
+    FN = np.sum((expected_dep_triu == 1) & (udg_triu == 0))
+
+    # Metrics
+    precision = TP /(TP + FP + 1e-10)
+    recall = TP / (TP + FN + 1e-10)
+    f1_score = 2 * precision * recall / (precision + recall + 1e-10)
+
+    # Match rate
+    total = len(expected_dep_triu)
+    match_rate = (TP + TN) / total
+
+    # Results
+    print(f"Match rate: {match_rate:.2f}")
+    print("UDG:")
+    print(udg_triu)
+    print("Expected dependency structure:")
+    print(expected_dep_triu)
+    if p_vals is not None:
+        print("P-values:")
+        print(p_vals[triu_indices])
+
+    print(f"True Positives: {TP}")
+    print(f"True Negatives: {TN}")
+    print(f"False Positives: {FP}")
+    print(f"False Negatives: {FN}")
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall: {recall:.4f}")
+    print(f"F1 Score: {f1_score:.4f}")
+
+    return udg, expected_dep, match_rate, p_vals
+
 # Example usage
 biadj = np.array([
     [1, 1, 0],
