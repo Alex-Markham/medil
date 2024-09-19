@@ -205,7 +205,9 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             pickle.dump(loss_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
         with open(os.path.join(self.path, "error_recon.pkl"), "wb") as handle:
             pickle.dump(error_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        self.parameters.weights = model_recon.decoder.fc_logcov.weight.detach().numpy()
+        self.parameters.weights = (
+            model_recon.decoder.fc_logcov.weight.detach().numpy().T
+        )
         self.parameters.model = model_recon
         self.loss = {
             "elbo_train": loss_recon[0],
@@ -302,7 +304,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
                 x_batch = x_batch.to(self.device)
                 recon_batch, logcov_batch, mu_batch, logvar_batch = model(x_batch)
                 weight_batch = model.decoder.fc_logcov.weight
-                print(weight_batch)
+                # print(weight_batch)
                 # probably here or maybe outside one/both loop?? use
                 # model.decoder.fc_logcov.weight to get weights for
                 # regularization; add hyperparams mu and lambda (or
@@ -424,7 +426,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         loss = -beta * kl_div + recon_loss
         if weight is not None:
             llambda, mu = self.hyperparams["lambda"], self.hyperparams["mu"]
-            print(-loss + llambda * weight.norm("nuc") + mu * weight.norm(1))
+            # print(-loss + llambda * weight.norm("nuc") + mu * weight.norm(1))
             return -loss + llambda * weight.norm("nuc") + mu * weight.norm(1)
         return -loss
 
