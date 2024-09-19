@@ -56,7 +56,9 @@ class Parameters(object):
             self.error_variances = np.array([])
             self.biadj_weights = np.array([])
         elif parameterization == "VAE":
-            raise NotImplementedError
+            self.weights = np.array([])
+            with warnings.catch_warnings(action="ignore"):
+                self.vae = VariationalAutoencoder(0, 0, 0)
 
     def __str__(self) -> str:
         return "\n".join(
@@ -167,8 +169,11 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             "lr": 0.005,
             "beta": 1,
             "num_valid": 1000,
+            "mu": 0.01,
+            "lambda": 0.01,
         }
-        self.parameters = Parameters("vae")
+        self.parameters = Parameters("VAE")
+        self.loss = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def log(self, entry: str) -> None:
@@ -200,6 +205,14 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             pickle.dump(loss_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
         with open(os.path.join(self.path, "error_recon.pkl"), "wb") as handle:
             pickle.dump(error_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        self.parameters.weights = model_recon.decoder.fc_logcov.weight.detach().numpy()
+        self.parameters.model = model_recon
+        self.loss = {
+            "elbo_train": loss_recon[0],
+            "elbo_valid": loss_recon[1],
+            "recon_train": error_recon[0],
+            "recon_valid": error_recon[1],
+        }
         return self
 
     def assign_dof(self) -> npt.NDArray:
@@ -288,6 +301,8 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
                 batch_size = x_batch.shape[0]
                 x_batch = x_batch.to(self.device)
                 recon_batch, logcov_batch, mu_batch, logvar_batch = model(x_batch)
+                weight_batch = model.decoder.fc_logcov.weight
+                print(weight_batch)
                 # probably here or maybe outside one/both loop?? use
                 # model.decoder.fc_logcov.weight to get weights for
                 # regularization; add hyperparams mu and lambda (or
@@ -298,6 +313,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
                     logcov_batch,
                     mu_batch,
                     logvar_batch,
+                    weight_batch,
                     self.hyperparams["beta"],
                 )
                 error = self._recon_error(
@@ -353,6 +369,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
                     logcov_batch,
                     mu_batch,
                     logvar_batch,
+                    None,
                     self.hyperparams["beta"],
                 )
                 error = self._recon_error(
@@ -371,7 +388,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
         return valid_lb, valid_er
 
-    def _elbo_gaussian(self, x, x_recon, logcov, mu, logvar, beta):
+    def _elbo_gaussian(self, x, x_recon, logcov, mu, logvar, weight, beta):
         """Calculating loss for variational autoencoder
         :param x: original image
         :param x_recon: reconstruction in the output layer
@@ -405,8 +422,19 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
         # elbo
         loss = -beta * kl_div + recon_loss
-
+        if weight is not None:
+            llambda, mu = self.hyperparams["lambda"], self.hyperparams["mu"]
+            print(-loss + llambda * weight.norm("nuc") + mu * weight.norm(1))
+            return -loss + llambda * weight.norm("nuc") + mu * weight.norm(1)
         return -loss
+
+    # ρ(W)
+    def _rho(self, W: npt.NDArray) -> float:
+        return norm(W, "nuc")
+
+    # σ(W), the sum of absolute values of elements (L1 norm)
+    def _sigma(self, W: npt.NDArray) -> float:
+        return np.sum(W**2)
 
     def _recon_error(self, x, x_recon, logcov, weighted):
         """Reconstruction error given x and x_recon
