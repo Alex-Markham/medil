@@ -183,14 +183,20 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         if self.verbose:
             print(time_stamped_entry)
 
-    def fit(self, dataset: npt.NDArray) -> "NeuroCausalFactorAnalysis":
+    def fit(self, dataset: npt.NDArray, split_idcs=None) -> "NeuroCausalFactorAnalysis":
         self.dataset = dataset
         self.doffed = self.assign_dof()
 
         standardized = sc().fit_transform(dataset)
-        train_split, valid_split = train_test_split(
-            standardized, train_size=0.7, random_state=self.seed
-        )
+
+        # random train/val split if explicit indices not provided
+        if split_idcs is None:
+            train_split, valid_split = train_test_split(
+                standardized, train_size=0.7, random_state=self.seed
+            )
+        else:
+            train_split = dataset[split_idcs[0]]
+            valid_split = dataset[split_idcs[1]]
 
         train_loader = self._data_loader(train_split)
         valid_loader = self._data_loader(valid_split)
