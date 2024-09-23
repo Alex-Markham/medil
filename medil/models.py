@@ -214,7 +214,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         self.parameters.weights = (
             model_recon.decoder.fc_logcov.weight.detach().numpy().T
         )
-        self.parameters.model = model_recon
+        self.parameters.vae = model_recon
         self.loss = {
             "elbo_train": loss_recon[0],
             "elbo_valid": loss_recon[1],
