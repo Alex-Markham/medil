@@ -6,10 +6,12 @@ from torch.nn.parameter import Parameter
 
 
 class VariationalAutoencoder(nn.Module):
-    def __init__(self, m, n, mask):
+    def __init__(self, num_vae_latent, num_meas, num_hidden_layers, depth_per_meas):
         super(VariationalAutoencoder, self).__init__()
-        self.encoder = Encoder(m, n)
-        self.decoder = Decoder(m, n, mask)
+        self.encoder = Encoder(num_vae_latent, num_meas)
+        self.decoder = Decoder(
+            num_vae_latent, num_meas, num_hidden_layers, depth_per_meas
+        )
 
     def forward(self, x):
         mu, logvar = self.encoder(x)
@@ -29,16 +31,16 @@ class VariationalAutoencoder(nn.Module):
 
 
 class Block(nn.Module):
-    def __init__(self, m, n):
+    def __init__(self, num_vae_latent, num_meas):
         super(Block, self).__init__()
-        self.input_dim = n
-        self.latent_dim = m
-        self.output_dim = n
+        self.input_dim = num_meas
+        self.latent_dim = num_vae_latent
+        self.output_dim = num_meas
 
 
 class Encoder(Block):
-    def __init__(self, m, n):
-        super(Encoder, self).__init__(m, n)
+    def __init__(self, num_vae_latent, num_meas):
+        super(Encoder, self).__init__(num_vae_latent, num_meas)
 
         # first encoder layer
         self.inter_dim = self.input_dim
@@ -66,17 +68,17 @@ class Encoder(Block):
 
 
 class Decoder(Block):
-    def __init__(self, m, n, mask):
-        super(Decoder, self).__init__(m, n)
+    def __init__(self, num_vae_latent, num_meas, num_hidden_layers, depth_per_meas):
+        super(Decoder, self).__init__(num_vae_latent, num_meas)
 
         # decoder layer -- estimate mean
         self.dec_mean = SparseLinear(
-            in_features=self.latent_dim, out_features=self.output_dim, mask=mask
+            in_features=self.latent_dim, out_features=self.output_dim, mask=1.0
         )
 
         # decoder layer -- estimate log-covariance
         self.fc_logcov = SparseLinear(
-            in_features=self.latent_dim, out_features=self.output_dim, mask=mask
+            in_features=self.latent_dim, out_features=self.output_dim, mask=1.0
         )
 
     def forward(self, z):

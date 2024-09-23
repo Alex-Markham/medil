@@ -58,7 +58,7 @@ class Parameters(object):
         elif parameterization == "VAE":
             self.weights = np.array([])
             with warnings.catch_warnings(action="ignore"):
-                self.vae = VariationalAutoencoder(0, 0, 0)
+                self.vae = VariationalAutoencoder(0, 0, 0, 0)
 
     def __str__(self) -> str:
         return "\n".join(
@@ -185,7 +185,6 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
     def fit(self, dataset: npt.NDArray, split_idcs=None) -> "NeuroCausalFactorAnalysis":
         self.dataset = dataset
-        self.doffed = self.assign_dof()
 
         standardized = sc().fit_transform(dataset)
 
@@ -223,33 +222,6 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         }
         return self
 
-    def assign_dof(self) -> npt.NDArray:
-        """Assign degrees of freedom (latent variables) of VAE to
-        latent factors from causal structure learning.
-        """
-        if self.biadj.size == 0:
-            self._compute_biadj()
-
-        num_cliques, num_meas = self.biadj.shape
-        if self.hyperparams["dof"] == 0:
-            # then default to 3x num_meas overcomplete
-            self.dof = num_meas * 3
-        elif self.dof < num_cliques:
-            warnings.warn(
-                f"Input `deg_of_freedom={self.dof}` is less than the {num_cliques} required for the estimated causal structure. `deg_of_freedom` increased to {num_cliques} to compensate."
-            )
-        self.dof = num_cliques
-
-        latents_per_clique = np.ones(num_cliques, int) * (self.dof // num_cliques)
-
-        for _ in range(2):
-            remainder = self.dof - latents_per_clique.sum()
-            latents_per_clique[np.argsort(latents_per_clique)[0:remainder]] += 1
-
-        redundant_biadj_mat = np.repeat(self.biadj, latents_per_clique, axis=0)
-
-        return redundant_biadj_mat
-
     def _compute_biadj(self):
         if self.udg.size == 0:
             self._estimate_udg()
@@ -282,12 +254,13 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         :return: trained model and training loss history
         """
 
-        m, n = self.doffed.shape
+        num_vae_latent = num_meas = self.dataset.shape[1]
+        num_hidden_layers = width_per_meas = 0
 
         # building VAE
-        mask = self.doffed.T.astype("float32")
-        mask = torch.tensor(mask).to(self.device)
-        model = VariationalAutoencoder(m, n, mask)
+        model = VariationalAutoencoder(
+            num_vae_latent, num_meas, num_hidden_layers, width_per_meas
+        )
         model = model.to(self.device)
         optimizer = torch.optim.AdamW(
             model.parameters(), lr=self.hyperparams["lr"], weight_decay=1e-5
