@@ -1,16 +1,18 @@
 import math
 
+import numpy as np
+from scipy.linalg import block_diag
 import torch
 from torch import nn
 from torch.nn.parameter import Parameter
 
 
 class VariationalAutoencoder(nn.Module):
-    def __init__(self, num_vae_latent, num_meas, num_hidden_layers, depth_per_meas):
+    def __init__(self, num_vae_latent, num_meas, num_hidden_layers, width_per_meas):
         super(VariationalAutoencoder, self).__init__()
         self.encoder = Encoder(num_vae_latent, num_meas)
         self.decoder = Decoder(
-            num_vae_latent, num_meas, num_hidden_layers, depth_per_meas
+            num_vae_latent, num_meas, num_hidden_layers, width_per_meas
         )
 
     def forward(self, x):
@@ -31,10 +33,11 @@ class VariationalAutoencoder(nn.Module):
 
 
 class Block(nn.Module):
-    def __init__(self, num_vae_latent, num_meas):
+    def __init__(self, num_vae_latent, num_meas, width_per_meas=1):
         super(Block, self).__init__()
         self.input_dim = num_meas
         self.latent_dim = num_vae_latent
+        self.hidden_dim = num_meas * width_per_meas
         self.output_dim = num_meas
 
 
@@ -68,30 +71,68 @@ class Encoder(Block):
 
 
 class Decoder(Block):
-    def __init__(self, num_vae_latent, num_meas, num_hidden_layers, depth_per_meas):
-        super(Decoder, self).__init__(num_vae_latent, num_meas)
+    def __init__(self, num_vae_latent, num_meas, num_hidden_layers, width_per_meas):
+        super(Decoder, self).__init__(num_vae_latent, num_meas, width_per_meas)
 
-        # decoder layer -- estimate mean
-        self.dec_mean = SparseLinear(
-            in_features=self.latent_dim, out_features=self.output_dim, mask=1.0
+        # # decoder layer -- estimate mean
+        # self.dec_mean = SparseLinear(
+        #     in_features=self.latent_dim, out_features=self.output_dim
+        # )
+
+        # # decoder layer -- estimate log-covariance
+        # self.fc_logcov = SparseLinear(
+        #     in_features=self.latent_dim, out_features=self.output_dim
+        # )
+
+        # new arch
+        self.linear_fulcon = SparseLinear(
+            in_features=self.latent_dim, out_features=self.hidden_dim
         )
 
-        # decoder layer -- estimate log-covariance
-        self.fc_logcov = SparseLinear(
-            in_features=self.latent_dim, out_features=self.output_dim, mask=1.0
+        hidden_block = np.ones((width_per_meas, width_per_meas), float)
+        hidden_blocks = [hidden_block for _ in range(num_meas)]
+        hidden_mask = block_diag(*hidden_blocks)
+        self.linear_hidden = SparseLinear(
+            in_features=self.hidden_dim, out_features=self.hidden_dim, mask=hidden_mask
         )
+
+        output_block = np.ones((num_meas, width_per_meas), float)
+        output_blocks = [output_block for _ in range(num_meas)]
+        output_mask = block_diag(*output_blocks)
+        self.linear_output = SparseLinear(
+            in_features=self.hidden_dim, out_features=self.output_dim, mask=output_mask
+        )
+
+        self.activation = torch.nn.ReLU()
 
     def forward(self, z):
         # linear layer
-        mean = self.dec_mean(z)
-        logcov = self.fc_logcov(z)
+        # mean = self.dec_mean(z)
+        # logcov = self.fc_logcov(z)
+
+        # new arch
+        mean = self.linear_fulcon(z)
+        mean = self.activation(z)
+        # use a for loop here for hidden layers
+        mean = self.linear_fulcon(z)
+        mean = self.activation(z)
+        # end for
+        mean = self.linear_output(z)
+
+        logcov = self.linear_fulcon(z)
+        logcov = self.activation(z)
+        # use a for loop here for hidden layers
+        logcov = self.linear_fulcon(z)
+        logcov = self.activation(z)
+        # end for
+        logcov = self.linear_output(z)
 
         return mean, logcov
 
 
 class SparseLinear(nn.Module):
     def __init__(
-        self, in_features, out_features, mask, bias=True, device=None, dtype=None
+        self, in_features, out_features, mask=1.0, bias=True, device=None, dtype=None
     ):
         factory_kwargs = {"device": device, "dtype": dtype}
         super(SparseLinear, self).__init__()
