@@ -22,8 +22,8 @@ pages:
     - make html
     - cd ..
     - mv docs/_build/html/ public/
-    - wget https://gitlab.com/alex-markham/medil/-/jobs/7621245770/artifacts/download?file_type=archive
-    - unzip -o 'download?file_type=archive'
+    - 'curl --location --output artifacts.zip "https://gitlab.example.com/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/main/download?job=pytest&job_token=$CI_JOB_TOKEN"'
+    - unzip artifacts.zip
     - mv htmlcov/ public/
   artifacts:
     paths:
