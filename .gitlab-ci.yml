@@ -14,7 +14,7 @@ pages:
   image: alpine
   stage: deploy
   script:
-    - apk add make unzip py3-pip python3-dev
+    - apk add make curl unzip py3-pip python3-dev
     - python3 -m venv .
     - . bin/activate
     - pip install setuptools sphinx sphinx-rtd-theme sphinx-mdinclude sphinxcontrib-bibtex
@@ -22,7 +22,7 @@ pages:
     - make html
     - cd ..
     - mv docs/_build/html/ public/
-    - 'curl --location --output artifacts.zip "https://gitlab.example.com/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/main/download?job=pytest&job_token=$CI_JOB_TOKEN"'
+    - 'curl --location --output artifacts.zip "https://gitlab.example.com/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/develop/download?job=pytest&job_token=$CI_JOB_TOKEN"'
     - unzip artifacts.zip
     - mv htmlcov/ public/
   artifacts:
