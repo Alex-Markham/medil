@@ -169,9 +169,9 @@ class TestNeuroCausalFactorAnalysis:
         params.error_means = np.zeros(3)
         params.error_variances = np.ones(3)
 
-        dataset = mcm.sample(10000)
+        dataset = mcm.sample(1000)
 
-        ncfa = NeuroCausalFactorAnalysis(verbose=True)
+        ncfa = NeuroCausalFactorAnalysis(verbose=False)
         # ncfa.hyperparams["width_per_meas"] = 1
         # ncfa.hyperparams["num_hidden_layers"] = 1
         ncfa.fit(dataset)
