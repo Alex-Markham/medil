@@ -22,7 +22,7 @@ pages:
     - make html
     - cd ..
     - mv docs/_build/html/ public/
-    - 'curl -L --output artifacts.zip "https://gitlab.com/api/v4/projects/14696396/jobs/artifacts/develop/download?job=pytest&job_token=$CI_JOB_TOKEN"'
+    - 'curl -L --output artifacts.zip --header "PRIVATE-TOKEN: glpat-ZLYbTK5vzSiSizWtAi3V" "https://gitlab.com/api/v4/projects/14696396/jobs/artifacts/develop/download?job=pytest"'
     - unzip artifacts.zip
     - mv htmlcov/ public/
   artifacts:
