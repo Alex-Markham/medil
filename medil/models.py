@@ -171,6 +171,8 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             "num_valid": 1000,
             "mu": 0.01,
             "lambda": 0.01,
+            "width_per_meas": 1,
+            "num_hidden_layers": 1,
         }
         self.parameters = Parameters("VAE")
         self.loss = None
@@ -211,7 +213,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         with open(os.path.join(self.path, "error_recon.pkl"), "wb") as handle:
             pickle.dump(error_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
         self.parameters.weights = (
-            model_recon.decoder.fc_logcov.weight.detach().numpy().T
+            model_recon.decoder.cov_linear_fulcon.weight.detach().numpy().T
         )
         self.parameters.vae = model_recon
         self.loss = {
@@ -255,7 +257,8 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         """
 
         num_vae_latent = num_meas = self.dataset.shape[1]
-        num_hidden_layers = width_per_meas = 0
+        num_hidden_layers = self.hyperparams["num_hidden_layers"]
+        width_per_meas = self.hyperparams["width_per_meas"]
 
         # building VAE
         model = VariationalAutoencoder(
@@ -282,7 +285,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
                 batch_size = x_batch.shape[0]
                 x_batch = x_batch.to(self.device)
                 recon_batch, logcov_batch, mu_batch, logvar_batch = model(x_batch)
-                weight_batch = model.decoder.fc_logcov.weight
+                weight_batch = model.decoder.cov_linear_fulcon.weight
                 # print(weight_batch)
                 # probably here or maybe outside one/both loop?? use
                 # model.decoder.fc_logcov.weight to get weights for

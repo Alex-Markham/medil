@@ -1,7 +1,5 @@
 import math
 
-import numpy as np
-from scipy.linalg import block_diag
 import torch
 from torch import nn
 from torch.nn.parameter import Parameter
@@ -85,25 +83,45 @@ class Decoder(Block):
         # )
 
         # new arch
-        self.linear_fulcon = SparseLinear(
+        self.mean_linear_fulcon = SparseLinear(
+            in_features=self.latent_dim, out_features=self.hidden_dim
+        )
+        self.cov_linear_fulcon = SparseLinear(
             in_features=self.latent_dim, out_features=self.hidden_dim
         )
 
-        hidden_block = np.ones((width_per_meas, width_per_meas), float)
+        hidden_block = torch.ones(width_per_meas, width_per_meas)
         hidden_blocks = [hidden_block for _ in range(num_meas)]
-        hidden_mask = block_diag(*hidden_blocks)
-        self.linear_hidden = SparseLinear(
-            in_features=self.hidden_dim, out_features=self.hidden_dim, mask=hidden_mask
-        )
+        hidden_mask = torch.block_diag(*hidden_blocks)
 
-        output_block = np.ones((num_meas, width_per_meas), float)
+        self.mean_linear_hidden = {
+            layer_idx: SparseLinear(
+                in_features=self.hidden_dim,
+                out_features=self.hidden_dim,
+                mask=hidden_mask,
+            )
+            for layer_idx in range(num_hidden_layers)
+        }
+        self.cov_linear_hidden = {
+            layer_idx: SparseLinear(
+                in_features=self.hidden_dim,
+                out_features=self.hidden_dim,
+                mask=hidden_mask,
+            )
+            for layer_idx in range(num_hidden_layers)
+        }
+
+        output_block = torch.ones(1, width_per_meas)
         output_blocks = [output_block for _ in range(num_meas)]
-        output_mask = block_diag(*output_blocks)
-        self.linear_output = SparseLinear(
+        output_mask = torch.block_diag(*output_blocks)
+        self.mean_linear_output = SparseLinear(
+            in_features=self.hidden_dim, out_features=self.output_dim, mask=output_mask
+        )
+        self.cov_linear_output = SparseLinear(
             in_features=self.hidden_dim, out_features=self.output_dim, mask=output_mask
         )
 
-        self.activation = torch.nn.ReLU()
+        self.activation = torch.nn.Sigmoid()
 
     def forward(self, z):
         # linear layer
@@ -111,28 +129,32 @@ class Decoder(Block):
         # logcov = self.fc_logcov(z)
 
         # new arch
-        mean = self.linear_fulcon(z)
-        mean = self.activation(z)
-        # use a for loop here for hidden layers
-        mean = self.linear_fulcon(z)
-        mean = self.activation(z)
-        # end for
-        mean = self.linear_output(z)
+        mean = self.mean_linear_fulcon(z)
+        mean = self.activation(mean)
+        for hidden_layer in self.mean_linear_hidden.values():
+            mean = hidden_layer(mean)
+            mean = self.activation(mean)
+        mean = self.mean_linear_output(mean)
 
-        logcov = self.linear_fulcon(z)
-        logcov = self.activation(z)
-        # use a for loop here for hidden layers
-        logcov = self.linear_fulcon(z)
-        logcov = self.activation(z)
-        # end for
-        logcov = self.linear_output(z)
+        logcov = self.cov_linear_fulcon(z)
+        logcov = self.activation(logcov)
+        for hidden_layer in self.cov_linear_hidden.values():
+            logcov = hidden_layer(logcov)
+            logcov = self.activation(logcov)
+        logcov = self.cov_linear_output(logcov)
 
         return mean, logcov
 
 
 class SparseLinear(nn.Module):
     def __init__(
-        self, in_features, out_features, mask=1.0, bias=True, device=None, dtype=None
+        self,
+        in_features,
+        out_features,
+        mask=torch.ones(1),
+        bias=True,
+        device=None,
+        dtype=None,
     ):
         factory_kwargs = {"device": device, "dtype": dtype}
         super(SparseLinear, self).__init__()
