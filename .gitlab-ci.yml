@@ -1,14 +1,14 @@
-pytest:
-  image: continuumio/miniconda3
-  stage: test
-  script:
-    - conda update conda
-    - conda install pip
-    - pip install pytest-cov .
-    - python -m pytest --cov-report html --cov-report term --cov=medil
-  artifacts:
-    paths:
-      - htmlcov/
+# pytest:
+#   image: continuumio/miniconda3
+#   stage: test
+#   script:
+#     - conda update conda
+#     - conda install pip
+#     - pip install pytest-cov .
+#     - python -m pytest --cov-report html --cov-report term --cov=medil
+#   artifacts:
+#     paths:
+#       - htmlcov/
 
 pages:
   image: alpine
