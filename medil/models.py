@@ -150,7 +150,6 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
     def __init__(
         self,
         seed: int = 0,
-        dof: int = 0,
         path: str = "trained_ncfa/",
         verbose: bool = False,
         **kwargs,
@@ -164,7 +163,6 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             "heuristic": True,
             "method": "xicor",
             "alpha": 0.05,
-            "dof": dof,
             "batch_size": 128,
             "num_epochs": 200,
             "lr": 0.005,
@@ -172,6 +170,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             "num_valid": 1000,
             "mu": 0.01,
             "lambda": 0.01,
+            "deg_of_free": 1,
             "width_per_meas": 1,
             "num_hidden_layers": 1,
         }
@@ -257,7 +256,8 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         :return: trained model and training loss history
         """
 
-        num_vae_latent = num_meas = self.dataset.shape[1]
+        num_meas = self.dataset.shape[1]
+        num_vae_latent = self.hyperparams["deg_of_free"] * num_meas
         num_hidden_layers = self.hyperparams["num_hidden_layers"]
         width_per_meas = self.hyperparams["width_per_meas"]
 
@@ -405,7 +405,10 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         if weight is not None:
             llambda, mu = self.hyperparams["lambda"], self.hyperparams["mu"]
             norm_type = 2
-            kernel_size = (self.hyperparams["width_per_meas"], 1)
+            kernel_size = (
+                self.hyperparams["width_per_meas"],
+                self.hyperparams["deg_of_free"],
+            )
             weight = weight[None, None, :, :]
             weight = lp_pool2d(weight, norm_type, kernel_size).squeeze()
             self.parameters.biadj = weight.detach().numpy().T
