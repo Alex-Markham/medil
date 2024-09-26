@@ -171,8 +171,14 @@ class TestNeuroCausalFactorAnalysis:
 
         dataset = mcm.sample(1000)
 
-        ncfa = NeuroCausalFactorAnalysis(verbose=False)
-        ncfa.hyperparams["deg_of_free"] = 3
-        ncfa.hyperparams["width_per_meas"] = 3
-        ncfa.hyperparams["num_hidden_layers"] = 1
+        ncfa = NeuroCausalFactorAnalysis(verbose=True)
+        ncfa.hyperparams.update(
+            {
+                "mu": 0.01,
+                "lambda": 0.1,
+                "deg_of_free": 3,
+                "width_per_meas": 3,
+                "num_hidden_layers": 1,
+            }
+        )
         ncfa.fit(dataset)
