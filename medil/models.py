@@ -14,6 +14,7 @@ from scipy.optimize import minimize
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler as sc
 import torch
+from torch.nn.functional import lp_pool2d
 from torch.utils.data import DataLoader, TensorDataset
 
 from .ecc_algorithms import find_heuristic_1pc
@@ -286,11 +287,6 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
                 x_batch = x_batch.to(self.device)
                 recon_batch, logcov_batch, mu_batch, logvar_batch = model(x_batch)
                 weight_batch = model.decoder.cov_linear_fulcon.weight
-                # print(weight_batch)
-                # probably here or maybe outside one/both loop?? use
-                # model.decoder.fc_logcov.weight to get weights for
-                # regularization; add hyperparams mu and lambda (or
-                # other names) and feed to _elbo_gaussian
                 loss = self._elbo_gaussian(
                     x_batch,
                     recon_batch,
@@ -408,7 +404,11 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         loss = -beta * kl_div + recon_loss
         if weight is not None:
             llambda, mu = self.hyperparams["lambda"], self.hyperparams["mu"]
-            # print(-loss + llambda * weight.norm("nuc") + mu * weight.norm(1))
+            norm_type = 2
+            kernel_size = (self.hyperparams["width_per_meas"], 1)
+            weight = weight[None, None, :, :]
+            weight = lp_pool2d(weight, norm_type, kernel_size).squeeze()
+            self.parameters.biadj = weight.detach().numpy().T
             return -loss + llambda * weight.norm("nuc") + mu * weight.norm(1)
         return -loss
 
