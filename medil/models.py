@@ -14,7 +14,7 @@ from scipy.optimize import minimize
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler as sc
 import torch
-from torch.nn.functional import lp_pool2d
+from torch.nn.functional import lp_pool2d, max_pool2d, max_pool1d
 from torch.utils.data import DataLoader, TensorDataset
 
 from .ecc_algorithms import find_heuristic_1pc
@@ -213,7 +213,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         with open(os.path.join(self.path, "error_recon.pkl"), "wb") as handle:
             pickle.dump(error_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
         self.parameters.weights = (
-            model_recon.decoder.cov_linear_fulcon.weight.detach().numpy().T
+            model_recon.decoder.mean_linear_fulcon.weight.detach().numpy().T
         )
         self.parameters.vae = model_recon
         self.loss = {
@@ -286,7 +286,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
                 batch_size = x_batch.shape[0]
                 x_batch = x_batch.to(self.device)
                 recon_batch, logcov_batch, mu_batch, logvar_batch = model(x_batch)
-                weight_batch = model.decoder.cov_linear_fulcon.weight
+                weight_batch = model.decoder.mean_linear_fulcon.weight
                 loss = self._elbo_gaussian(
                     x_batch,
                     recon_batch,
@@ -410,9 +410,12 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
                 self.hyperparams["deg_of_free"],
             )
             weight = weight[None, None, :, :]
-            weight = lp_pool2d(weight, norm_type, kernel_size).squeeze()
-            self.parameters.biadj = weight.detach().numpy().T
-            return -loss + llambda * weight.norm("nuc") + mu * weight.norm(1)
+            mu_weight = max_pool2d(weight, kernel_size).squeeze()
+            # weight = lp_pool2d(weight, norm_type, kernel_size).squeeze()
+            self.parameters.biadj = mu_weight.detach().numpy().T
+            ll_kernel_size = (self.hyperparams["width_per_meas"], weight.shape[-1])
+            ll_weight = max_pool2d(weight, ll_kernel_size).squeeze()
+            return -loss + llambda * ll_weight.norm(1) + mu * mu_weight.norm(1)
         return -loss
 
     # ρ(W)

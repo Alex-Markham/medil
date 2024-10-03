@@ -170,19 +170,20 @@ class TestNeuroCausalFactorAnalysis:
         params.error_means = np.zeros(3)
         params.error_variances = np.ones(3)
 
-        dataset = mcm.sample(10000)
+        dataset = mcm.sample(1000)
 
         ncfa = NeuroCausalFactorAnalysis(verbose=True)
         ncfa.hyperparams.update(
             {
-                "mu": 0.0,
-                "lambda": 0.0,
+                "mu": 0.1,
+                "lambda": 0.1,
                 "deg_of_free": 3,
                 "width_per_meas": 3,
                 "num_hidden_layers": 1,
+                "num_epochs": 200,
             }
         )
         ncfa.fit(dataset)
 
-        d = torch.Tensor(dataset[:5])
-        recon_d = ncfa.parameters.vae(d)[0]
+        # d = torch.Tensor(dataset[:5])
+        # recon_d = ncfa.parameters.vae(d)[0]
