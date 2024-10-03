@@ -1,7 +1,8 @@
 from itertools import permutations
 
-import pytest
 import numpy as np
+import pytest
+import torch
 
 from medil.models import MedilCausalModel, GaussianMCM, NeuroCausalFactorAnalysis
 
@@ -169,16 +170,19 @@ class TestNeuroCausalFactorAnalysis:
         params.error_means = np.zeros(3)
         params.error_variances = np.ones(3)
 
-        dataset = mcm.sample(1000)
+        dataset = mcm.sample(10000)
 
         ncfa = NeuroCausalFactorAnalysis(verbose=True)
         ncfa.hyperparams.update(
             {
-                "mu": 0.01,
-                "lambda": 0.1,
+                "mu": 0.0,
+                "lambda": 0.0,
                 "deg_of_free": 3,
                 "width_per_meas": 3,
                 "num_hidden_layers": 1,
             }
         )
         ncfa.fit(dataset)
+
+        d = torch.Tensor(dataset[:5])
+        recon_d = ncfa.parameters.vae(d)[0]
