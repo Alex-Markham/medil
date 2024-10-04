@@ -172,7 +172,7 @@ class TestNeuroCausalFactorAnalysis:
 
         dataset = mcm.sample(1000)
 
-        ncfa = NeuroCausalFactorAnalysis(verbose=True)
+        ncfa = NeuroCausalFactorAnalysis(verbose=False)
         ncfa.hyperparams.update(
             {
                 "mu": 0.05,

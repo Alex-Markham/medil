@@ -23,5 +23,6 @@ setup(
         "seaborn",
         "scikit-learn",
         "torch",
+        "tqdm",
     ],
 )

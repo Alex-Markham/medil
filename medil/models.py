@@ -16,6 +16,7 @@ from sklearn.preprocessing import StandardScaler as sc
 import torch
 from torch.nn.functional import lp_pool2d, max_pool2d, max_pool1d
 from torch.utils.data import DataLoader, TensorDataset
+from tqdm import tqdm
 
 from .ecc_algorithms import find_heuristic_1pc
 from .independence_testing import estimate_UDG
@@ -282,7 +283,10 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         train_elbo, train_error = [], []
         valid_elbo, valid_error = [], []
 
-        for idx in range(self.hyperparams["num_epochs"]):
+        pbar = tqdm(
+            range(self.hyperparams["num_epochs"]), desc="Training NCFA", unit="epoch"
+        )
+        for idx in pbar:
             self.log(f"Training on epoch {idx}...")
             train_lb, train_er, nbatch = 0.0, 0.0, 0
 
@@ -324,6 +328,9 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             valid_lb, valid_er = self._valid_vae(model, valid_loader)
             valid_elbo.append(valid_lb)
             valid_error.append(valid_er)
+
+            # update tqdm progress bar
+            pbar.set_postfix({"loss": train_lb})  # , "validation loss": valid_lb
 
         train_elbo, train_error = np.array(train_elbo), np.array(train_error)
         valid_elbo, valid_error = np.array(valid_elbo), np.array(valid_error)
