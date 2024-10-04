@@ -175,15 +175,16 @@ class TestNeuroCausalFactorAnalysis:
         ncfa = NeuroCausalFactorAnalysis(verbose=True)
         ncfa.hyperparams.update(
             {
-                "mu": 0.1,
+                "mu": 0.05,
                 "lambda": 0.1,
-                "deg_of_free": 3,
-                "width_per_meas": 3,
+                "deg_of_free": 2,
+                "width_per_meas": 2,
                 "num_hidden_layers": 1,
                 "num_epochs": 200,
+                "lr": 0.001,
             }
         )
         ncfa.fit(dataset)
 
-        # d = torch.Tensor(dataset[:5])
-        # recon_d = ncfa.parameters.vae(d)[0]
+        d = torch.Tensor(dataset[:5])
+        recon_d = ncfa.parameters.vae(d)[0]
