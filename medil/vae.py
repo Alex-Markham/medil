@@ -172,7 +172,9 @@ class SparseLinear(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        # nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        nn.init.orthogonal_(self.weight)
+        # nn.init.sparse_(self.weight, 2 / 3)
         if self.bias is not None:
             fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
