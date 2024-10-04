@@ -170,8 +170,8 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             "num_valid": 1000,
             "mu": 0.01,
             "lambda": 0.01,
-            "deg_of_free": 1,
-            "width_per_meas": 1,
+            "deg_of_free": 2,
+            "width_per_meas": 2,
             "num_hidden_layers": 1,
         }
         self.parameters = Parameters("VAE")
