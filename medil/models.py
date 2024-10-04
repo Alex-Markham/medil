@@ -418,14 +418,6 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             return -loss + llambda * ll_weight.norm(1) + mu * mu_weight.norm(1)
         return -loss
 
-    # ρ(W)
-    def _rho(self, W: npt.NDArray) -> float:
-        return norm(W, "nuc")
-
-    # σ(W), the sum of absolute values of elements (L1 norm)
-    def _sigma(self, W: npt.NDArray) -> float:
-        return np.sum(W**2)
-
     def _recon_error(self, x, x_recon, logcov, weighted):
         """Reconstruction error given x and x_recon
         :param x: original image
