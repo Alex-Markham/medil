@@ -150,13 +150,14 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
     def __init__(
         self,
         seed: int = 0,
-        path: str = "trained_ncfa/",
+        log_path: str = "",
         verbose: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
-        Path(path).mkdir(exist_ok=True)
-        self.path = path
+        if log_path:
+            Path(log_path).mkdir(exist_ok=True)
+        self.log_path = log_path
         self.verbose = verbose
         self.seed = seed
         self.hyperparams = {
@@ -179,9 +180,12 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     def log(self, entry: str) -> None:
+        if not (self.log_path or self.verbose):
+            return
         time_stamped_entry = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {entry}"
-        with open(f"{self.path}training.log", "a") as log_file:
-            log_file.write(time_stamped_entry + "\n")
+        if self.log_path:
+            with open(f"{self.log_path}training.log", "a") as log_file:
+                log_file.write(time_stamped_entry + "\n")
         if self.verbose:
             print(time_stamped_entry)
 
@@ -207,10 +211,10 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         model_recon, loss_recon, error_recon = self._train_vae(
             train_loader, valid_loader
         )
-        torch.save(model_recon, os.path.join(self.path, "model_recon.pt"))
-        with open(os.path.join(self.path, "loss_recon.pkl"), "wb") as handle:
+        torch.save(model_recon, os.path.join(self.log_path, "model_recon.pt"))
+        with open(os.path.join(self.log_path, "loss_recon.pkl"), "wb") as handle:
             pickle.dump(loss_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        with open(os.path.join(self.path, "error_recon.pkl"), "wb") as handle:
+        with open(os.path.join(self.log_path, "error_recon.pkl"), "wb") as handle:
             pickle.dump(error_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
         self.parameters.weights = (
             model_recon.decoder.mean_linear_fulcon.weight.detach().numpy().T
