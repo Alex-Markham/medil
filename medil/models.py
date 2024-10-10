@@ -212,11 +212,12 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         model_recon, loss_recon, error_recon = self._train_vae(
             train_loader, valid_loader
         )
-        torch.save(model_recon, os.path.join(self.log_path, "model_recon.pt"))
-        with open(os.path.join(self.log_path, "loss_recon.pkl"), "wb") as handle:
-            pickle.dump(loss_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        with open(os.path.join(self.log_path, "error_recon.pkl"), "wb") as handle:
-            pickle.dump(error_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        if self.log_path:
+            torch.save(model_recon, os.path.join(self.log_path, "model_recon.pt"))
+            with open(os.path.join(self.log_path, "loss_recon.pkl"), "wb") as handle:
+                pickle.dump(loss_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            with open(os.path.join(self.log_path, "error_recon.pkl"), "wb") as handle:
+                pickle.dump(error_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
         self.parameters.weights = (
             model_recon.decoder.mean_linear_fulcon.weight.detach().numpy().T
         )
