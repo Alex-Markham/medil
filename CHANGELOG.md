@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## Unreleased ##
 - differentiable NCFA
+- interventions
+
+## [2.0.0] - 202X-XX-XX ##
+
+### Removed ###
+- `dcor` dependency
 
 ## [1.1.0] - 2024-08-19 ##
 

@@ -2,7 +2,6 @@
 
 from typing import NamedTuple, Optional
 
-from dcor.independence import distance_correlation_t_test
 from multiprocessing import Pool, cpu_count
 import numpy as np
 import numpy.typing as npt
@@ -23,6 +22,12 @@ def dcov(samples):
         A square matrix :math:`C`, where :math:`C_{i,j}` is the sample
         distance covariance between random variables :math:`R_i` and
         :math:`R_j`.
+
+    Notes
+    -----
+    Trades time complexity for space complexity, so it can be too
+    memory-intensive for larger datasets, in which case recommend to
+    use xicor or distance_correlation_t_test from the dcor package.
     """
     num_samps, num_feats = samples.shape
     num_pairs = num_samps * (num_samps - 1) // 2
@@ -62,9 +67,9 @@ def estimate_UDG(sample, method="dcov_fast", significance_level=0.05):
         idxs, jdxs = np.triu_indices(num_feats, 1)
         zipped = zip(idxs, jdxs)
         sample_iter = (sample[:, i_j].T for i_j in zipped)
-        if method == "dcov_big":
-            test = dcor_test
-        elif method == "xicor":
+        # if method == "dcov_big":
+        #     can use distance_correlation_t_test from dcor package
+        if method == "xicor":
             test = xicor_test
         with Pool(max(1, int(0.75 * cpu_count()))) as p:
             p_vals[idxs, jdxs] = p_vals[jdxs, idxs] = np.fromiter(
@@ -73,11 +78,6 @@ def estimate_UDG(sample, method="dcov_fast", significance_level=0.05):
             udg = p_vals < significance_level
     np.fill_diagonal(udg, False)
     return udg, p_vals
-
-
-def dcor_test(x_y):
-    x, y = x_y
-    return distance_correlation_t_test(x, y).pvalue
 
 
 def xicor_test(x_y):

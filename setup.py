@@ -17,7 +17,6 @@ setup(
     license="GNU Affero General Public License version 3 or later (AGPLv3+)",
     packages=["medil"],
     install_requires=[
-        "dcor",
         "matplotlib",
         "networkx",
         "seaborn",
