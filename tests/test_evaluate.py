@@ -27,7 +27,7 @@ def test_nshd():
     with pytest.raises(ValueError):
         nshd([1])
     with pytest.raises(ValueError):
-        nshd([1], [1], [1])
+        nshd([1], predicted_biadj=[1], predicted_adj=[1])
     assert nshd(true_mcm(), predicted_biadj=est_mcm1()) == 1 / 6
     assert nshd(true_mcm(), predicted_biadj=est_mcm2()) == 1 / 6
     assert nshd(est_mcm1(), predicted_biadj=est_mcm2()) == 1 / 3
