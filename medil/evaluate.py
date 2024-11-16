@@ -1,41 +1,75 @@
-import itertools
-
 import numpy as np
 import numpy.typing as npt
 
 
-def sfd(predicted_biadj, true_biadj):
-    """Perform analysis of the distances between true and reconstructed structures
+def nsfd(true_biadj: npt.NDArray, predicted_biadj: npt.NDArray) -> float:
+    """Measure distance between predicted and true and structures.
+
     Parameters
     ----------
-    biadj_mat: input directed graph
-    biadj_mat_recon: learned directed graph in the form of adjacency matrix
+    predicted_biadj: learned bipartite directed graph
+    true_biadj: true bipartite directed graph
 
     Returns
     -------
-    sfd: squared Frobenius distance (bipartite graph)
-    ushd: structural hamming distance (undirected graph)
+    nsfd: normalized structural Frobenius distance
     """
-
-    # ushd = shd_func(recover_ug(biadj_mat), recover_ug(biadj_mat_recon))
-    ug = recover_ug(true_biadj)
-    ug_recon = recover_ug(predicted_biadj)
-
-    ushd = np.triu(np.logical_xor(ug, ug_recon), 1).sum()
-
     true_biadj = true_biadj.astype(int)
+    true_wtd_ug = true_biadj.T @ true_biadj
+    true_zeros = np.where(true_wtd_ug == 0)
+    true_wtd_ug[true_zeros] = -1
+
     predicted_biadj = predicted_biadj.astype(int)
+    predicted_wtd_ug = predicted_biadj.T @ predicted_biadj
+    predicted_zeros = np.where(predicted_wtd_ug == 0)
+    predicted_wtd_ug[predicted_zeros] = -1
 
-    wtd_ug = true_biadj.T @ true_biadj
-    wtd_ug_recon = predicted_biadj.T @ predicted_biadj
+    similarity = np.sum(true_wtd_ug * predicted_wtd_ug)
 
-    sfd = ((wtd_ug - wtd_ug_recon) ** 2).sum()
+    cosin_normalizer = np.sqrt((true_wtd_ug**2).sum()) * np.sqrt(
+        (predicted_wtd_ug**2).sum()
+    )
 
-    return sfd, ushd
+    nsfd = np.arccos(similarity / cosin_normalizer) / np.pi
+
+    return nsfd
 
 
-def recover_ug(biadj_mat):
-    """Recover the undirected graph from the directed graph
+def nshd(
+    true_biadj: npt.NDArray,
+    *,
+    predicted_biadj: npt.NDArray = np.array([]),
+    predicted_adj: npt.NDArray = np.array([]),
+) -> float:
+    """Measure distance between predicted and true and structures.
+
+    Parameters
+    ----------
+    true_biadj: true bipartite directed graph
+    predicted_biadj: learned bipartite directed graph
+    predicted_adj: learned mixed graph
+
+    Returns
+    -------
+    nshd: normalized structural Hamming distance
+    """
+    if bool(len(predicted_biadj)) == bool(len(predicted_adj)):
+        raise ValueError(
+            "Must provide `predicted_biadj` or `predicted_adj` but not both."
+        )
+    elif bool(len(predicted_biadj)):
+        predicted_adj = recover_ug(predicted_biadj)
+
+    ug = recover_ug(true_biadj)
+
+    shd = np.logical_xor(ug, predicted_adj).sum()
+    n = len(ug)
+    nshd = shd / (n**2 - n)
+    return nshd
+
+
+def recover_ug(biadj_mat: npt.NDArray) -> npt.NDArray:
+    """Recover the undirected graph from the directed bipartite graph
     Parameters
     ----------
     biadj_mat: learned directed graph
@@ -44,53 +78,6 @@ def recover_ug(biadj_mat):
     -------
     ug: the recovered undirected graph
     """
-
-    # get the undirected graph from the directed graph
     ug = biadj_mat.T @ biadj_mat
     np.fill_diagonal(ug, False)
-
     return ug
-
-
-def min_perm_squared_l2_dist(predicted_W: npt.NDArray, true_W: npt.NDArray):
-    zeros = np.zeros_like(predicted_W)
-    num_latents = len(true_W)
-    zeros[:num_latents] = true_W
-    true_W = zeros
-
-    def perm_squared_l2_dist(perm):
-        perm = np.array(perm)
-        return np.sum((predicted_W[perm] - true_W) ** 2)
-
-    def pair(perm):
-        return perm, perm_squared_l2_dist(perm)
-
-    perms = itertools.permutations(range(len(predicted_W)))
-
-    pairs = map(pair, perms)
-
-    opt_perm, min_dist = min(pairs, key=lambda pair: pair[1])
-
-    return np.array(opt_perm), min_dist
-
-
-def min_perm_squared_l2_dist_abs(predicted_W: npt.NDArray, true_W: npt.NDArray):
-    zeros = np.zeros_like(predicted_W)
-    num_latents = len(true_W)
-    zeros[:num_latents] = true_W
-    true_W = zeros
-
-    def perm_squared_l2_dist(perm):
-        perm = np.array(perm)
-        return np.sum((np.abs(predicted_W[perm]) - np.abs(true_W)) ** 2)
-
-    def pair(perm):
-        return perm, perm_squared_l2_dist(perm)
-
-    perms = itertools.permutations(range(len(predicted_W)))
-
-    pairs = map(pair, perms)
-
-    opt_perm, min_dist = min(pairs, key=lambda pair: pair[1])
-
-    return np.array(opt_perm), min_dist
