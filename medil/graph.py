@@ -1,4 +1,5 @@
 """Various types and representations of graphs."""
+
 import numpy as np
 from numpy.random import default_rng
 

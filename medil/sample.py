@@ -1,4 +1,5 @@
 """Generate random minimum MeDIL causal model graph or parameters."""
+
 import numpy as np
 import numpy.typing as npt
 from numpy.random import default_rng

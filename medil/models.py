@@ -1,20 +1,20 @@
 """MeDIL causal model base class and a preconfigured NCFA class."""
 
-from datetime import datetime
 import os
-from pathlib import Path
 import pickle
 import warnings
+from datetime import datetime
+from pathlib import Path
 
 import numpy as np
-from numpy.random import default_rng
 import numpy.typing as npt
+import torch
+from numpy.random import default_rng
 from scipy.linalg import norm
 from scipy.optimize import minimize
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler as sc
-import torch
-from torch.nn.functional import lp_pool2d, max_pool2d, max_pool1d
+from torch.nn.functional import lp_pool2d, max_pool1d, max_pool2d
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 

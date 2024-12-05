@@ -10,8 +10,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [2.0.0] - 202X-XX-XX ##
 
+### Changed ###
+- pyproject.toml based packaging, managed by uv and devenv
+
 ### Removed ###
 - `dcor` dependency
+- `visualize` submodule and dependencies
 
 ## [1.1.0] - 2024-08-19 ##
 

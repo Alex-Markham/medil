@@ -1,4 +1,5 @@
 """Example graphs and data, for use in testing and tutorials."""
+
 import numpy as np
 
 
