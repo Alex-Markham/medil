@@ -7,7 +7,7 @@ readme = "README.md"
 license = {file = "LICENSE.md"}
 classifiers = [
   "Development Status :: 5 - Production/Stable",
-  "Intended Audience :: Science/Researcher",
+  "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
   "Programming Language :: Python :: 3.12",
@@ -24,3 +24,12 @@ dependencies = [
 [project.urls]
 documentation = "https://medil.causal.dev"
 repository = "https://gitlab.com/alex-markham/medil"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+]
