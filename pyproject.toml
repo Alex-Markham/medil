@@ -4,6 +4,7 @@ version = "2.0.0"
 description = "MeDIL is a Python package for causal factor analysis with the (me)asurement (d)ependence (i)nducing (l)atent causal model framework."
 keywords = ["factor analysis", "causal representation learning"]
 readme = "README.md"
+license = {file = "LICENSE.md"}
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Science/Researcher",
