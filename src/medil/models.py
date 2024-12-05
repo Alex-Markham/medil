@@ -14,7 +14,7 @@ from scipy.linalg import norm
 from scipy.optimize import minimize
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler as sc
-from torch.nn.functional import lp_pool2d, max_pool1d, max_pool2d
+from torch.nn.functional import lp_pool2d
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
@@ -263,6 +263,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         """
 
         num_meas = self.dataset.shape[1]
+        self.num_meas = num_meas
         num_vae_latent = self.hyperparams["deg_of_free"] * num_meas
         num_hidden_layers = self.hyperparams["num_hidden_layers"]
         width_per_meas = self.hyperparams["width_per_meas"]
@@ -422,11 +423,17 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
                 self.hyperparams["deg_of_free"],
             )
             weight = weight[None, None, :, :]
-            mu_weight = max_pool2d(weight, kernel_size).squeeze()
-            # weight = lp_pool2d(weight, norm_type, kernel_size).squeeze()
+            mu_weight = lp_pool2d(
+                weight, norm_type, kernel_size
+            ).squeeze()  # penalize num edges
             self.parameters.biadj = mu_weight.detach().numpy().T
-            ll_kernel_size = (self.hyperparams["width_per_meas"], weight.shape[-1])
-            ll_weight = max_pool2d(weight, ll_kernel_size).squeeze()
+            ll_kernel_size = (
+                self.hyperparams["width_per_meas"] * self.num_meas,
+                self.hyperparams["deg_of_free"],
+            )
+            ll_weight = lp_pool2d(
+                weight, norm_type, ll_kernel_size
+            ).squeeze()  # penalize num latents
             return -loss + llambda * ll_weight.norm(1) + mu * mu_weight.norm(1)
         return -loss
 
