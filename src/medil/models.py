@@ -276,7 +276,10 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         optimizer = torch.optim.AdamW(
             model.parameters(), lr=self.hyperparams["lr"], weight_decay=1e-5
         )
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 50, gamma=0.90)
+        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 50, gamma=0.90)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, patience=10, factor=0.5
+        )
         num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         self.log(f"Number of parameters: {num_params}")
 
@@ -319,7 +322,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
                 nbatch += 1
 
             # finish training epoch
-            scheduler.step()
+            # scheduler.step()
             train_lb = train_lb / nbatch
             train_er = train_er / nbatch
             train_elbo.append(train_lb)
@@ -330,6 +333,9 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             valid_lb, valid_er = self._valid_vae(model, valid_loader)
             valid_elbo.append(valid_lb)
             valid_error.append(valid_er)
+
+            # decrease learning rate if validation plateaus
+            scheduler.step(valid_lb)
 
             # update tqdm progress bar
             pbar.set_postfix({"loss": train_lb})  # , "validation loss": valid_lb
