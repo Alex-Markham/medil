@@ -121,7 +121,8 @@ class Decoder(Block):
             in_features=self.hidden_dim, out_features=self.output_dim, mask=output_mask
         )
 
-        self.activation = torch.nn.Sigmoid()
+        self.first_activation = torch.nn.Sigmoid()
+        self.other_activation = torch.nn.GELU()
 
     def forward(self, z):
         # linear layer
@@ -130,17 +131,17 @@ class Decoder(Block):
 
         # new arch
         mean = self.mean_linear_fulcon(z)
-        mean = self.activation(mean)
+        mean = self.first_activation(mean)
         for hidden_layer in self.mean_linear_hidden.values():
             mean = hidden_layer(mean)
-            mean = self.activation(mean)
+            mean = self.other_activation(mean)
         mean = self.mean_linear_output(mean)
 
         logcov = self.cov_linear_fulcon(z)
-        logcov = self.activation(logcov)
+        logcov = self.first_activation(logcov)
         for hidden_layer in self.cov_linear_hidden.values():
             logcov = hidden_layer(logcov)
-            logcov = self.activation(logcov)
+            logcov = self.other_activation(logcov)
         logcov = self.cov_linear_output(logcov)
 
         return mean, logcov
