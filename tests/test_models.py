@@ -3,8 +3,12 @@ from itertools import permutations
 import numpy as np
 import pytest
 import torch
-
-from medil.models import MedilCausalModel, GaussianMCM, NeuroCausalFactorAnalysis
+from medil.models import (
+    DevMedilInterv,
+    GaussianMCM,
+    MedilCausalModel,
+    NeuroCausalFactorAnalysis,
+)
 
 
 class TestMedilCausalModel:
@@ -170,21 +174,83 @@ class TestNeuroCausalFactorAnalysis:
         params.error_means = np.zeros(3)
         params.error_variances = np.ones(3)
 
-        dataset = mcm.sample(1000)
+        dataset = mcm.sample(2000)
+
+        # standardize
+        dataset -= dataset.mean(0)
+        dataset /= dataset.std(0)
 
         ncfa = NeuroCausalFactorAnalysis(verbose=False)
         ncfa.hyperparams.update(
             {
-                "mu": 0.05,
-                "lambda": 0.1,
-                "deg_of_free": 2,
-                "width_per_meas": 2,
+                "mu": 0.01,
+                "lambda": 0.01,
+                "deg_of_free": 5,
+                "width_per_meas": 5,
                 "num_hidden_layers": 1,
                 "num_epochs": 200,
-                "lr": 0.001,
+                "lr": 0.01,
             }
         )
         ncfa.fit(dataset)
 
         d = torch.Tensor(dataset[:5])
         recon_d = ncfa.parameters.vae(d)[0]
+
+        ncfa.parameters.biadj
+
+        ncfa = NeuroCausalFactorAnalysis(verbose=False)
+        ncfa.hyperparams.update(
+            {
+                "mu": 0.0,
+                "lambda": 0,  # 0.015,
+                "deg_of_free": 5,
+                "width_per_meas": 5,
+                "num_hidden_layers": 1,
+                "num_epochs": 200,
+                "lr": 0.01,
+            }
+        )
+        ncfa.fit(dataset)
+
+        torch.Tensor(dataset[:5])  # d
+        ncfa.parameters.vae(torch.Tensor(dataset[:5]))[0]  # recon_d
+
+        ncfa.parameters.biadj
+
+
+class TestDevMedilInterv:
+    def test_fit_m_gaussian(self):
+        """Simple "M" graph, with 2 latent and 3 measurement vars, sampled from GaussianMCM."""
+        biadj = np.zeros((2, 3), bool)
+        biadj[[0, 0, 1, 1], [0, 1, 1, 2]] = True
+        mcm = GaussianMCM(biadj=biadj)
+        params = mcm.parameters
+        params.biadj_weights = biadj.astype(float)
+        params.error_means = np.zeros(3)
+        params.error_variances = np.ones(3)
+
+        dataset = mcm.sample(2000)
+
+        # standardize
+        dataset -= dataset.mean(0)
+        dataset /= dataset.std(0)
+
+        ncfa = DevMedilInterv(verbose=False)
+        ncfa.hyperparams.update(
+            {
+                "mu": 0.01,
+                "lambda": 0.01,
+                "deg_of_free": 5,
+                "width_per_meas": 5,
+                "num_hidden_layers": 1,
+                "num_epochs": 200,
+                "lr": 0.01,
+            }
+        )
+        ncfa.fit(dataset)
+
+        d = torch.Tensor(dataset[:5])
+        recon_d = ncfa.parameters.vae(d)[0]
+
+        ncfa.parameters.biadj
