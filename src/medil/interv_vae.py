@@ -1,4 +1,5 @@
 import math
+import warnings
 
 import torch
 from torch import nn
@@ -6,11 +7,13 @@ from torch.nn.parameter import Parameter
 
 
 class VariationalAutoencoder(nn.Module):
-    def __init__(self, num_vae_latent, num_meas, num_hidden_layers, width_per_meas):
+    def __init__(
+        self, num_meas, meas_width, meas_depth, num_latent, latent_width, latent_depth
+    ):
         super(VariationalAutoencoder, self).__init__()
-        self.encoder = Encoder(num_vae_latent, num_meas)
+        self.encoder = Encoder(num_meas, num_latent, latent_width)
         self.decoder = Decoder(
-            num_vae_latent, num_meas, num_hidden_layers, width_per_meas
+            num_latent, latent_width, latent_depth, num_meas, meas_width, meas_depth
         )
 
     def forward(self, x):
@@ -30,118 +33,138 @@ class VariationalAutoencoder(nn.Module):
             return mu
 
 
-class Block(nn.Module):
-    def __init__(self, num_vae_latent, num_meas, width_per_meas=1):
-        super(Block, self).__init__()
-        self.input_dim = num_meas
-        self.latent_dim = num_vae_latent
-        self.hidden_dim = num_meas * width_per_meas
-        self.output_dim = num_meas
-
-
-class Encoder(Block):
-    def __init__(self, num_vae_latent, num_meas):
-        super(Encoder, self).__init__(num_vae_latent, num_meas)
+class Encoder(nn.Module):
+    def __init__(self, num_meas, num_latent, latent_width):
+        super(Encoder, self).__init__()
 
         # first encoder layer
-        self.inter_dim = self.input_dim
-        self.enc1 = nn.Linear(in_features=self.input_dim, out_features=self.inter_dim)
+        self.enc1 = nn.Linear(in_features=num_meas, out_features=num_meas)
 
         # second encoder layer
-        self.enc2 = nn.Linear(in_features=self.inter_dim, out_features=self.inter_dim)
+        self.enc2 = nn.Linear(in_features=num_meas, out_features=num_meas)
 
         # map to mu and variance
-        self.fc_mu = nn.Linear(in_features=self.inter_dim, out_features=self.latent_dim)
-        self.fc_logvar = nn.Linear(
-            in_features=self.inter_dim, out_features=self.latent_dim
-        )
+        num_vae_latent = num_latent * latent_width
+        self.fc_mu = nn.Linear(in_features=num_meas, out_features=num_vae_latent)
+        self.fc_logvar = nn.Linear(in_features=num_meas, out_features=num_vae_latent)
 
     def forward(self, x):
+        activation = torch.nn.GELU()
         # encoder layers
-        inter = torch.relu(self.enc1(x))
-        inter = torch.relu(self.enc2(inter))
+        x = activation(self.enc1(x))
+        x = activation(self.enc2(x))
 
         # calculate mu & logvar
-        mu = self.fc_mu(inter)
-        logvar = self.fc_logvar(inter)
+        mu = self.fc_mu(x)
+        logvar = self.fc_logvar(x)
 
         return mu, logvar
 
 
-class Decoder(Block):
-    def __init__(self, num_vae_latent, num_meas, num_hidden_layers, width_per_meas):
-        super(Decoder, self).__init__(num_vae_latent, num_meas, width_per_meas)
+class Decoder(nn.Module):
+    def __init__(
+        self, num_latent, latent_width, latent_depth, num_meas, meas_width, meas_depth
+    ):
+        super(Decoder, self).__init__()
+        num_vae_latent = num_latent * latent_width
+        num_vae_meas = num_meas * meas_width
+        if meas_depth == 0 and meas_width > 1:
+            num_vae_meas = num_meas
+            warnings.warn(
+                f"Reduced architecture complexity: `meas_width` set to 1 rather than {meas_width} since `meas_depth`={meas_depth}."
+            )
 
-        # # decoder layer -- estimate mean
-        # self.dec_mean = SparseLinear(
-        #     in_features=self.latent_dim, out_features=self.output_dim
-        # )
-
-        # # decoder layer -- estimate log-covariance
-        # self.fc_logcov = SparseLinear(
-        #     in_features=self.latent_dim, out_features=self.output_dim
-        # )
-
-        # new arch
-        self.mean_linear_fulcon = SparseLinear(
-            in_features=self.latent_dim, out_features=self.hidden_dim
-        )
-        self.cov_linear_fulcon = SparseLinear(
-            in_features=self.latent_dim, out_features=self.hidden_dim
-        )
-
-        hidden_block = torch.ones(width_per_meas, width_per_meas)
-        hidden_blocks = [hidden_block for _ in range(num_meas)]
+        # hidden latent layers
+        hidden_block = torch.ones(latent_width, latent_width)
+        hidden_blocks = [hidden_block for _ in range(num_latent)]
         hidden_mask = torch.block_diag(*hidden_blocks)
-
-        self.mean_linear_hidden = {
+        self.mean_hidden_latent = {
             layer_idx: SparseLinear(
-                in_features=self.hidden_dim,
-                out_features=self.hidden_dim,
+                in_features=num_vae_latent,
+                out_features=num_vae_latent,
                 mask=hidden_mask,
             )
-            for layer_idx in range(num_hidden_layers)
+            for layer_idx in range(latent_depth)
         }
-        self.cov_linear_hidden = {
+        self.logcov_hidden_latent = {
             layer_idx: SparseLinear(
-                in_features=self.hidden_dim,
-                out_features=self.hidden_dim,
+                in_features=num_vae_latent,
+                out_features=num_vae_latent,
                 mask=hidden_mask,
             )
-            for layer_idx in range(num_hidden_layers)
+            for layer_idx in range(latent_depth)
         }
 
-        output_block = torch.ones(1, width_per_meas)
-        output_blocks = [output_block for _ in range(num_meas)]
-        output_mask = torch.block_diag(*output_blocks)
-        self.mean_linear_output = SparseLinear(
-            in_features=self.hidden_dim, out_features=self.output_dim, mask=output_mask
+        # causal layer
+        self.mean_causal = SparseLinear(
+            in_features=num_vae_latent, out_features=num_vae_latent
         )
-        self.cov_linear_output = SparseLinear(
-            in_features=self.hidden_dim, out_features=self.output_dim, mask=output_mask
+        self.logcov_causal = SparseLinear(
+            in_features=num_vae_latent, out_features=num_vae_latent
+        )
+
+        # mixture layer
+        self.mean_mix = SparseLinear(
+            in_features=num_vae_latent, out_features=num_vae_meas
+        )
+        self.logcov_mix = SparseLinear(
+            in_features=num_vae_latent, out_features=num_vae_meas
+        )
+
+        # additional mixture layers
+        self.mean_hidden_mix = {
+            layer_idx: SparseLinear(
+                in_features=num_vae_meas,
+                out_features=num_vae_meas,
+            )
+            for layer_idx in range(meas_depth - 1)
+        }
+        self.mean_hidden_mix[meas_depth] = SparseLinear(
+            in_features=num_vae_meas,
+            out_features=num_meas,
+        )
+        self.logcov_hidden_mix = {
+            layer_idx: SparseLinear(
+                in_features=num_vae_latent,
+                out_features=num_vae_latent,
+            )
+            for layer_idx in range(meas_depth - 1)
+        }
+        self.logcov_hidden_mix[meas_depth] = SparseLinear(
+            in_features=num_vae_meas,
+            out_features=num_meas,
         )
 
         self.activation = torch.nn.GELU()
 
     def forward(self, z):
-        # linear layer
-        # mean = self.dec_mean(z)
-        # logcov = self.fc_logcov(z)
-
-        # new arch
-        mean = self.mean_linear_fulcon(z)
-        mean = self.activation(mean)
-        for hidden_layer in self.mean_linear_hidden.values():
+        # hidden layers for latent exogenous variables
+        mean = z.copy()
+        logcov = z.copy()
+        for hidden_layer in self.mean_hidden_latent.values():
             mean = hidden_layer(mean)
             mean = self.activation(mean)
-        mean = self.mean_linear_output(mean)
-
-        logcov = self.cov_linear_fulcon(z)
-        logcov = self.activation(logcov)
-        for hidden_layer in self.cov_linear_hidden.values():
+        for hidden_layer in self.logcov_hidden_latent.values():
             logcov = hidden_layer(logcov)
             logcov = self.activation(logcov)
-        logcov = self.cov_linear_output(logcov)
+
+        # connect exogenous variables to latent causal DAG
+        mean = self.mean_causal(mean)
+        mean = self.activation(mean)
+        logcov = self.logcov_causal(logcov)
+        logcov = self.activation(logcov)
+
+        # mix latent causal vars into measurements
+        mean = self.mean_mix(mean)
+        logcov = self.logcov_mix(logcov)
+
+        # hidden layers for mixture
+        for hidden_layer in self.mean_hidden_mix.values():
+            mean = self.activation(mean)
+            mean = hidden_layer(mean)
+        for hidden_layer in self.logcov_hidden_mix.values():
+            logcov = self.activation(logcov)
+            logcov = hidden_layer(logcov)
 
         return mean, logcov
 
@@ -151,7 +174,7 @@ class SparseLinear(nn.Module):
         self,
         in_features,
         out_features,
-        mask=torch.ones(1),
+        mask=None,
         bias=True,
         device=None,
         dtype=None,
@@ -182,7 +205,10 @@ class SparseLinear(nn.Module):
 
     def forward(self, input):
         # masked linear layer
-        return nn.functional.linear(input, self.weight * self.mask, self.bias)
+        if self.mask is None:
+            return nn.functional.linear(input, self.weight, self.bias)
+        else:
+            return nn.functional.linear(input, self.weight * self.mask, self.bias)
 
     def extra_repr(self):
         return "in_features={}, out_features={}, bias={}".format(
