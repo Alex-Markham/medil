@@ -16,10 +16,10 @@ class VariationalAutoencoder(nn.Module):
             num_latent, latent_width, latent_depth, num_meas, meas_width, meas_depth
         )
 
-    def forward(self, x):
+    def forward(self, x, label):
         mu, logvar = self.encoder(x)
         latent = self.latent_sample(mu, logvar)
-        x_recon, logcov = self.decoder(latent)
+        x_recon, logcov = self.decoder(latent, label)
 
         return x_recon, logcov, mu, logvar
 
@@ -137,7 +137,7 @@ class Decoder(nn.Module):
 
         self.activation = torch.nn.GELU()
 
-    def forward(self, z):
+    def forward(self, z, label):
         # hidden layers for latent exogenous variables
         mean = z.copy()
         logcov = z.copy()
@@ -149,8 +149,10 @@ class Decoder(nn.Module):
             logcov = self.activation(logcov)
 
         # connect exogenous variables to latent causal DAG
+        mean = self.interv_mask(label, mean)
         mean = self.mean_causal(mean)
         mean = self.activation(mean)
+        logcov = self.interv_mask(label, logcov)
         logcov = self.logcov_causal(logcov)
         logcov = self.activation(logcov)
 
@@ -167,6 +169,10 @@ class Decoder(nn.Module):
             logcov = hidden_layer(logcov)
 
         return mean, logcov
+
+    def interv_mask(self, label, noise):
+        print(f"noise has shape {noise.shape}")
+        return noise
 
 
 class SparseLinear(nn.Module):

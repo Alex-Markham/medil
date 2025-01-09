@@ -65,7 +65,7 @@ class Parameters(object):
         elif parameterization == "InterVAE":
             self.weights = np.array([])
             with warnings.catch_warnings(action="ignore"):
-                self.vae = InterVAE(0, 0, 0, 0)
+                self.vae = InterVAE(0, 0, 0, 0, 0, 0)
 
     def __str__(self) -> str:
         return "\n".join(
@@ -661,6 +661,21 @@ class DevMedilInterv(NeuroCausalFactorAnalysis):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.parameters = Parameters("InterVAE")
+        self.hyperparams = {  # TODO
+            "heuristic": True,
+            "method": "xicor",
+            "alpha": 0.05,
+            "batch_size": 128,
+            "num_epochs": 200,
+            "lr": 0.005,
+            "beta": 1,
+            "num_valid": 1000,
+            "mu": 0.01,
+            "lambda": 0.01,
+            "deg_of_free": 2,
+            "width_per_meas": 2,
+            "num_hidden_layers": 1,
+        }
 
     def _train_vae(self, train_loader, valid_loader):
         """Training VAE with the specified image dataset
@@ -673,14 +688,16 @@ class DevMedilInterv(NeuroCausalFactorAnalysis):
         :return: trained model and training loss history
         """
 
-        num_meas = self.dataset.shape[1]
-        self.num_meas = num_meas
-        num_vae_latent = self.hyperparams["deg_of_free"] * num_meas
-        num_hidden_layers = self.hyperparams["num_hidden_layers"]
-        width_per_meas = self.hyperparams["width_per_meas"]
+        num_meas = self.dataset.shape[1]  # TODO
+        self.num_meas = num_meas  # TODO
+        num_vae_latent = self.hyperparams["deg_of_free"] * num_meas  # TODO
+        num_hidden_layers = self.hyperparams["num_hidden_layers"]  # TODO
+        width_per_meas = self.hyperparams["width_per_meas"]  # TODO
 
         # building VAE
-        model = InterVAE(num_vae_latent, num_meas, num_hidden_layers, width_per_meas)
+        model = InterVAE(
+            num_vae_latent, num_meas, num_hidden_layers, width_per_meas
+        )  # TODO
         model = model.to(self.device)
         optimizer = torch.optim.AdamW(
             model.parameters(), lr=self.hyperparams["lr"], weight_decay=1e-5
@@ -705,17 +722,20 @@ class DevMedilInterv(NeuroCausalFactorAnalysis):
             train_lb, train_er, nbatch = 0.0, 0.0, 0
 
             for x_batch, _ in train_loader:
+                label_batch = None
                 batch_size = x_batch.shape[0]
                 x_batch = x_batch.to(self.device)
-                recon_batch, logcov_batch, mu_batch, logvar_batch = model(x_batch)
-                weight_batch = model.decoder.mean_linear_fulcon.weight
+                recon_batch, logcov_batch, mu_batch, logvar_batch = model(
+                    x_batch, label_batch
+                )
+                causal_adj_batch = model.decoder.mean_causal.weight
                 loss = self._elbo_gaussian(
                     x_batch,
                     recon_batch,
                     logcov_batch,
                     mu_batch,
                     logvar_batch,
-                    weight_batch,
+                    causal_adj_batch,
                     self.hyperparams["beta"],
                 )
                 error = self._recon_error(
@@ -756,7 +776,7 @@ class DevMedilInterv(NeuroCausalFactorAnalysis):
 
         return model, elbo, error
 
-    def _elbo_gaussian(self, x, x_recon, logcov, mu, logvar, weight, beta):
+    def _elbo_gaussian(self, x, x_recon, logcov, mu, logvar, causal_adj, beta):
         """Calculating loss for variational autoencoder
         :param x: original image
         :param x_recon: reconstruction in the output layer
@@ -790,16 +810,16 @@ class DevMedilInterv(NeuroCausalFactorAnalysis):
 
         # elbo
         loss = -beta * kl_div + recon_loss
-        if weight is not None:
+        if causal_adj is not None:
             llambda, mu = self.hyperparams["lambda"], self.hyperparams["mu"]
             norm_type = 2
             kernel_size = (
                 self.hyperparams["width_per_meas"],
                 self.hyperparams["deg_of_free"],
             )
-            weight = weight[None, None, :, :]
+            causal_adj = causal_adj[None, None, :, :]
             mu_weight = lp_pool2d(
-                weight, norm_type, kernel_size
+                causal_adj, norm_type, kernel_size
             ).squeeze()  # penalize num edges
             self.parameters.biadj = mu_weight.detach().numpy().T
             ll_kernel_size = (
@@ -807,7 +827,7 @@ class DevMedilInterv(NeuroCausalFactorAnalysis):
                 self.hyperparams["deg_of_free"],
             )
             ll_weight = lp_pool2d(
-                weight, norm_type, ll_kernel_size
+                causal_adj, norm_type, ll_kernel_size
             ).squeeze()  # penalize num latents
             return -loss + llambda * ll_weight.norm(1) + mu * mu_weight.norm(1)
         return -loss
