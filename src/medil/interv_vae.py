@@ -16,10 +16,10 @@ class VariationalAutoencoder(nn.Module):
             num_latent, latent_width, latent_depth, num_meas, meas_width, meas_depth
         )
 
-    def forward(self, x, label):
+    def forward(self, x, interv_idx):
         mu, logvar = self.encoder(x)
         latent = self.latent_sample(mu, logvar)
-        x_recon, logcov = self.decoder(latent, label)
+        x_recon, logcov = self.decoder(latent, interv_idx)
 
         return x_recon, logcov, mu, logvar
 
@@ -96,8 +96,8 @@ class Decoder(nn.Module):
         }
 
         # causal layer
-        self.mean_causal = SparseLinear(
-            in_features=num_vae_latent, out_features=num_vae_latent
+        self.mean_causal = Intervenable(
+            in_features=num_vae_latent, out_features=num_vae_latent, width=latent_width
         )
         self.logcov_causal = SparseLinear(
             in_features=num_vae_latent, out_features=num_vae_latent
@@ -137,7 +137,7 @@ class Decoder(nn.Module):
 
         self.activation = torch.nn.GELU()
 
-    def forward(self, z, label):
+    def forward(self, z, interv_idx):
         # hidden layers for latent exogenous variables
         mean = z.clone()
         logcov = z.clone()
@@ -149,10 +149,8 @@ class Decoder(nn.Module):
             logcov = self.activation(logcov)
 
         # connect exogenous variables to latent causal DAG
-        mean = self.interv_mask(label, mean)
-        mean = self.mean_causal(mean)
+        mean = self.mean_causal(mean, interv_idx)
         mean = self.activation(mean)
-        logcov = self.interv_mask(label, logcov)
         logcov = self.logcov_causal(logcov)
         logcov = self.activation(logcov)
 
@@ -169,10 +167,6 @@ class Decoder(nn.Module):
             logcov = hidden_layer(logcov)
 
         return mean, logcov
-
-    def interv_mask(self, label, noise):
-        # print(f"noise has shape {noise.shape}")
-        return noise
 
 
 class SparseLinear(nn.Module):
@@ -220,3 +214,29 @@ class SparseLinear(nn.Module):
         return "in_features={}, out_features={}, bias={}".format(
             self.in_features, self.out_features, self.bias is not None
         )
+
+
+class Intervenable(SparseLinear):
+    def __init__(self, width, **kwargs):
+        super().__init__(**kwargs)
+        self.width = width
+
+    def forward(self, input, interv_idx):
+        interv_idx = interv_idx.squeeze().to(int)  # reformat
+        observed = nn.functional.linear(input, self.weight, self.bias)
+
+        # interv idx of -1 indicates no intervention, so remove those
+        sample_idx = torch.arange(len(input))
+        obs_mask = interv_idx == -1
+        sample_idx = sample_idx[~obs_mask]
+        interv_idx = interv_idx[~obs_mask]
+
+        # expand idcs according to width of layer in VAE
+        expander = torch.arange(self.width).tile(len(sample_idx))
+        sample_idx = sample_idx.tile(self.width)
+        interv_idx = interv_idx.tile(self.width) + expander
+
+        # perform intervention
+        intervened = observed
+        intervened[sample_idx, interv_idx] = input[sample_idx, interv_idx]
+        return intervened

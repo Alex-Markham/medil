@@ -725,11 +725,11 @@ class DevMedilInterv(NeuroCausalFactorAnalysis):
 
             for batch, _ in train_loader:
                 x_batch = batch[:, :-1]
-                label_batch = batch[:, -1, None]
+                interv_idx_batch = batch[:, -1, None]
                 batch_size = x_batch.shape[0]
                 x_batch = x_batch.to(self.device)
                 recon_batch, logcov_batch, mu_batch, logvar_batch = model(
-                    x_batch, label_batch
+                    x_batch, interv_idx_batch
                 )
                 causal_biadj_batch = model.decoder.mean_causal.weight
                 loss = self._elbo_gaussian(
@@ -791,13 +791,13 @@ class DevMedilInterv(NeuroCausalFactorAnalysis):
 
         for batch, _ in valid_loader:
             x_batch = batch[:, :-1]
-            label_batch = label_batch = batch[:, -1, None]
+            interv_idx_batch = batch[:, -1, None]
 
             with torch.no_grad():
                 batch_size = x_batch.shape[0]
                 x_batch = x_batch.to(self.device)
                 recon_batch, logcov_batch, mu_batch, logvar_batch = model(
-                    x_batch, label_batch
+                    x_batch, interv_idx_batch
                 )
                 loss = self._elbo_gaussian(
                     x_batch,
