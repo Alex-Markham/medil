@@ -247,7 +247,7 @@ class TestDevMedilInterv:
                 "meas_depth": 3,
                 "num_latent": 3,
                 "latent_width": 5,
-                "latent_depth": 3,
+                "latent_depth": 0,
             }
         )
         ncfa.fit(dataset)
