@@ -661,21 +661,21 @@ class DevMedilInterv(NeuroCausalFactorAnalysis):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.parameters = Parameters("InterVAE")
-        self.hyperparams = {  # TODO
-            "heuristic": True,
-            "method": "xicor",
-            "alpha": 0.05,
-            "batch_size": 128,
-            "num_epochs": 200,
-            "lr": 0.005,
-            "beta": 1,
-            "num_valid": 1000,
-            "mu": 0.01,
-            "lambda": 0.01,
-            "deg_of_free": 2,
-            "width_per_meas": 2,
-            "num_hidden_layers": 1,
-        }
+        self.hyperparams.update(
+            {
+                "batch_size": 128,
+                "num_epochs": 200,
+                "lr": 0.005,
+                "beta": 1,
+                "num_valid": 1000,
+                "lambda": 0.01,
+                "meas_width": 1,
+                "meas_depth": 0,
+                "num_latent": 5,
+                "latent_width": 1,
+                "latent_depth": 0,
+            }
+        )
 
     def _train_vae(self, train_loader, valid_loader):
         """Training VAE with the specified image dataset
