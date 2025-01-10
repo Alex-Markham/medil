@@ -235,22 +235,26 @@ class TestDevMedilInterv:
         # standardize
         dataset -= dataset.mean(0)
         dataset /= dataset.std(0)
+        dataset = np.hstack((dataset, -np.ones((2000, 1))))
 
         ncfa = DevMedilInterv(verbose=False)
         ncfa.hyperparams.update(
             {
-                "mu": 0.01,
-                "lambda": 0.01,
-                "deg_of_free": 5,
-                "width_per_meas": 5,
-                "num_hidden_layers": 1,
                 "num_epochs": 200,
-                "lr": 0.01,
+                "lr": 0.005,
+                "lambda": 0.00,
+                "meas_width": 3,
+                "meas_depth": 2,
+                "num_latent": 10,
+                "latent_width": 3,
+                "latent_depth": 2,
             }
         )
         ncfa.fit(dataset)
 
         d = torch.Tensor(dataset[:5])
-        recon_d = ncfa.parameters.vae(d)[0]
+        x = d[:, :-1]
+        l = d[:, -1, None]
+        recon_x = ncfa.parameters.vae(x, l)[0]
 
-        ncfa.parameters.biadj
+        ncfa.parameters.causal_biadj
