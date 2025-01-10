@@ -125,8 +125,8 @@ class Decoder(nn.Module):
         )
         self.logcov_hidden_mix = {
             layer_idx: SparseLinear(
-                in_features=num_vae_latent,
-                out_features=num_vae_latent,
+                in_features=num_vae_meas,
+                out_features=num_vae_meas,
             )
             for layer_idx in range(meas_depth - 1)
         }
@@ -139,8 +139,8 @@ class Decoder(nn.Module):
 
     def forward(self, z, label):
         # hidden layers for latent exogenous variables
-        mean = z.copy()
-        logcov = z.copy()
+        mean = z.clone()
+        logcov = z.clone()
         for hidden_layer in self.mean_hidden_latent.values():
             mean = hidden_layer(mean)
             mean = self.activation(mean)
@@ -171,7 +171,7 @@ class Decoder(nn.Module):
         return mean, logcov
 
     def interv_mask(self, label, noise):
-        print(f"noise has shape {noise.shape}")
+        # print(f"noise has shape {noise.shape}")
         return noise
 
 
