@@ -230,24 +230,24 @@ class TestDevMedilInterv:
         params.error_means = np.zeros(3)
         params.error_variances = np.ones(3)
 
-        dataset = mcm.sample(2000)
+        dataset = mcm.sample(1000)
 
         # standardize
         dataset -= dataset.mean(0)
         dataset /= dataset.std(0)
-        dataset = np.hstack((dataset, -np.ones((2000, 1))))
+        dataset = np.hstack((dataset, -np.ones((1000, 1))))
 
         ncfa = DevMedilInterv(verbose=False)
         ncfa.hyperparams.update(
             {
                 "num_epochs": 200,
-                "lr": 0.005,
-                "lambda": 0.00,
-                "meas_width": 3,
-                "meas_depth": 2,
-                "num_latent": 10,
-                "latent_width": 3,
-                "latent_depth": 2,
+                "lr": 0.01,
+                "lambda": 0.001,
+                "meas_width": 5,
+                "meas_depth": 3,
+                "num_latent": 3,
+                "latent_width": 5,
+                "latent_depth": 3,
             }
         )
         ncfa.fit(dataset)
