@@ -180,6 +180,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             "deg_of_free": 2,
             "width_per_meas": 2,
             "num_hidden_layers": 1,
+            "prior_biadj": None,
         }
         self.parameters = Parameters("VAE")
         self.loss = None
@@ -272,10 +273,11 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         num_vae_latent = self.hyperparams["deg_of_free"] * num_meas
         num_hidden_layers = self.hyperparams["num_hidden_layers"]
         width_per_meas = self.hyperparams["width_per_meas"]
+        prior_biadj = self.hyperparams["prior_biadj"]
 
         # building VAE
         model = VariationalAutoencoder(
-            num_vae_latent, num_meas, num_hidden_layers, width_per_meas
+            num_vae_latent, num_meas, num_hidden_layers, width_per_meas, prior_biadj
         )
         model = model.to(self.device)
         optimizer = torch.optim.AdamW(

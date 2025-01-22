@@ -6,11 +6,18 @@ from torch.nn.parameter import Parameter
 
 
 class VariationalAutoencoder(nn.Module):
-    def __init__(self, num_vae_latent, num_meas, num_hidden_layers, width_per_meas):
+    def __init__(
+        self,
+        num_vae_latent,
+        num_meas,
+        num_hidden_layers,
+        width_per_meas,
+        prior_biadj=None,
+    ):
         super(VariationalAutoencoder, self).__init__()
         self.encoder = Encoder(num_vae_latent, num_meas)
         self.decoder = Decoder(
-            num_vae_latent, num_meas, num_hidden_layers, width_per_meas
+            num_vae_latent, num_meas, num_hidden_layers, width_per_meas, prior_biadj
         )
 
     def forward(self, x):
@@ -69,7 +76,9 @@ class Encoder(Block):
 
 
 class Decoder(Block):
-    def __init__(self, num_vae_latent, num_meas, num_hidden_layers, width_per_meas):
+    def __init__(
+        self, num_vae_latent, num_meas, num_hidden_layers, width_per_meas, prior_biadj
+    ):
         super(Decoder, self).__init__(num_vae_latent, num_meas, width_per_meas)
 
         # # decoder layer -- estimate mean
@@ -84,7 +93,7 @@ class Decoder(Block):
 
         # new arch
         self.mean_linear_fulcon = SparseLinear(
-            in_features=self.latent_dim, out_features=self.hidden_dim
+            in_features=self.latent_dim, out_features=self.hidden_dim, mask=prior_biadj
         )
         self.cov_linear_fulcon = SparseLinear(
             in_features=self.latent_dim, out_features=self.hidden_dim
@@ -151,7 +160,7 @@ class SparseLinear(nn.Module):
         self,
         in_features,
         out_features,
-        mask=torch.ones(1),
+        mask=None,
         bias=True,
         device=None,
         dtype=None,
@@ -160,7 +169,10 @@ class SparseLinear(nn.Module):
         super(SparseLinear, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.mask = mask
+        if mask is None:
+            self.mask = torch.ones(1)
+        else:
+            self.mask = mask
         self.weight = Parameter(
             torch.empty((out_features, in_features), **factory_kwargs)
         )
