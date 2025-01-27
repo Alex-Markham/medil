@@ -14,7 +14,7 @@ from numpy.random import default_rng
 from scipy.linalg import norm
 from scipy.optimize import minimize
 from sklearn.model_selection import train_test_split
-from torch.nn.functional import lp_pool2d
+from torch.nn.functional import lp_pool2d, lp_pool3d
 from torch.utils.data import DataLoader, Subset, TensorDataset
 from tqdm import tqdm
 
@@ -932,9 +932,7 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
                 self.counts / self.counts.sum(), len(self), replacement=True
             )
             # contexts = self.contexts[context_idcs]
-            print(context_idcs)
             for context_idx in context_idcs:
-                print(context_idx)
                 context_data_idcs = torch.where(self.inv == context_idx)[0]
                 batch_idcs = context_data_idcs[torch.randperm(len(context_data_idcs))][
                     : self.batch_size
@@ -995,14 +993,17 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
                 recon_batch, logcov_batch, mu_batch, logvar_batch = model(
                     x_batch, interv_idx_batch
                 )
-                causal_biadj_batch = model.decoder.mean_causal.weight
+                causal_biadj_dict_batch = {
+                    interv_idx - 1: model.decoder.mean_causal[interv_idx - 1].weight
+                    for interv_idx in range(self.hyperparams["num_latent"] + 1)
+                }
                 loss = self._elbo_gaussian(
                     x_batch,
                     recon_batch,
                     logcov_batch,
                     mu_batch,
                     logvar_batch,
-                    causal_biadj_batch,
+                    causal_biadj_dict_batch,
                     self.hyperparams["beta"],
                 )
                 error = self._recon_error(
@@ -1088,7 +1089,7 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
 
         return valid_lb, valid_er
 
-    def _elbo_gaussian(self, x, x_recon, logcov, mu, logvar, causal_biadj, beta):
+    def _elbo_gaussian(self, x, x_recon, logcov, mu, logvar, causal_biadj_dict, beta):
         """Calculating loss for variational autoencoder
         :param x: original image
         :param x_recon: reconstruction in the output layer
@@ -1122,17 +1123,24 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
 
         # elbo
         loss = -beta * kl_div + recon_loss
-        if causal_biadj is not None:
+        if causal_biadj_dict is not None:
             llambda = self.hyperparams["lambda"]
             norm_type = 2
             kernel_size = (
+                1,
                 self.hyperparams["latent_width"],
                 self.hyperparams["latent_width"],
             )
-            causal_biadj = causal_biadj[None, None, :, :]
-            causal_biadj = lp_pool2d(
-                causal_biadj, norm_type, kernel_size
-            ).squeeze()  # penalize num edges
-            self.parameters.causal_biadj = causal_biadj.detach().numpy().T
-            return -loss + llambda * causal_biadj.norm(1)
+            pooled = {}
+            self.parameters.causal_biadj_dict = {}
+            for idx, causal_biadj in causal_biadj_dict.items():
+                temp = causal_biadj[None, None, :, :]
+                temp = lp_pool3d(
+                    temp, norm_type, kernel_size
+                ).squeeze()  # penalize num edges
+                pooled[idx] = temp
+                self.parameters.causal_biadj_dict[idx] = temp.detach().numpy().T
+            return -loss + llambda * sum(
+                (causal_biadj.norm(1) for causal_biadj in causal_biadj_dict.values())
+            )
         return -loss

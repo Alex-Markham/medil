@@ -96,12 +96,15 @@ class Decoder(nn.Module):
         }
 
         # causal layer
-        self.mean_causal = Intervenable(
-            in_features=num_vae_latent,
-            out_features=num_vae_latent,
-            width=latent_width,
-            num_contexts=num_latent + 1,
-        )
+        self.mean_causal = {
+            interv_idx - 1: Intervenable(
+                in_features=num_vae_latent,
+                out_features=num_vae_latent,
+                width=latent_width,
+            )
+            for interv_idx in range(num_latent + 1)
+        }
+
         self.logcov_causal = SparseLinear(
             in_features=num_vae_latent, out_features=num_vae_latent
         )
@@ -152,7 +155,10 @@ class Decoder(nn.Module):
             logcov = self.activation(logcov)
 
         # connect exogenous variables to latent causal DAG
-        mean = self.mean_causal(mean, interv_idx)
+        interv_idx = torch.unique(interv_idx).to(int)
+        assert len(interv_idx) == 1
+        obs_weight = self.mean_causal[-1].weight
+        mean = self.mean_causal[int(interv_idx)](mean, obs_weight, interv_idx)
         mean = self.activation(mean)
         logcov = self.logcov_causal(logcov)
         logcov = self.activation(logcov)
@@ -220,25 +226,18 @@ class SparseLinear(nn.Module):
 
 
 class Intervenable(SparseLinear):
-    def __init__(self, width, num_contexts, **kwargs):
+    def __init__(self, width, **kwargs):
         super().__init__(**kwargs)
         self.width = width
-        self.num_contexts = num_contexts
-        self.weight = {
-            interv_idx - 1: Parameter(torch.empty(self.out_features, self.in_features))
-            for interv_idx in range(num_contexts)
-        }
-        self.interv_mask = torch.ones(num_contexts - 1, num_contexts - 1)
 
-    def forward(self, input, interv_idx):
-        interv_idx = torch.unique(interv_idx).to(int)
-        assert len(interv_idx) == 1
-        weight = self.weight[interv_idx]
-        mask = self.interv_mask
-        mask[interv_idx] = 0
-        mask[interv_idx, interv_idx] = 1
-        mask = mask.kron(torch.ones(self.width, self.width))
+    def forward(self, input, obs_weight, interv_idx):
+        min_weight = torch.minimum(self.weight, obs_weight)
+        num_vars = len(self.weight) // self.width
+        interv_mask = torch.ones(num_vars, num_vars)
+        interv_mask[interv_idx] = 0
+        interv_mask[interv_idx, interv_idx] = 1
+        interv_mask = interv_mask.kron(torch.ones(self.width, self.width))
         if self.mask is None:
-            return nn.functional.linear(input, weight * mask, self.bias)
+            return nn.functional.linear(input, min_weight, self.bias)
         else:
-            return nn.functional.linear(input, weight * mask * self.mask, self.bias)
+            return nn.functional.linear(input, min_weight * self.mask, self.bias)
