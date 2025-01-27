@@ -994,8 +994,8 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
                     x_batch, interv_idx_batch
                 )
                 causal_biadj_dict_batch = {
-                    interv_idx - 1: model.decoder.mean_causal[interv_idx - 1].weight
-                    for interv_idx in range(self.hyperparams["num_latent"] + 1)
+                    interv_idx: model.decoder.mean_causal[interv_idx].weight
+                    for interv_idx in range(-1, self.hyperparams["num_latent"])
                 }
                 loss = self._elbo_gaussian(
                     x_batch,

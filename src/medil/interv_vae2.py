@@ -97,12 +97,12 @@ class Decoder(nn.Module):
 
         # causal layer
         self.mean_causal = {
-            interv_idx - 1: Intervenable(
+            interv_idx: Intervenable(
                 in_features=num_vae_latent,
                 out_features=num_vae_latent,
                 width=latent_width,
             )
-            for interv_idx in range(num_latent + 1)
+            for interv_idx in range(-1, num_latent)
         }
 
         self.logcov_causal = SparseLinear(

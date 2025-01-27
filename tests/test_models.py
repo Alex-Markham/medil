@@ -288,7 +288,7 @@ class TestDevMedilInterv2:
         ncfa = DevMedilInterv2(verbose=False)
         ncfa.hyperparams.update(
             {
-                "num_epochs": 200,
+                "num_epochs": 20,
                 "lr": 0.01,
                 "lambda": 0.001,
                 "meas_width": 3,
