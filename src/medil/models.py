@@ -932,9 +932,13 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
                 self.counts / self.counts.sum(), len(self), replacement=True
             )
             # contexts = self.contexts[context_idcs]
+            print(context_idcs)
             for context_idx in context_idcs:
+                print(context_idx)
                 context_data_idcs = torch.where(self.inv == context_idx)[0]
-                batch_idcs = torch.randperm(len(context_data_idcs))[: self.batch_size]
+                batch_idcs = context_data_idcs[torch.randperm(len(context_data_idcs))][
+                    : self.batch_size
+                ]
                 yield batch_idcs
 
     def _train_vae(self, train_loader, valid_loader):

@@ -5,6 +5,7 @@ import pytest
 import torch
 from medil.models import (
     DevMedilInterv,
+    DevMedilInterv2,
     GaussianMCM,
     MedilCausalModel,
     NeuroCausalFactorAnalysis,
@@ -239,6 +240,53 @@ class TestDevMedilInterv:
         dataset = np.hstack((dataset, -np.ones((samp_size, 1))))
 
         ncfa = DevMedilInterv(verbose=False)
+        ncfa.hyperparams.update(
+            {
+                "num_epochs": 200,
+                "lr": 0.01,
+                "lambda": 0.001,
+                "meas_width": 3,
+                "meas_depth": 3,
+                "num_latent": 3,
+                "latent_width": 3,
+                "latent_depth": 0,
+            }
+        )
+        ncfa.fit(dataset)
+
+        d = torch.Tensor(dataset[:5])
+        x = d[:, :-1]
+        l = d[:, -1, None]
+        recon_x = ncfa.parameters.vae(x, l)[0]
+
+        ncfa.parameters.causal_biadj
+
+
+class TestDevMedilInterv2:
+    def test_fit_m_gaussian(self):
+        """Simple "M" graph, with 2 latent and 3 measurement vars, sampled from GaussianMCM."""
+        biadj = np.zeros((2, 3), bool)
+        biadj[[0, 0, 1, 1], [0, 1, 1, 2]] = True
+        mcm = GaussianMCM(biadj=biadj)
+        params = mcm.parameters
+        params.biadj_weights = biadj.astype(float)
+        params.error_means = np.zeros(3)
+        params.error_variances = np.ones(3)
+
+        samp_size = 1000
+        dataset = mcm.sample(samp_size)
+
+        # standardize
+        dataset -= dataset.mean(0)
+        dataset /= dataset.std(0)
+        dataset1 = np.hstack((dataset, -np.ones((samp_size, 1))))
+        dataset2 = np.hstack((dataset, np.zeros((samp_size, 1))))
+        dataset = np.vstack((dataset1, dataset2))
+
+        ncfa = DevMedilInterv2(verbose=False)
+        dl = [batch for batch in ncfa._data_loader(dataset)]
+        contexts = [torch.unique(batch[:][0][:, -1]) for batch in dl]
+        print(contexts)
         ncfa.hyperparams.update(
             {
                 "num_epochs": 200,
