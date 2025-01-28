@@ -231,13 +231,15 @@ class Intervenable(SparseLinear):
         self.width = width
 
     def forward(self, input, obs_weight, interv_idx):
-        min_weight = torch.minimum(self.weight, obs_weight)
-        num_vars = len(self.weight) // self.width
-        interv_mask = torch.ones(num_vars, num_vars)
-        interv_mask[interv_idx] = 0
-        interv_mask[interv_idx, interv_idx] = 1
-        interv_mask = interv_mask.kron(torch.ones(self.width, self.width))
+        if interv_idx != -1:
+            min_weight = torch.minimum(self.weight, obs_weight)
+            num_vars = len(self.weight) // self.width
+            interv_mask = torch.ones(num_vars, num_vars)
+            interv_mask[interv_idx] = 0
+            interv_mask[interv_idx, interv_idx] = 1
+            interv_mask = interv_mask.kron(torch.ones(self.width, self.width))
+            self.weight.data = min_weight * interv_mask
         if self.mask is None:
-            return nn.functional.linear(input, min_weight, self.bias)
+            return nn.functional.linear(input, self.weight, self.bias)
         else:
-            return nn.functional.linear(input, min_weight * self.mask, self.bias)
+            return nn.functional.linear(input, self.weight * self.mask, self.bias)
