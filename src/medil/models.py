@@ -14,8 +14,8 @@ from numpy.random import default_rng
 from scipy.linalg import norm
 from scipy.optimize import minimize
 from sklearn.model_selection import train_test_split
-from torch.nn.functional import lp_pool2d, lp_pool3d
-from torch.utils.data import DataLoader, Subset, TensorDataset
+from torch.nn.functional import lp_pool2d
+from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
 from .ecc_algorithms import find_heuristic_1pc
@@ -1127,7 +1127,6 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
             llambda = self.hyperparams["lambda"]
             norm_type = 2
             kernel_size = (
-                1,
                 self.hyperparams["latent_width"],
                 self.hyperparams["latent_width"],
             )
@@ -1135,7 +1134,7 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
             self.parameters.causal_biadj_dict = {}
             for idx, causal_biadj in causal_biadj_dict.items():
                 temp = causal_biadj[None, None, :, :]
-                temp = lp_pool3d(
+                temp = lp_pool2d(
                     temp, norm_type, kernel_size
                 ).squeeze()  # penalize num edges
                 pooled[idx] = temp
