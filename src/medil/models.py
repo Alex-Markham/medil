@@ -988,22 +988,22 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
             for batch, _ in train_loader:
                 x_batch = batch[:, :-1]
                 interv_idx_batch = batch[:, -1, None]
+                interv_idx = torch.unique(interv_idx_batch).to(int)
+                assert len(interv_idx) == 1
+                interv_idx = int(interv_idx)
                 batch_size = x_batch.shape[0]
                 x_batch = x_batch.to(self.device)
                 recon_batch, logcov_batch, mu_batch, logvar_batch = model(
                     x_batch, interv_idx_batch
                 )
-                causal_biadj_dict_batch = {
-                    interv_idx: model.decoder.mean_causal[interv_idx].weight
-                    for interv_idx in range(-1, self.hyperparams["num_latent"])
-                }
+                causal_biadj_batch = model.decoder.mean_causal[interv_idx].weight
                 loss = self._elbo_gaussian(
                     x_batch,
                     recon_batch,
                     logcov_batch,
                     mu_batch,
                     logvar_batch,
-                    causal_biadj_dict_batch,
+                    causal_biadj_batch,
                     self.hyperparams["beta"],
                 )
                 error = self._recon_error(
@@ -1041,6 +1041,22 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
         valid_elbo, valid_error = np.array(valid_elbo), np.array(valid_error)
         elbo = [train_elbo, valid_elbo]
         error = [train_error, valid_error]
+
+        temp = {
+            k: v.weight.detach().numpy().T for k, v in model.decoder.mean_causal.items()
+        }
+        norm_type = 2
+        kernel_size = (
+            self.hyperparams["latent_width"],
+            self.hyperparams["latent_width"],
+        )
+        temp = {
+            t: lp_pool2d(
+                v.weight.detach()[None, None, :, :], norm_type, kernel_size
+            ).squeeze()
+            for t, v in model.decoder.mean_causal.items()
+        }
+        self.parameters.causal_biadj_dict = {k: v.numpy().T for k, v in temp.items()}
 
         return model, elbo, error
 
@@ -1089,7 +1105,7 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
 
         return valid_lb, valid_er
 
-    def _elbo_gaussian(self, x, x_recon, logcov, mu, logvar, causal_biadj_dict, beta):
+    def _elbo_gaussian(self, x, x_recon, logcov, mu, logvar, causal_biadj, beta):
         """Calculating loss for variational autoencoder
         :param x: original image
         :param x_recon: reconstruction in the output layer
@@ -1121,25 +1137,25 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
             )
         ).mul(-1 / 2)
 
+        # https://github.com/AntixK/PyTorch-VAE/blob/a6896b944c918dd7030e7d795a8c13e5c6345ec7/models/beta_vae.py#L139C4-L142C1
+        # recon_loss = torch.nn.functional.mse_loss(x_recon, x)
+        # kl_div_loss = torch.mean(
+        #     -0.5 * torch.sum(1 + logvar - mu**2 - logvar.exp(), dim=1), dim=0
+        # )
+
         # elbo
         loss = -beta * kl_div + recon_loss
-        if causal_biadj_dict is not None:
+        # loss = beta * kl_div_loss + recon_loss
+        if causal_biadj is not None:
             llambda = self.hyperparams["lambda"]
             norm_type = 2
             kernel_size = (
                 self.hyperparams["latent_width"],
                 self.hyperparams["latent_width"],
             )
-            pooled = {}
-            self.parameters.causal_biadj_dict = {}
-            for idx, causal_biadj in causal_biadj_dict.items():
-                temp = causal_biadj[None, None, :, :]
-                temp = lp_pool2d(
-                    temp, norm_type, kernel_size
-                ).squeeze()  # penalize num edges
-                pooled[idx] = temp
-                self.parameters.causal_biadj_dict[idx] = temp.detach().numpy().T
-            return -loss + llambda * sum(
-                (causal_biadj.norm(1) for causal_biadj in causal_biadj_dict.values())
-            )
+            pooled = causal_biadj[None, None, :, :]
+            pooled = lp_pool2d(
+                pooled, norm_type, kernel_size
+            ).squeeze()  # penalize num edges
+            return -loss + llambda * pooled.norm(1)
         return -loss
