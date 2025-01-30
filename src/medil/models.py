@@ -1157,5 +1157,13 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
             pooled = lp_pool2d(
                 pooled, norm_type, kernel_size
             ).squeeze()  # penalize num edges
-            return -loss + llambda * pooled.norm(1)
+
+            # https://dagma.readthedocs.io/en/latest/#the-log-det-acyclicity-characterization
+            s = torch.tensor([5])
+            d = len(pooled)
+            dagness = -torch.logdet(
+                s * torch.eye(d) - torch.square(pooled)
+            ) + d * torch.log(s)
+
+            return -loss + llambda * pooled.norm(1) + llambda * dagness
         return -loss
