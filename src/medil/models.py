@@ -890,7 +890,8 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
                 "lr": 0.005,
                 "beta": 1,
                 "num_valid": 1000,
-                "lambda": 0.01,
+                "sparse_reg": 10,
+                "dag_reg": 10,
                 "meas_width": 1,
                 "meas_depth": 0,
                 "num_latent": 5,
@@ -1129,7 +1130,8 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
         # elbo loss
         loss = beta * kl_div_loss + recon_loss
         if causal_biadj is not None:
-            llambda = self.hyperparams["lambda"]
+            sparse_reg = self.hyperparams["sparse_reg"]
+            dag_reg = self.hyperparams["dag_reg"]
             norm_type = 2
             kernel_size = (
                 self.hyperparams["latent_width"],
@@ -1145,8 +1147,8 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
             s = torch.tensor([5])
             d = len(pooled)
             nondagness = -torch.logdet(
-                s * torch.eye(d) - torch.square(pooled)
+                s * torch.eye(d) - torch.square(pooled - torch.diag(pooled))
             ) + d * torch.log(s)
 
-            return loss + llambda * density + llambda * nondagness
+            return loss + sparse_reg * density + dag_reg * nondagness
         return loss
