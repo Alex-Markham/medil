@@ -1120,32 +1120,14 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
         # https://github.com/AntixK/PyTorch-VAE/blob/master/models/vanilla_vae.py
         # https://github.com/AntixK/PyTorch-VAE/blob/master/models/beta_vae.py
         # https://arxiv.org/pdf/1312.6114.pdf
-        kl_div = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        kl_div_loss = torch.mean(
+            -0.5 * torch.sum(1 + logvar - mu**2 - logvar.exp(), dim=1), dim=0
+        )
 
-        # reconstruction loss
-        cov = torch.exp(logcov)
-        cov = self._apply_along_axis(torch.diag, cov, axis=0)
-        cov = cov.mean(axis=0)
+        recon_loss = torch.nn.functional.mse_loss(x_recon, x)
 
-        diff = x - x_recon
-        recon_loss = torch.sum(
-            torch.det(cov)
-            + torch.diagonal(
-                torch.mm(
-                    torch.mm(diff, torch.inverse(cov)), torch.transpose(diff, 0, 1)
-                )
-            )
-        ).mul(-1 / 2)
-
-        # https://github.com/AntixK/PyTorch-VAE/blob/a6896b944c918dd7030e7d795a8c13e5c6345ec7/models/beta_vae.py#L139C4-L142C1
-        # recon_loss = torch.nn.functional.mse_loss(x_recon, x)
-        # kl_div_loss = torch.mean(
-        #     -0.5 * torch.sum(1 + logvar - mu**2 - logvar.exp(), dim=1), dim=0
-        # )
-
-        # elbo
-        loss = -beta * kl_div + recon_loss
-        # loss = beta * kl_div_loss + recon_loss
+        # elbo loss
+        loss = beta * kl_div_loss + recon_loss
         if causal_biadj is not None:
             llambda = self.hyperparams["lambda"]
             norm_type = 2
@@ -1157,13 +1139,14 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
             pooled = lp_pool2d(
                 pooled, norm_type, kernel_size
             ).squeeze()  # penalize num edges
+            density = pooled.mean()  # L1 norm / num_entries
 
             # https://dagma.readthedocs.io/en/latest/#the-log-det-acyclicity-characterization
             s = torch.tensor([5])
             d = len(pooled)
-            dagness = -torch.logdet(
+            nondagness = -torch.logdet(
                 s * torch.eye(d) - torch.square(pooled)
             ) + d * torch.log(s)
 
-            return -loss + llambda * pooled.norm(1) + llambda * dagness
-        return -loss
+            return loss + llambda * density + llambda * nondagness
+        return loss
