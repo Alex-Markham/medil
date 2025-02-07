@@ -42,7 +42,7 @@ class IvnDataset(Dataset):
         return image, label
 
 
-dataset = IvnDataset("mnist_images_concat.csv")
+dataset = IvnDataset("mnist_images_concat5000.csv")
 
 # train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 # check why `train_loader.dataset[400000]` appears to be all 0s!!!
