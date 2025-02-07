@@ -126,7 +126,7 @@ class Intervenable(nn.Module):
             interv_mask[interv_idx] = 0
             interv_mask[interv_idx, interv_idx] = 1
             interv_mask = interv_mask.kron(torch.ones(self.width, self.width))
-            self.weight.data = min_weight * interv_mask
+            self.weight.data = (min_weight * interv_mask).to(device)
         if self.mask is None:
             return nn.functional.linear(input, self.weight, self.bias)
         else:
