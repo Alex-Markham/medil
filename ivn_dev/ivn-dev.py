@@ -1,6 +1,7 @@
 import os
 import random
 from collections import defaultdict
+from itertools import chain
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,16 +9,18 @@ import seaborn as sns
 import torch
 from torch import nn
 from torch.nn import functional as F
+from torch.nn.parameter import Parameter
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 # Hyperparameters
 latent_dims = 20
+context_dims = 7
 hidden_dims = 400
 batch_size = 512
 learning_rate = 1e-3
 epochs = 100
-append_path = ""
+append_path = "dev"
 
 
 class IvnDataset(Dataset):
@@ -77,6 +80,60 @@ sampler = SameLabelBatchSampler(dataset, batch_size)
 train_loader = DataLoader(dataset, batch_sampler=sampler)
 
 
+class Intervenable(nn.Module):
+    def __init__(
+        self,
+        in_features,
+        out_features,
+        width=1,
+        mask=None,
+        bias=True,
+        device=None,
+        dtype=None,
+    ):
+        factory_kwargs = {"device": device, "dtype": dtype}
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.width = width
+        self.mask = mask
+        self.weight = Parameter(
+            torch.empty((out_features, in_features), **factory_kwargs)
+        )
+
+        if bias:
+            self.bias = Parameter(torch.empty(out_features, **factory_kwargs))
+        else:
+            self.register_parameter("bias", None)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.orthogonal_(self.weight)
+        if self.bias is not None:
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / torch.sqrt(torch.tensor(fan_in)) if fan_in > 0 else 0
+            nn.init.uniform_(self.bias, -bound, bound)
+
+    def forward(self, input, obs_weight, interv_idx):
+        if interv_idx != -1:
+            min_weight = torch.minimum(self.weight, obs_weight)
+            num_vars = len(self.weight) // self.width
+            interv_mask = torch.ones(num_vars, num_vars)
+            interv_mask[interv_idx] = 0
+            interv_mask[interv_idx, interv_idx] = 1
+            interv_mask = interv_mask.kron(torch.ones(self.width, self.width))
+            self.weight.data = min_weight * interv_mask
+        if self.mask is None:
+            return nn.functional.linear(input, self.weight, self.bias)
+        else:
+            return nn.functional.linear(input, self.weight * self.mask, self.bias)
+
+    def extra_repr(self):
+        return "in_features={}, out_features={}, bias={}".format(
+            self.in_features, self.out_features, self.bias is not None
+        )
+
+
 class VAE(nn.Module):
     def __init__(self):
         super(VAE, self).__init__()
@@ -96,12 +153,15 @@ class VAE(nn.Module):
         self.fc_mu = nn.Linear(hidden_dims, latent_dims)
         self.fc_var = nn.Linear(hidden_dims, latent_dims)
 
-        self.causal_layer = nn.Linear(
-            latent_dims, latent_dims
-        )  # use self.batch_label here; define a causal_layer class
+        self.causal_layer = {
+            interv_idx: Intervenable(
+                in_features=latent_dims,
+                out_features=latent_dims,
+            )
+            for interv_idx in chain((-1,), range(1, context_dims))
+        }
         # Decoder
         self.decoder_linear = nn.Sequential(
-            self.causal_layer,
             nn.Linear(latent_dims, hidden_dims),
             nn.ReLU(),
             nn.Linear(hidden_dims, 128),
@@ -127,11 +187,13 @@ class VAE(nn.Module):
         return mu + eps * std
 
     def decode(self, z):
-        h = self.decoder_linear(z)
+        obs_weight = self.causal_layer[-1].weight
+        h = self.causal_layer[self.batch_label](z, obs_weight, self.batch_label)
+        h = self.decoder_linear(h)
         h = h.view(-1, 128, 1, 1)
         return self.decoder_conv(h)
 
-    def forward(self, x, label=-1):
+    def forward(self, x, label):
         self.batch_label = label
         mu, log_var = self.encode(x)
         z = self.reparameterize(mu, log_var)
@@ -159,70 +221,7 @@ model = VAE().to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 
-def train():
-    model.train()
-    train_loss = 0
-    pbar = tqdm(enumerate(train_loader), desc="training epoch...", unit="batch")
-    for batch_idx, (data, labels) in pbar:
-        data = data.to(device)
-        label = labels[0]  # fix
-        optimizer.zero_grad()
-        recon_batch, mu, log_var = model(data)
-        causal_weights_batch = model.causal_layer.weight
-        loss = loss_function(recon_batch, data, mu, log_var, causal_weights_batch)
-        loss.backward()
-        train_loss += loss.item()
-        optimizer.step()
-        pbar.set_postfix({"loss": f"{train_loss / batch_idx + 1:.4f}"})
-    return train_loss / len(train_loader.dataset)
-
-
-# Train the model
-def train_model():
-    losses = []
-    pbar = tqdm(range(epochs), desc="Training...", unit="epoch")
-
-    for epoch in pbar:
-        loss = train()
-        losses.append(loss)
-        pbar.set_postfix({"loss": f"{loss:.4f}"})
-
-        # Save checkpoint after each epoch
-        dir_path = f"ivn-vae_mnist_checkpoints{append_path}"
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-        torch.save(
-            {
-                "epoch": epoch,
-                "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-                "loss": loss,
-                "losses": losses,
-            },
-            f"{dir_path}/epoch_{epoch}.pth",
-        )
-
-    # Save model and training losses
-    torch.save(
-        {
-            "model_state_dict": model.state_dict(),
-            "optimizer_state_dict": optimizer.state_dict(),
-            "losses": losses,
-        },
-        f"ivn-vae_mnist{append_path}.pth",
-    )
-
-
-train_model()
-
-# Load trained model
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = VAE().to(device)
-checkpoint = torch.load(f"ivn-vae_mnist{append_path}.pth", weights_only=False)
-model.load_state_dict(checkpoint["model_state_dict"])
-losses = checkpoint["losses"]
-
-
+##### Plot code
 def plot_latent_traversal():
     model.eval()
 
@@ -323,6 +322,77 @@ def plot_causal():
     plt.tight_layout()
     plt.savefig(f"ivn-causal{append_path}.png")
     plt.close()
+
+
+#### Training loop
+def train():
+    model.train()
+    train_loss = 0
+    pbar = tqdm(enumerate(train_loader), desc="training epoch...", unit="batch")
+    for batch_idx, (data, labels) in pbar:
+        data = data.to(device)
+        label = torch.unique(labels).to(int)
+        assert len(label) == 1
+        label = int(label)
+        optimizer.zero_grad()
+        recon_batch, mu, log_var = model(data, label)
+        causal_weights_batch = model.causal_layer[label].weight
+        loss = loss_function(recon_batch, data, mu, log_var, causal_weights_batch)
+        loss.backward()
+        train_loss += loss.item()
+        optimizer.step()
+        pbar.set_postfix({"loss": f"{train_loss / (batch_idx + 1):.4f}"})
+    return train_loss / len(train_loader.dataset)
+
+
+# Train the model
+def train_model():
+    losses = []
+    pbar = tqdm(range(epochs), desc="Training...", unit="epoch")
+
+    for epoch in pbar:
+        loss = train()
+        losses.append(loss)
+        pbar.set_postfix({"loss": f"{loss:.4f}"})
+
+        # Save checkpoint after each epoch
+        dir_path = f"ivn-vae_mnist_checkpoints{append_path}"
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        torch.save(
+            {
+                "epoch": epoch,
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "loss": loss,
+                "losses": losses,
+            },
+            f"{dir_path}/epoch_{epoch}.pth",
+        )
+        plot_reconstructions()
+        plot_random_samples()
+        plot_latent_traversal()
+        plot_causal()
+
+    # Save model and training losses
+    torch.save(
+        {
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "losses": losses,
+        },
+        f"ivn-vae_mnist{append_path}.pth",
+    )
+
+
+train_model()
+
+# Load trained model
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = VAE().to(device)
+checkpoint = torch.load(f"ivn-vae_mnist{append_path}.pth", weights_only=False)
+model.load_state_dict(checkpoint["model_state_dict"])
+losses = checkpoint["losses"]
 
 
 # Generate all visualizations
