@@ -28,7 +28,7 @@ class IvnDataset(Dataset):
             self.raw_lines = f.readlines()
 
     def __len__(self):
-        return 10000# len(self.raw_lines)
+        return len(self.raw_lines)
 
     def __getitem__(self, idx):
         string = self.raw_lines[idx][:-1]
