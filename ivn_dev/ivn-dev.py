@@ -38,8 +38,8 @@ class IvnDataset(Dataset):
         return image, label
 
 
-# dataset = IvnDataset("test_ivn.csv")
-dataset = IvnDataset("mnist_images_concat.csv")
+dataset = IvnDataset("test_ivn.csv")
+# dataset = IvnDataset("mnist_images_concat.csv")
 
 # train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 # check why `train_loader.dataset[400000]` appears to be all 0s!!!
