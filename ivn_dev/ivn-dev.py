@@ -38,7 +38,7 @@ class IvnDataset(Dataset):
         return image, label
 
 
-dataset = IvnDataset("test_ivn.csv")
+dataset = IvnDataset("mnist_images_concat100.csv")
 # dataset = IvnDataset("mnist_images_concat.csv")
 
 # train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
