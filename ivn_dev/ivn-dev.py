@@ -219,9 +219,7 @@ def loss_function(recon_x, x, mu, logvar, causal_weights):
     # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-    diag = torch.diag(causal_weights)
-
-    sparse_reg = (causal_weights - diag).pow(2).mean()
+    sparse_reg = causal_weights.pow(2).mean()
 
     return BCE + KLD + 1000 * sparse_reg
 
