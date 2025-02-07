@@ -3,7 +3,6 @@ import random
 from collections import defaultdict
 
 import matplotlib.pyplot as plt
-import networkx as nx
 import numpy as np
 import seaborn as sns
 import torch
@@ -15,7 +14,7 @@ from tqdm import tqdm
 # Hyperparameters
 latent_dims = 20
 hidden_dims = 400
-batch_size = 128
+batch_size = 512
 learning_rate = 1e-3
 epochs = 100
 append_path = ""
@@ -38,8 +37,7 @@ class IvnDataset(Dataset):
         return image, label
 
 
-dataset = IvnDataset("mnist_images_concat100.csv")
-# dataset = IvnDataset("mnist_images_concat.csv")
+dataset = IvnDataset("mnist_images_concat.csv")
 
 # train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 # check why `train_loader.dataset[400000]` appears to be all 0s!!!
@@ -164,7 +162,8 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 def train():
     model.train()
     train_loss = 0
-    for batch_idx, (data, labels) in enumerate(train_loader):
+    pbar = tqdm(enumerate(train_loader), desc="training epoch...", unit="batch")
+    for batch_idx, (data, labels) in pbar:
         data = data.to(device)
         label = labels[0]  # fix
         optimizer.zero_grad()
@@ -174,6 +173,7 @@ def train():
         loss.backward()
         train_loss += loss.item()
         optimizer.step()
+        pbar.set_postfix({"loss": f"{train_loss / batch_idx + 1:.4f}"})
     return train_loss / len(train_loader.dataset)
 
 
