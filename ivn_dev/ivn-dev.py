@@ -20,7 +20,7 @@ hidden_dims = 400
 batch_size = 512
 learning_rate = 1e-3
 epochs = 100
-append_path = "dev"
+append_path = "-dev"
 
 
 class IvnDataset(Dataset):
@@ -153,13 +153,14 @@ class VAE(nn.Module):
         self.fc_mu = nn.Linear(hidden_dims, latent_dims)
         self.fc_var = nn.Linear(hidden_dims, latent_dims)
 
-        self.causal_layer = {
-            interv_idx: Intervenable(
-                in_features=latent_dims,
-                out_features=latent_dims,
-            )
-            for interv_idx in chain((-1,), range(1, context_dims))
-        }
+        self.causal_layer = nn.ModuleDict(
+            {
+                str(interv_idx): Intervenable(
+                    in_features=latent_dims, out_features=latent_dims, device=device
+                )
+                for interv_idx in chain((-1,), range(1, context_dims))
+            }
+        )
         # Decoder
         self.decoder_linear = nn.Sequential(
             nn.Linear(latent_dims, hidden_dims),
@@ -187,8 +188,8 @@ class VAE(nn.Module):
         return mu + eps * std
 
     def decode(self, z):
-        obs_weight = self.causal_layer[-1].weight
-        h = self.causal_layer[self.batch_label](z, obs_weight, self.batch_label)
+        obs_weight = self.causal_layer[str(-1)].weight
+        h = self.causal_layer[str(self.batch_label)](z, obs_weight, self.batch_label)
         h = self.decoder_linear(h)
         h = h.view(-1, 128, 1, 1)
         return self.decoder_conv(h)
@@ -260,8 +261,12 @@ def plot_latent_traversal():
 def plot_reconstructions():
     model.eval()
     with torch.no_grad():
-        data = next(iter(train_loader))[0][:8].to(device)
-        recon, _, _ = model(data)
+        data, labels = next(iter(train_loader))[:8]
+        data = data.to(device)
+        label = torch.unique(labels).to(int)
+        assert len(label) == 1
+        label = int(label)
+        recon, _, _ = model(data, label)
 
     fig, axes = plt.subplots(2, 8, figsize=(15, 4))
     for i in range(8):
@@ -336,7 +341,7 @@ def train():
         label = int(label)
         optimizer.zero_grad()
         recon_batch, mu, log_var = model(data, label)
-        causal_weights_batch = model.causal_layer[label].weight
+        causal_weights_batch = model.causal_layer[str(label)].weight
         loss = loss_function(recon_batch, data, mu, log_var, causal_weights_batch)
         loss.backward()
         train_loss += loss.item()
@@ -372,7 +377,7 @@ def train_model():
         plot_reconstructions()
         plot_random_samples()
         plot_latent_traversal()
-        plot_causal()
+        # plot_causal()
 
     # Save model and training losses
     torch.save(
