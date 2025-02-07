@@ -1,5 +1,6 @@
 import random
 from collections import defaultdict
+import os
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -20,7 +21,6 @@ epochs = 100
 append_path = ""
 
 
-# Load interventional MNIST
 class IvnDataset(Dataset):
     def __init__(self, data_path):
         self.data_path = data_path
@@ -38,13 +38,11 @@ class IvnDataset(Dataset):
         return image, label
 
 
-dataset = IvnDataset("mnist_images_concat.csv")
 # dataset = IvnDataset("test_ivn.csv")
-train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+dataset = IvnDataset("mnist_images_concat.csv")
+
+# train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 # check why `train_loader.dataset[400000]` appears to be all 0s!!!
-
-print(train_loader.dataset[400000])
-
 
 # Custom Sampler for grouping by label
 class SameLabelBatchSampler(torch.utils.data.Sampler):
@@ -77,158 +75,153 @@ class SameLabelBatchSampler(torch.utils.data.Sampler):
 
 
 sampler = SameLabelBatchSampler(dataset, batch_size)
-dataloader = DataLoader(dataset, batch_sampler=sampler)
+trainloader = DataLoader(dataset, batch_sampler=sampler)
 
-# Iterate through the DataLoader
-for images, labels in dataloader:
-    print("Batch labels:", labels)
-    print("Batch size:", len(labels))
+class VAE(nn.Module):
+    def __init__(self):
+        super(VAE, self).__init__()
+        # Encoder
+        self.encoder = nn.Sequential(
+            nn.Conv2d(1, 32, 4, stride=2, padding=1),  # 14x14
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 4, stride=2, padding=1),  # 7x7
+            nn.ReLU(),
+            nn.Conv2d(64, 128, 7),  # 1x1
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(128, hidden_dims),
+            nn.ReLU(),
+        )
 
-# class VAE(nn.Module):
-#     def __init__(self):
-#         super(VAE, self).__init__()
-#         # Encoder
-#         self.encoder = nn.Sequential(
-#             nn.Conv2d(1, 32, 4, stride=2, padding=1),  # 14x14
-#             nn.ReLU(),
-#             nn.Conv2d(32, 64, 4, stride=2, padding=1),  # 7x7
-#             nn.ReLU(),
-#             nn.Conv2d(64, 128, 7),  # 1x1
-#             nn.ReLU(),
-#             nn.Flatten(),
-#             nn.Linear(128, hidden_dims),
-#             nn.ReLU(),
-#         )
+        self.fc_mu = nn.Linear(hidden_dims, latent_dims)
+        self.fc_var = nn.Linear(hidden_dims, latent_dims)
 
-#         self.fc_mu = nn.Linear(hidden_dims, latent_dims)
-#         self.fc_var = nn.Linear(hidden_dims, latent_dims)
+        self.causal_layer = nn.Linear(latent_dims, latent_dims) # use self.batch_label here; define a causal_layer class
+        # Decoder
+        self.decoder_linear = nn.Sequential(
+            self.causal_layer,
+            nn.Linear(latent_dims, hidden_dims),
+            nn.ReLU(),
+            nn.Linear(hidden_dims, 128),
+            nn.ReLU(),
+        )
 
-#         self.causal_layer = nn.Linear(latent_dims, latent_dims)
-#         # Decoder
-#         self.decoder_linear = nn.Sequential(
-#             self.causal_layer,
-#             nn.Linear(latent_dims, hidden_dims),
-#             nn.ReLU(),
-#             nn.Linear(hidden_dims, 128),
-#             nn.ReLU(),
-#         )
+        self.decoder_conv = nn.Sequential(
+            nn.ConvTranspose2d(128, 64, 7),  # 7x7
+            nn.ReLU(),
+            nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),  # 14x14
+            nn.ReLU(),
+            nn.ConvTranspose2d(32, 1, 4, stride=2, padding=1),  # 28x28
+            nn.Sigmoid(),
+        )
 
-#         self.decoder_conv = nn.Sequential(
-#             nn.ConvTranspose2d(128, 64, 7),  # 7x7
-#             nn.ReLU(),
-#             nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),  # 14x14
-#             nn.ReLU(),
-#             nn.ConvTranspose2d(32, 1, 4, stride=2, padding=1),  # 28x28
-#             nn.Sigmoid(),
-#         )
+    def encode(self, x):
+        h = self.encoder(x)
+        return self.fc_mu(h), self.fc_var(h)
 
-#     def encode(self, x):
-#         h = self.encoder(x)
-#         return self.fc_mu(h), self.fc_var(h)
+    def reparameterize(self, mu, log_var):
+        std = torch.exp(0.5 * log_var)
+        eps = torch.randn_like(std)
+        return mu + eps * std
 
-#     def reparameterize(self, mu, log_var):
-#         std = torch.exp(0.5 * log_var)
-#         eps = torch.randn_like(std)
-#         return mu + eps * std
+    def decode(self, z):
+        h = self.decoder_linear(z)
+        h = h.view(-1, 128, 1, 1)
+        return self.decoder_conv(h)
 
-#     def decode(self, z):
-#         h = self.decoder_linear(z)
-#         h = h.view(-1, 128, 1, 1)
-#         return self.decoder_conv(h)
-
-#     def forward(self, x):
-#         mu, log_var = self.encode(x)
-#         z = self.reparameterize(mu, log_var)
-#         return self.decode(z), mu, log_var
+    def forward(self, x, label):
+        self.batch_label = label
+        print(batch_label)
+        mu, log_var = self.encode(x)
+        z = self.reparameterize(mu, log_var)
+        return self.decode(z), mu, log_var
 
 
-# def loss_function(recon_x, x, mu, logvar, causal_weights, pen):
-#     BCE = F.binary_cross_entropy(recon_x, x, reduction="sum")
+def loss_function(recon_x, x, mu, logvar, causal_weights, pen):
+    BCE = F.binary_cross_entropy(recon_x, x, reduction="sum")
 
-#     # see Appendix B from VAE paper:
-#     # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
-#     # https://arxiv.org/abs/1312.6114
-#     # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
-#     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    # see Appendix B from VAE paper:
+    # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
+    # https://arxiv.org/abs/1312.6114
+    # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
+    KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-#     causal_weights = torch.abs(causal_weights)
-#     diag = torch.diag(causal_weights)
+    causal_weights = torch.abs(causal_weights)
+    diag = torch.diag(causal_weights)
 
-#     sparse_reg = causal_weights.pow(2).mean()
+    sparse_reg = causal_weights.pow(2).mean()
 
-#     s = torch.tensor([5])
-#     d = latent_dims
-#     dag_reg = -torch.logdet(
-#         s * torch.eye(d) - torch.square(causal_weights - diag)
-#     ) + d * torch.log(s)
+    s = torch.tensor([5])
+    d = latent_dims
+    dag_reg = -torch.logdet(
+        s * torch.eye(d) - torch.square(causal_weights - diag)
+    ) + d * torch.log(s)
 
-#     return BCE + KLD + 1000 * sparse_reg
-
-
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# model = VAE().to(device)
-# optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    return BCE + KLD + 1000 * sparse_reg
 
 
-# def train():
-#     model.train()
-#     train_loss = 0
-#     pen = 1
-#     for batch_idx, (data, _) in enumerate(train_loader):
-#         data = data.to(device)
-#         optimizer.zero_grad()
-#         recon_batch, mu, log_var = model(data)
-#         causal_weights_batch = model.causal_layer.weight
-#         loss = loss_function(recon_batch, data, mu, log_var, causal_weights_batch, pen)
-#         loss.backward()
-#         train_loss += loss.item()
-#         optimizer.step()
-#         if append_path != "":
-#             pen *= 0.999
-#     return train_loss / len(train_loader.dataset)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = VAE().to(device)
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 
-# # Train the model
-# def train_model():
-#     losses = []
-#     pbar = tqdm(range(epochs), desc="Training...", unit="epoch")
-
-#     for epoch in pbar:
-#         loss = train()
-#         losses.append(loss)
-#         pbar.set_postfix({"loss": f"{loss:.4f}"})
-
-#         # Save checkpoint after each epoch
-#         torch.save(
-#             {
-#                 "epoch": epoch,
-#                 "model_state_dict": model.state_dict(),
-#                 "optimizer_state_dict": optimizer.state_dict(),
-#                 "loss": loss,
-#                 "losses": losses,
-#             },
-#             f"conv-vae_mnist_checkpoint_epoch_{epoch}{append_path}.pth",
-#         )
-
-#     # Save model and training losses
-#     torch.save(
-#         {
-#             "model_state_dict": model.state_dict(),
-#             "optimizer_state_dict": optimizer.state_dict(),
-#             "losses": losses,
-#         },
-#         f"conv-vae_mnist{append_path}.pth",
-#     )
+def train():
+    model.train()
+    train_loss = 0
+    for batch_idx, (data, labels) in enumerate(train_loader):
+        data = data.to(device)
+        labels = labels[0]         # fix
+        optimizer.zero_grad()
+        recon_batch, mu, log_var = model(data,label)
+        causal_weights_batch = model.causal_layer.weight
+        loss = loss_function(recon_batch, data, mu, log_var, causal_weights_batch)
+        loss.backward()
+        train_loss += loss.item()
+        optimizer.step()
+    return train_loss / len(train_loader.dataset)
 
 
-# train_model()
+# Train the model
+def train_model():
+    losses = []
+    pbar = tqdm(range(epochs), desc="Training...", unit="epoch")
 
-# # Load trained model
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# model = VAE().to(device)
-# checkpoint = torch.load(f"conv-vae_mnist{append_path}.pth", weights_only=False)
-# model.load_state_dict(checkpoint["model_state_dict"])
-# losses = checkpoint["losses"]
+    for epoch in pbar:
+        loss = train()
+        losses.append(loss)
+        pbar.set_postfix({"loss": f"{loss:.4f}"})
+
+        # Save checkpoint after each epoch
+        torch.save(
+            {
+                "epoch": epoch,
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "loss": loss,
+                "losses": losses,
+            },
+            f"conv-vae_mnist_checkpoint_epoch_{epoch}{append_path}.pth",
+        )
+
+    # Save model and training losses
+    torch.save(
+        {
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "losses": losses,
+        },
+        f"conv-vae_mnist{append_path}.pth",
+    )
+
+
+train_model()
+
+# Load trained model
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = VAE().to(device)
+checkpoint = torch.load(f"conv-vae_mnist{append_path}.pth", weights_only=False)
+model.load_state_dict(checkpoint["model_state_dict"])
+losses = checkpoint["losses"]
 
 
 # def plot_latent_traversal():
