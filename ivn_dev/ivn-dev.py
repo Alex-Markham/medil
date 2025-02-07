@@ -14,9 +14,11 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 # Hyperparameters
-latent_dims = 20
-context_dims = 7
-hidden_dims = 400
+latent_dims = 20  # num latent neurons in vae
+context_dims = 7  # num interventions
+hidden_dims = (
+    400  # num neurons in hidden layers (non-input, -output, -causal, and -latent)
+)
 batch_size = 512
 learning_rate = 1e-3
 epochs = 100
