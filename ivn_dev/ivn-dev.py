@@ -14,11 +14,13 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 # Hyperparameters
-latent_dims = 20  # num latent neurons in vae
-context_dims = 7  # num interventions
-hidden_dims = (
-    400  # num neurons in hidden layers (non-input, -output, -causal, and -latent)
+latent_dims = (
+    20  # actual number of latents in VAE (also number of epsilon/L in this case)
 )
+context_dims = (
+    7  # number of interventions (needed for constructing the intervenable layer)
+)
+hidden_dims = 128  # same as hidden_dims in vanilla arch
 batch_size = 512
 learning_rate = 1e-3
 epochs = 100
@@ -142,10 +144,13 @@ class VAE(nn.Module):
         # Encoder
         self.encoder = nn.Sequential(
             nn.Conv2d(1, 32, 4, stride=2, padding=1),  # 14x14
+            nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.Conv2d(32, 64, 4, stride=2, padding=1),  # 7x7
+            nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.Conv2d(64, 128, 7),  # 1x1
+            nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.Flatten(),
             nn.Linear(128, hidden_dims),
@@ -173,8 +178,10 @@ class VAE(nn.Module):
 
         self.decoder_conv = nn.Sequential(
             nn.ConvTranspose2d(128, 64, 7),  # 7x7
+            nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),  # 14x14
+            nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.ConvTranspose2d(32, 1, 4, stride=2, padding=1),  # 28x28
             nn.Sigmoid(),
