@@ -1,3 +1,6 @@
+import random
+from collections import defaultdict
+
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
@@ -36,10 +39,50 @@ class IvnDataset(Dataset):
 
 
 dataset = IvnDataset("mnist_images_concat.csv")
+# dataset = IvnDataset("test_ivn.csv")
 train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 # check why `train_loader.dataset[400000]` appears to be all 0s!!!
 
 print(train_loader.dataset[400000])
+
+
+# Custom Sampler for grouping by label
+class SameLabelBatchSampler(torch.utils.data.Sampler):
+    def __init__(self, dataset, batch_size):
+        self.dataset = dataset
+        self.batch_size = batch_size
+
+        # Group indices by label
+        self.label_to_indices = defaultdict(list)
+        for idx in range(len(dataset)):
+            _, label = dataset[idx]
+            self.label_to_indices[label].append(idx)
+
+        # Create batches for each label
+        self.batches = []
+        for label, indices in self.label_to_indices.items():
+            random.shuffle(indices)  # Shuffle indices for randomness
+            # Split indices into batches of size `batch_size`
+            for i in range(0, len(indices), batch_size):
+                self.batches.append(indices[i : i + batch_size])
+
+        random.shuffle(self.batches)  # Shuffle the order of batches
+
+    def __iter__(self):
+        for batch in self.batches:
+            yield batch
+
+    def __len__(self):
+        return len(self.batches)
+
+
+sampler = SameLabelBatchSampler(dataset, batch_size)
+dataloader = DataLoader(dataset, batch_sampler=sampler)
+
+# Iterate through the DataLoader
+for images, labels in dataloader:
+    print("Batch labels:", labels)
+    print("Batch size:", len(labels))
 
 # class VAE(nn.Module):
 #     def __init__(self):
