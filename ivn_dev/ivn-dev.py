@@ -188,6 +188,9 @@ def train_model():
         pbar.set_postfix({"loss": f"{loss:.4f}"})
 
         # Save checkpoint after each epoch
+        dir_path = f"ivn-vae_mnist_checkpoints{append_path}"
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
         torch.save(
             {
                 "epoch": epoch,
@@ -196,7 +199,7 @@ def train_model():
                 "loss": loss,
                 "losses": losses,
             },
-            f"conv-vae_mnist_checkpoint_epoch_{epoch}{append_path}.pth",
+            f"{dir_path}/epoch_{epoch}.pth",
         )
 
     # Save model and training losses
@@ -206,7 +209,7 @@ def train_model():
             "optimizer_state_dict": optimizer.state_dict(),
             "losses": losses,
         },
-        f"conv-vae_mnist{append_path}.pth",
+        f"ivn-vae_mnist{append_path}.pth",
     )
 
 
@@ -215,139 +218,116 @@ train_model()
 # Load trained model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = VAE().to(device)
-checkpoint = torch.load(f"conv-vae_mnist{append_path}.pth", weights_only=False)
+checkpoint = torch.load(f"ivn-vae_mnist{append_path}.pth", weights_only=False)
 model.load_state_dict(checkpoint["model_state_dict"])
 losses = checkpoint["losses"]
 
 
-# def plot_latent_traversal():
-#     model.eval()
+def plot_latent_traversal():
+    model.eval()
 
-#     selected_dims = [i for i in range(20)]
-#     # Create figure with 8 rows and 10 columns
-#     fig, axs = plt.subplots(20, 10, figsize=(20, 16))
+    selected_dims = [i for i in range(20)]
+    # Create figure with 8 rows and 10 columns
+    fig, axs = plt.subplots(20, 10, figsize=(20, 16))
 
-#     # Create base latent vector
-#     z_base = torch.zeros(1, latent_dims).to(device)
+    # Create base latent vector
+    z_base = torch.zeros(1, latent_dims).to(device)
 
-#     # Values to traverse for each dimension
-#     traverse_values = torch.linspace(-3, 3, 10)
+    # Values to traverse for each dimension
+    traverse_values = torch.linspace(-3, 3, 10)
 
-#     for i, row in enumerate(selected_dims):
-#         for col in range(10):
-#             z = z_base.clone()
-#             z[0, row] = traverse_values[col]
+    for i, row in enumerate(selected_dims):
+        for col in range(10):
+            z = z_base.clone()
+            z[0, row] = traverse_values[col]
 
-#             with torch.no_grad():
-#                 img = model.decode(z).cpu().view(28, 28)
+            with torch.no_grad():
+                img = model.decode(z).cpu().view(28, 28)
 
-#             axs[i, col].imshow(img, cmap="gray")
-#             axs[i, col].axis("off")
+            axs[i, col].imshow(img, cmap="gray")
+            axs[i, col].axis("off")
 
-#             # Add labels only for first and last column
-#             # if col == 0:
-#             #     axs[i, col].set_title(f"-3")
-#             # elif col == 9:
-#             #     axs[i, col].set_title(f"3")
+            # Add labels only for first and last column
+            # if col == 0:
+            #     axs[i, col].set_title(f"-3")
+            # elif col == 9:
+            #     axs[i, col].set_title(f"3")
 
-#     plt.tight_layout()
-#     plt.savefig(f"conv-latent_traversal{append_path}.png", dpi=150, bbox_inches="tight")
-#     plt.close()
-
-
-# def plot_reconstructions():
-#     model.eval()
-#     with torch.no_grad():
-#         data = next(iter(train_loader))[0][:8].to(device)
-#         recon, _, _ = model(data)
-
-#     fig, axes = plt.subplots(2, 8, figsize=(15, 4))
-#     for i in range(8):
-#         axes[0, i].imshow(data[i].cpu().squeeze(), cmap="gray")
-#         axes[0, i].axis("off")
-#         axes[1, i].imshow(recon[i].cpu().reshape(28, 28), cmap="gray")
-#         axes[1, i].axis("off")
-
-#     axes[0, 0].set_title("Original")
-#     axes[1, 0].set_title("Reconstructed")
-#     plt.tight_layout()
-#     plt.savefig(f"conv-reconstructions{append_path}.png")
-#     plt.close()
+    plt.tight_layout()
+    plt.savefig(f"ivn-latent_traversal{append_path}.png", dpi=150, bbox_inches="tight")
+    plt.close()
 
 
-# def plot_training_loss():
-#     plt.figure()
-#     plt.plot(losses)
-#     plt.title("Training Loss")
-#     plt.xlabel("Epoch")
-#     plt.ylabel("Loss")
-#     plt.savefig(f"conv-training_loss{append_path}.png")
-#     plt.close()
+def plot_reconstructions():
+    model.eval()
+    with torch.no_grad():
+        data = next(iter(train_loader))[0][:8].to(device)
+        recon, _, _ = model(data)
+
+    fig, axes = plt.subplots(2, 8, figsize=(15, 4))
+    for i in range(8):
+        axes[0, i].imshow(data[i].cpu().squeeze(), cmap="gray")
+        axes[0, i].axis("off")
+        axes[1, i].imshow(recon[i].cpu().reshape(28, 28), cmap="gray")
+        axes[1, i].axis("off")
+
+    axes[0, 0].set_title("Original")
+    axes[1, 0].set_title("Reconstructed")
+    plt.tight_layout()
+    plt.savefig(f"ivn-reconstructions{append_path}.png")
+    plt.close()
 
 
-# def plot_random_samples(num_samples=8):
-#     model.eval()
-#     with torch.no_grad():
-#         # Sample from standard normal distribution
-#         z = torch.randn(num_samples, latent_dims).to(device)
-#         # Decode latent vectors
-#         samples = model.decode(z)
-
-#     # Plot samples
-#     fig, axes = plt.subplots(2, 4, figsize=(8, 4))
-#     for i, ax in enumerate(axes.flat):
-#         ax.imshow(samples[i].cpu().reshape(28, 28), cmap="gray")
-#         ax.axis("off")
-
-#     plt.tight_layout()
-#     plt.savefig(f"conv-random_samples{append_path}.png")
-#     plt.close()
+def plot_training_loss():
+    plt.figure()
+    plt.plot(losses)
+    plt.title("Training Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.savefig(f"ivn-training_loss{append_path}.png")
+    plt.close()
 
 
-# def plot_causal():
-#     to_plot = model.causal_layer.weight.detach().numpy()
+def plot_random_samples(num_samples=8):
+    model.eval()
+    with torch.no_grad():
+        # Sample from standard normal distribution
+        z = torch.randn(num_samples, latent_dims).to(device)
+        # Decode latent vectors
+        samples = model.decode(z)
 
-#     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    # Plot samples
+    fig, axes = plt.subplots(2, 4, figsize=(8, 4))
+    for i, ax in enumerate(axes.flat):
+        ax.imshow(samples[i].cpu().reshape(28, 28), cmap="gray")
+        ax.axis("off")
 
-#     # Plot the heatmap
-#     sns.heatmap(np.abs(to_plot), ax=ax1, cmap="viridis")
-#     ax1.set_title("DAG adjacency")
-
-#     # Plot the histogram
-#     ax2.hist(to_plot.flatten())
-#     ax2.set_title("Weight distribution")
-
-#     plt.tight_layout()
-#     plt.savefig(f"conv-causal{append_path}.png")
-#     plt.close()
-
-
-# # Generate all visualizations
-# plot_training_loss()
-# plot_reconstructions()
-# plot_random_samples()
-# plot_latent_traversal()
-# plot_causal()
+    plt.tight_layout()
+    plt.savefig(f"ivn-random_samples{append_path}.png")
+    plt.close()
 
 
-# def find_dag():
-#     w = model.causal_layer.weight.detach().numpy()
-#     for thresh in np.linspace(0, np.abs(w).max(), 10):
-#         adj = np.abs(w) > thresh
-#         dag = nx.DiGraph(adj)
-#         if nx.is_directed_acyclic_graph(dag):
-#             return dag, adj, thresh
-#     print(":(")
+def plot_causal():
+    to_plot = model.causal_layer.weight.detach().numpy()
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    # Plot the heatmap
+    sns.heatmap(np.abs(to_plot), ax=ax1, cmap="viridis")
+    ax1.set_title("DAG adjacency")
+
+    # Plot the histogram
+    ax2.hist(to_plot.flatten())
+    ax2.set_title("Weight distribution")
+
+    plt.tight_layout()
+    plt.savefig(f"ivn-causal{append_path}.png")
+    plt.close()
 
 
-# dag, adj, thresh = find_dag()
-# s = torch.tensor([5])
-# d = latent_dims
-# causal_weights = torch.abs(model.causal_layer.weight.detach())
-# diag = torch.diag(causal_weights)
-# dag_reg = -torch.logdet(
-#     s * torch.eye(d) - torch.square(causal_weights - diag)
-# ) + d * torch.log(s)
-
-# print(f"dagness: {dag_reg}")
-# print(adj.sum())
+# Generate all visualizations
+plot_training_loss()
+plot_reconstructions()
+plot_random_samples()
+plot_latent_traversal()
+plot_causal()
