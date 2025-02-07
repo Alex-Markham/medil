@@ -233,6 +233,17 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 ##### Plot code
 def plot_latent_traversal():
+    label_dict = {
+        -1: "raw",
+        0: "free",
+        1: "scaled",
+        2: "shear",
+        3: "shift",
+        4: "swel",
+        5: "thic",
+        6: "thin",
+    }
+
     model.eval()
 
     selected_dims = [i for i in range(latent_dims)]
@@ -261,7 +272,7 @@ def plot_latent_traversal():
                 axs[i, col].set_title(f"-3")
             elif col == 9:
                 axs[i, col].set_title(f"3")
-        axs[i, 4].set_title(f"Latent {row}")
+        axs[i, 4].set_title(f"{label_dict[row - 1]}")
 
     plt.tight_layout()
     plt.savefig(f"ivn-latent_traversal{append_path}.png", dpi=150, bbox_inches="tight")
