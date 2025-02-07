@@ -15,10 +15,10 @@ from tqdm import tqdm
 
 # Hyperparameters
 latent_dims = (
-    20  # actual number of latents in VAE (also number of epsilon/L in this case)
+    8  # actual number of latents in VAE (also number of epsilon/L in this case)
 )
 context_dims = (
-    7  # number of interventions (needed for constructing the intervenable layer)
+    7  # number of interventions + obs (needed for constructing the intervenable layer)
 )
 hidden_dims = 128  # same as hidden_dims in vanilla arch
 batch_size = 512
@@ -384,9 +384,10 @@ def train_model():
             },
             f"{dir_path}/epoch_{epoch}.pth",
         )
-        plot_reconstructions()
-        plot_random_samples()
-        plot_latent_traversal()
+        if device.type == "cpu":
+            plot_reconstructions()
+            plot_random_samples()
+            plot_latent_traversal()
         # plot_causal()
 
     # Save model and training losses
