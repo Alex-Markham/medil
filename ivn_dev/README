@@ -1,0 +1,18 @@
+README Thu Feb 6 2025 8:48
+
+- labeled intervention data is in ./mnist_images_concat.csv (1.4G)
+	- see below for label dictionary
+- original MNIST data is in ./MNIST
+- transformed versions are in ./ 
+	- mnist_images_<label>.csv
+- python script to visualize and compare datasets in mnist_compare_digits_csv.py
+- python script to generate new transformed samples is in mnist_apply_transform.py
+
+
+-1 "raw" 
+ 1 "scaled" 
+ 2 "shear" 
+ 3 "shift" 
+ 4 "swel" 
+ 5 "thic" 
+ 6 "thin"

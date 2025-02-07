@@ -257,10 +257,11 @@ def plot_latent_traversal():
             axs[i, col].axis("off")
 
             # Add labels only for first and last column
-            # if col == 0:
-            #     axs[i, col].set_title(f"-3")
-            # elif col == 9:
-            #     axs[i, col].set_title(f"3")
+            if col == 0:
+                axs[i, col].set_title(f"-3")
+            elif col == 9:
+                axs[i, col].set_title(f"3")
+        axs[i, 4].set_title(f"Latent {row}")
 
     plt.tight_layout()
     plt.savefig(f"ivn-latent_traversal{append_path}.png", dpi=150, bbox_inches="tight")
