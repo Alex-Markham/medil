@@ -36,6 +36,7 @@ dev = [
     "seaborn>=0.13.2",
     "sempler>=0.2.13",
     "torchvision>=0.20.1",
+    "ipython>=8.32.0",
 ]
 
 [tool.uv]
