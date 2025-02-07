@@ -30,3 +30,7 @@ devenv.local.nix
 
 # pre-commit
 .pre-commit-config.yaml
+*.~undo-tree~
+*_checkpoints
+mnist_dev/
+new_arch/
