@@ -235,9 +235,9 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 def plot_latent_traversal():
     model.eval()
 
-    selected_dims = [i for i in range(20)]
+    selected_dims = [i for i in range(latent_dims)]
     # Create figure with 8 rows and 10 columns
-    fig, axs = plt.subplots(20, 10, figsize=(20, 16))
+    fig, axs = plt.subplots(latent_dims, 10, figsize=(20, 16))
 
     # Create base latent vector
     z_base = torch.zeros(1, latent_dims).to(device)
@@ -343,8 +343,8 @@ def plot_causal():
 def train():
     model.train()
     train_loss = 0
-    pbar = tqdm(enumerate(train_loader), desc="training epoch...", unit="batch")
-    for batch_idx, (data, labels) in pbar:
+    pbar = tqdm(train_loader, desc="training epoch...", unit="batch", leave=False)
+    for batch_idx, (data, labels) in enumerate(pbar):
         data = data.to(device)
         label = torch.unique(labels).to(int)
         assert len(label) == 1
@@ -356,7 +356,7 @@ def train():
         loss.backward()
         train_loss += loss.item()
         optimizer.step()
-        pbar.set_postfix({"loss": f"{train_loss / (batch_idx + 1):.4f}"})
+        # pbar.set_postfix({"loss": f"{train_loss / (batch_idx + 1):.4f}"})
     return train_loss / len(train_loader.dataset)
 
 
