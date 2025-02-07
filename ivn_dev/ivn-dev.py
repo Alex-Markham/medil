@@ -75,7 +75,7 @@ class SameLabelBatchSampler(torch.utils.data.Sampler):
 
 
 sampler = SameLabelBatchSampler(dataset, batch_size)
-trainloader = DataLoader(dataset, batch_sampler=sampler)
+train_loader = DataLoader(dataset, batch_sampler=sampler)
 
 class VAE(nn.Module):
     def __init__(self):
