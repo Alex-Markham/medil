@@ -1,6 +1,6 @@
+import os
 import random
 from collections import defaultdict
-import os
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -33,7 +33,7 @@ class IvnDataset(Dataset):
     def __getitem__(self, idx):
         string = self.raw_lines[idx][:-1]
         nump = np.fromstring(string, sep=",")
-        image = torch.tensor(nump[:-1].reshape(28, 28), dtype=torch.float32)
+        image = torch.tensor(nump[:-1].reshape(1, 28, 28), dtype=torch.float32)
         label = int(nump[-1])
         return image, label
 
@@ -43,6 +43,7 @@ dataset = IvnDataset("mnist_images_concat.csv")
 
 # train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 # check why `train_loader.dataset[400000]` appears to be all 0s!!!
+
 
 # Custom Sampler for grouping by label
 class SameLabelBatchSampler(torch.utils.data.Sampler):
@@ -77,6 +78,7 @@ class SameLabelBatchSampler(torch.utils.data.Sampler):
 sampler = SameLabelBatchSampler(dataset, batch_size)
 train_loader = DataLoader(dataset, batch_sampler=sampler)
 
+
 class VAE(nn.Module):
     def __init__(self):
         super(VAE, self).__init__()
@@ -96,7 +98,9 @@ class VAE(nn.Module):
         self.fc_mu = nn.Linear(hidden_dims, latent_dims)
         self.fc_var = nn.Linear(hidden_dims, latent_dims)
 
-        self.causal_layer = nn.Linear(latent_dims, latent_dims) # use self.batch_label here; define a causal_layer class
+        self.causal_layer = nn.Linear(
+            latent_dims, latent_dims
+        )  # use self.batch_label here; define a causal_layer class
         # Decoder
         self.decoder_linear = nn.Sequential(
             self.causal_layer,
@@ -129,15 +133,14 @@ class VAE(nn.Module):
         h = h.view(-1, 128, 1, 1)
         return self.decoder_conv(h)
 
-    def forward(self, x, label):
+    def forward(self, x, label=-1):
         self.batch_label = label
-        print(batch_label)
         mu, log_var = self.encode(x)
         z = self.reparameterize(mu, log_var)
         return self.decode(z), mu, log_var
 
 
-def loss_function(recon_x, x, mu, logvar, causal_weights, pen):
+def loss_function(recon_x, x, mu, logvar, causal_weights):
     BCE = F.binary_cross_entropy(recon_x, x, reduction="sum")
 
     # see Appendix B from VAE paper:
@@ -146,16 +149,9 @@ def loss_function(recon_x, x, mu, logvar, causal_weights, pen):
     # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-    causal_weights = torch.abs(causal_weights)
     diag = torch.diag(causal_weights)
 
-    sparse_reg = causal_weights.pow(2).mean()
-
-    s = torch.tensor([5])
-    d = latent_dims
-    dag_reg = -torch.logdet(
-        s * torch.eye(d) - torch.square(causal_weights - diag)
-    ) + d * torch.log(s)
+    sparse_reg = (causal_weights - diag).pow(2).mean()
 
     return BCE + KLD + 1000 * sparse_reg
 
@@ -170,9 +166,9 @@ def train():
     train_loss = 0
     for batch_idx, (data, labels) in enumerate(train_loader):
         data = data.to(device)
-        labels = labels[0]         # fix
+        label = labels[0]  # fix
         optimizer.zero_grad()
-        recon_batch, mu, log_var = model(data,label)
+        recon_batch, mu, log_var = model(data)
         causal_weights_batch = model.causal_layer.weight
         loss = loss_function(recon_batch, data, mu, log_var, causal_weights_batch)
         loss.backward()
