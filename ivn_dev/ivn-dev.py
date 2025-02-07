@@ -308,7 +308,7 @@ def plot_random_samples(num_samples=8):
 
 
 def plot_causal():
-    to_plot = model.causal_layer.weight.detach().numpy()
+    to_plot = model.causal_layer.weight.detach().to(device).numpy()
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
