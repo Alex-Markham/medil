@@ -14,6 +14,7 @@ from numpy.random import default_rng
 from scipy.linalg import norm
 from scipy.optimize import minimize
 from sklearn.model_selection import train_test_split
+from torch import nn
 from torch.nn.functional import lp_pool2d
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
@@ -1152,3 +1153,151 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
 
             return loss + sparse_reg * density + dag_reg * nondagness
         return loss
+
+
+class IvnFA(object):
+    def __init__(self):
+        self.hyperparams = {
+            "batch_size": 128,
+            "num_epochs": 100,
+            "lr": 0.005,
+            "beta": 1,
+            "num_valid": 1000,
+            "sparse_reg": 10,
+            "width": 1,
+            "depth": 0,
+            "context_dims": 5,
+            "hidden_dims": 50,
+        }
+        self.checkpoint_save_path = None
+        self.final_save_path = None
+
+    def fit(self, dataset):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.train_loader = DataLoader(torch.tensor(dataset, dtype=torch.float32))
+        input_dims, context_dims, width, hidden_dims = (
+            dataset.shape[1],
+            self.hyperparams["context_dims"],
+            self.hyperparams["width"],
+            self.hyperparams["hidden_dims"],
+        )
+        self.model = self.VAE(input_dims, context_dims, width, hidden_dims).to(
+            self.device
+        )
+        self.optimizer = torch.optim.Adam(
+            self.model.parameters(), lr=self.hyperparams["lr"]
+        )
+
+        losses = []
+        pbar = tqdm(
+            range(self.hyperparams["num_epochs"]), desc="Training...", unit="epoch"
+        )
+
+        for epoch in pbar:
+            loss = self._train()
+            losses.append(loss)
+            pbar.set_postfix({"loss": f"{loss:.4f}"})
+
+            # Save checkpoint after each epoch
+            if self.checkpoint_save_path is not None:
+                torch.save(
+                    {
+                        "epoch": epoch,
+                        "model_state_dict": self.model.state_dict(),
+                        "optimizer_state_dict": self.optimizer.state_dict(),
+                        "loss": loss,
+                        "losses": losses,
+                    },
+                    f"{self.checkpoint_save_path}.pt",
+                )
+
+        # Save model and training losses
+        if self.final_save_path is not None:
+            torch.save(
+                {
+                    "model_state_dict": self.model.state_dict(),
+                    "optimizer_state_dict": self.optimizer.state_dict(),
+                    "losses": losses,
+                },
+                f"{self.final_save_path}.pt",
+            )
+
+    class VAE(nn.Module):
+        def __init__(self, input_dims, context_dims, width, hidden_dims):
+            super().__init__()
+            latent_dims = context_dims * width
+            self.input_dims = input_dims
+
+            # Encoder
+            self.encoder = nn.Sequential(
+                nn.Linear(input_dims, hidden_dims),
+                nn.BatchNorm1d(hidden_dims),
+                nn.GELU(),
+                nn.Linear(hidden_dims, hidden_dims),
+                nn.BatchNorm1d(hidden_dims),
+                nn.GELU(),
+            )
+            self.fc_mu = nn.Linear(hidden_dims, latent_dims)
+            self.fc_var = nn.Linear(hidden_dims, latent_dims)
+
+            self.causal_layer = nn.Linear(latent_dims, latent_dims)
+
+            # Decoder
+            self.decoder = nn.Sequential(
+                self.causal_layer,
+                nn.Linear(latent_dims, hidden_dims),
+                nn.BatchNorm1d(hidden_dims),
+                nn.GELU(),
+                nn.Linear(hidden_dims, hidden_dims),
+                nn.BatchNorm1d(hidden_dims),
+                nn.GELU(),
+                nn.Linear(hidden_dims, input_dims),
+            )
+
+        def encode(self, x):
+            h = self.encoder(x)
+            return self.fc_mu(h), self.fc_var(h)
+
+        def reparameterize(self, mu, log_var):
+            std = torch.exp(0.5 * log_var)
+            eps = torch.randn_like(std)
+            return mu + eps * std
+
+        def decode(self, z):
+            return self.decoder(z)
+
+        def forward(self, x):
+            mu, log_var = self.encode(x)
+            z = self.reparameterize(mu, log_var)
+            return self.decode(z), mu, log_var
+
+    def _loss_function(recon_x, x, mu, logvar, causal_weights):
+        MSE = nn.MSELoss(recon_x, x, reduction="mean")
+
+        # see Appendix B from VAE paper:
+        # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
+        # https://arxiv.org/abs/1312.6114
+        # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
+        KLD = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+
+        causal_weights = torch.abs(causal_weights)
+        sparse_reg = causal_weights.pow(2).mean()
+
+        return MSE + KLD + 1000 * sparse_reg
+
+    def _train(self):
+        self.model.train()
+        train_loss = 0
+        # for batch_idx, (data, _) in enumerate(self.train_loader):
+        for batch_idx, data in enumerate(self.train_loader):
+            data = data.to(self.device)
+            self.optimizer.zero_grad()
+            recon_batch, mu, log_var = self.model(data)
+            causal_weights_batch = self.model.causal_layer.weight
+            loss = self._loss_function(
+                recon_batch, data, mu, log_var, causal_weights_batch
+            )
+            loss.backward()
+            train_loss += loss.item()
+            self.optimizer.step()
+        return train_loss / len(self.train_loader.dataset)

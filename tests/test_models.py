@@ -7,6 +7,7 @@ from medil.models import (
     DevMedilInterv,
     DevMedilInterv2,
     GaussianMCM,
+    IvnFA,
     MedilCausalModel,
     NeuroCausalFactorAnalysis,
 )
@@ -298,3 +299,41 @@ class TestDevMedilInterv2:
             }
         )
         ncfa.fit(dataset)
+
+
+def test_IvnFA():
+    """Simple "M" graph, with 2 latent and 3 measurement vars, sampled from GaussianMCM."""
+
+    biadj = np.zeros((2, 3), bool)
+    biadj[[0, 0, 1, 1], [0, 1, 1, 2]] = True
+    mcm = GaussianMCM(biadj=biadj)
+    params = mcm.parameters
+    params.biadj_weights = biadj.astype(float)
+    params.error_means = np.zeros(3)
+    params.error_variances = np.ones(3)
+
+    samp_size = 1000
+    dataset = mcm.sample(samp_size)
+
+    # standardize
+    dataset -= dataset.mean(0)
+    dataset /= dataset.std(0)
+    dataset1 = np.hstack((dataset, -np.ones((samp_size, 1))))
+    dataset2 = np.hstack((dataset, np.zeros((samp_size, 1))))
+    dataset = np.vstack((dataset1, dataset2))
+
+    model = IvnFA()
+    model.hyperparams.update(
+        {
+            "batch_size": 128,
+            "num_epochs": 100,
+            "lr": 0.005,
+            "beta": 1,
+            "num_valid": 1000,
+            "sparse_reg": 10,
+            "width": 1,
+            "depth": 0,
+            "context_dims": 5,
+        }
+    )
+    model.fit(dataset)
