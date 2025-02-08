@@ -14,11 +14,14 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 # Hyperparameters
-latent_dims = (
-    8  # actual number of latents in VAE (also number of epsilon/L in this case)
-)
 context_dims = (
     7  # number of interventions + obs (needed for constructing the intervenable layer)
+)
+width = 2  # >=1; width/degrees of freedom/num neurons per context in the block weight matrix
+depth = 1  # >=0; w>1 requires d>0; w=1 & d=0 implies Z ≡ ε; number of hidden layers and activations between Z and ε
+latent_dims = (
+    context_dims
+    * width  # actual number of latents in VAE (also number of epsilon/L in this case)
 )
 hidden_dims = 128  # same as hidden_dims in vanilla arch
 batch_size = 512
@@ -84,12 +87,52 @@ sampler = SameLabelBatchSampler(dataset, batch_size)
 train_loader = DataLoader(dataset, batch_sampler=sampler)
 
 
+class BlockLinear(nn.Module):
+    def __init__(
+        self,
+        context_dims,
+        width,
+        bias=True,
+        device=None,
+        dtype=None,
+    ):
+        factory_kwargs = {"device": device, "dtype": dtype}
+        super().__init__()
+        self.block_mask = torch.eye(context_dims).kron(torch.ones(width, width))
+        num_features = context_dims * width
+        self.weight = Parameter(
+            torch.empty((num_features, num_features), **factory_kwargs)
+        )
+        if bias:
+            self.bias = Parameter(torch.empty(num_features, **factory_kwargs))
+        else:
+            self.register_parameter("bias", None)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        # nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        nn.init.orthogonal_(self.weight)
+        # nn.init.sparse_(self.weight, 2 / 3)
+        if self.bias is not None:
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / torch.sqrt(torch.tensor(fan_in)) if fan_in > 0 else 0
+            nn.init.uniform_(self.bias, -bound, bound)
+
+    def forward(self, input):
+        # masked linear layer
+        return nn.functional.linear(input, self.weight * self.block_mask, self.bias)
+
+    def extra_repr(self):
+        return "in_features={}, out_features={}, bias={}".format(
+            self.in_features, self.out_features, self.bias is not None
+        )
+
+
 class Intervenable(nn.Module):
     def __init__(
         self,
         in_features,
         out_features,
-        width=1,
         mask=None,
         bias=True,
         device=None,
@@ -99,7 +142,6 @@ class Intervenable(nn.Module):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.width = width
         self.mask = mask
         self.weight = Parameter(
             torch.empty((out_features, in_features), **factory_kwargs)
@@ -121,11 +163,10 @@ class Intervenable(nn.Module):
     def forward(self, input, obs_weight, interv_idx):
         if interv_idx != -1:
             min_weight = torch.minimum(self.weight, obs_weight)
-            num_vars = len(self.weight) // self.width
+            num_vars = len(self.weight)
             interv_mask = torch.ones(num_vars, num_vars)
             interv_mask[interv_idx] = 0
             interv_mask[interv_idx, interv_idx] = 1
-            interv_mask = interv_mask.kron(torch.ones(self.width, self.width))
             self.weight.data = min_weight * interv_mask.to(device)
         if self.mask is None:
             return nn.functional.linear(input, self.weight, self.bias)
@@ -160,14 +201,19 @@ class VAE(nn.Module):
         self.fc_mu = nn.Linear(hidden_dims, latent_dims)
         self.fc_var = nn.Linear(hidden_dims, latent_dims)
 
+        # Our module
+        unchained = BlockLinear(context_dims, width), nn.GELU()
+        deeply_expressive = chain(*(unchained for _ in range(depth)))
+        self.expressive_layer = nn.Sequential(*deeply_expressive, nn.AvgPool1d(width))
         self.causal_layer = nn.ModuleDict(
             {
                 str(interv_idx): Intervenable(
-                    in_features=latent_dims, out_features=latent_dims, device=device
+                    in_features=context_dims, out_features=context_dims, device=device
                 )
                 for interv_idx in chain((-1,), range(1, context_dims))
             }
         )
+
         # Decoder
         self.decoder_linear = nn.Sequential(
             nn.Linear(latent_dims, hidden_dims),
@@ -197,8 +243,12 @@ class VAE(nn.Module):
         return mu + eps * std
 
     def decode(self, z):
+        epsilon = self.expressive_layer(z)
         obs_weight = self.causal_layer[str(-1)].weight
-        h = self.causal_layer[str(self.batch_label)](z, obs_weight, self.batch_label)
+        l = self.causal_layer[str(self.batch_label)](
+            epsilon, obs_weight, self.batch_label
+        )
+        h = l.kron(torch.ones(width))
         h = self.decoder_linear(h)
         h = h.view(-1, 128, 1, 1)
         return self.decoder_conv(h)
@@ -230,7 +280,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 
 ##### Plot code
-def plot_latent_traversal():
+def _plot_latent_traversal(ivn):
     label_dict = {
         -1: "raw",
         0: "free",
@@ -243,6 +293,7 @@ def plot_latent_traversal():
     }
 
     model.eval()
+    model.batch_label = ivn
 
     selected_dims = [i for i in range(latent_dims)]
     # Create figure with 8 rows and 10 columns
