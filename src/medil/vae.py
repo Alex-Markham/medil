@@ -65,8 +65,9 @@ class Encoder(Block):
 
     def forward(self, x):
         # encoder layers
-        inter = torch.relu(self.enc1(x))
-        inter = torch.relu(self.enc2(inter))
+        norm = nn.BatchNorm1d(self.inter_dim)
+        inter = torch.relu(norm(self.enc1(x)))
+        inter = torch.relu(norm(self.enc2(inter)))
 
         # calculate mu & logvar
         mu = self.fc_mu(inter)
@@ -138,18 +139,19 @@ class Decoder(Block):
         # logcov = self.fc_logcov(z)
 
         # new arch
+        norm = nn.BatchNorm1d(self.hidden_dim)
         mean = self.mean_linear_fulcon(z)
-        mean = self.activation(mean)
+        mean = self.activation(norm(mean))
         for hidden_layer in self.mean_linear_hidden.values():
-            mean = hidden_layer(mean)
+            mean = hidden_layer(norm(mean))
             mean = self.activation(mean)
         mean = self.mean_linear_output(mean)
 
         logcov = self.cov_linear_fulcon(z)
-        logcov = self.activation(logcov)
+        logcov = self.activation(norm(logcov))
         for hidden_layer in self.cov_linear_hidden.values():
             logcov = hidden_layer(logcov)
-            logcov = self.activation(logcov)
+            logcov = self.activation(norm(logcov))
         logcov = self.cov_linear_output(logcov)
 
         return mean, logcov
