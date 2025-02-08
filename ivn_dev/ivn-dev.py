@@ -321,11 +321,18 @@ def _plot_latent_traversal(ivn):
                 axs[i, col].set_title(f"-3")
             elif col == 9:
                 axs[i, col].set_title(f"3")
-        axs[i, 4].set_title(f"{label_dict[row - 1]}")
-
+    fig.suptitle(f"{label_dict[ivn]}")
     plt.tight_layout()
-    plt.savefig(f"ivn-latent_traversal{append_path}.png", dpi=150, bbox_inches="tight")
+    dir_path = f"ivn-latent_traversal{append_path}"
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    plt.savefig(f"{dir_path}/ivn_{ivn}.png", dpi=150, bbox_inches="tight")
     plt.close()
+
+
+def plot_latent_traversal():
+    for ivn in chain((-1,), range(1, context_dims)):
+        _plot_latent_traversal(ivn)
 
 
 def plot_reconstructions():
@@ -362,11 +369,24 @@ def plot_training_loss():
     plt.close()
 
 
-def plot_random_samples(num_samples=8):
+def _plot_random_samples(ivn, num_samples=8):
+    label_dict = {
+        -1: "raw",
+        0: "free",
+        1: "scaled",
+        2: "shear",
+        3: "shift",
+        4: "swel",
+        5: "thic",
+        6: "thin",
+    }
     model.eval()
+    model.batch_label = ivn
     with torch.no_grad():
+        # fix seed
+        gen = lambda seed: torch.Generator().manual_seed(seed)
         # Sample from standard normal distribution
-        z = torch.randn(num_samples, latent_dims).to(device)
+        z = torch.randn(num_samples, latent_dims, generator=gen(0)).to(device)
         # Decode latent vectors
         samples = model.decode(z)
 
@@ -376,9 +396,18 @@ def plot_random_samples(num_samples=8):
         ax.imshow(samples[i].cpu().reshape(28, 28), cmap="gray")
         ax.axis("off")
 
+    fig.suptitle(f"Context: {label_dict[ivn]}")
     plt.tight_layout()
-    plt.savefig(f"ivn-random_samples{append_path}.png")
+    dir_path = f"ivn-random_samples{append_path}"
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    plt.savefig(f"{dir_path}/ivn_{ivn}.png", dpi=150, bbox_inches="tight")
     plt.close()
+
+
+def plot_random_samples():
+    for ivn in chain((-1,), range(1, context_dims)):
+        _plot_random_samples(ivn)
 
 
 def plot_causal():
@@ -448,6 +477,7 @@ def train_model():
             plot_reconstructions()
             plot_random_samples()
             plot_latent_traversal()
+
         # plot_causal()
 
     # Save model and training losses
