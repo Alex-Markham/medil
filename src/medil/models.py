@@ -1233,8 +1233,7 @@ class Intervenable(nn.Module):
     def forward(self, input, obs_weight, interv_idx):
         if interv_idx != -1:
             min_weight = torch.minimum(self.weight, obs_weight)
-            num_vars = len(self.weight)
-            interv_mask = torch.ones(num_vars, num_vars, **self.factory_kwargs)
+            interv_mask = torch.ones_like(min_weight, **self.factory_kwargs)
             interv_mask[interv_idx] = 0
             interv_mask[interv_idx, interv_idx] = 1
             self.weight.data = min_weight * interv_mask
@@ -1276,7 +1275,7 @@ class VAE(nn.Module):
             {
                 str(interv_idx): Intervenable(
                     in_features=context_dims,
-                    out_features=context_dims,
+                    out_features=input_dims,
                 )
                 for interv_idx in range(-1, context_dims)
             }
@@ -1284,7 +1283,7 @@ class VAE(nn.Module):
 
         # Decoder
         self.decoder = nn.Sequential(
-            nn.Linear(latent_dims, hidden_dims),
+            nn.Linear(input_dims, hidden_dims),
             nn.BatchNorm1d(hidden_dims),
             nn.GELU(),
             nn.Linear(hidden_dims, input_dims),
@@ -1305,8 +1304,7 @@ class VAE(nn.Module):
         l = self.causal_layer[str(self.batch_label)](
             epsilon, obs_weight, self.batch_label
         )
-        h = l.kron(torch.ones(self.width))
-        return self.decoder(h)
+        return self.decoder(l)
 
     def forward(self, x, label):
         self.batch_label = label
@@ -1518,7 +1516,7 @@ class IvnFA(object):
 
     def _validate(self):
         self.model.eval()
-        batch_size = len(self.valid_loader.dataset)
+        batch_size = len(self.train_loader.dataset)
         mse = 0
         kl = 0
         for batch_idx, (data, labels) in enumerate(self.valid_loader):

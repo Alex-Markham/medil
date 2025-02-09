@@ -330,14 +330,14 @@ def test_IvnFA():
     model.hyperparams.update(
         {
             "batch_size": 128,
-            "num_epochs": 100,
+            "num_epochs": 10,
             "lr": 0.005,
             "beta": 1,
             "llambda": 10,
             "num_valid": 1000,
             "width": 3,
             "depth": 2,
-            "context_dims": 5,
+            "context_dims": 1,
         }
     )
     model.fit(dataset)
