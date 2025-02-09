@@ -301,9 +301,8 @@ class TestDevMedilInterv2:
         ncfa.fit(dataset)
 
 
-def test_IvnFA():
+def gen_test_ivn_data():
     """Simple "M" graph, with 2 latent and 3 measurement vars, sampled from GaussianMCM."""
-
     biadj = np.zeros((2, 3), bool)
     biadj[[0, 0, 1, 1], [0, 1, 1, 2]] = True
     mcm = GaussianMCM(biadj=biadj)
@@ -321,6 +320,11 @@ def test_IvnFA():
     dataset1 = np.hstack((dataset, -np.ones((samp_size, 1))))
     dataset2 = np.hstack((dataset, np.zeros((samp_size, 1))))
     dataset = np.vstack((dataset1, dataset2))
+    return dataset
+
+
+def test_IvnFA():
+    dataset = gen_test_ivn_data()
 
     model = IvnFA()
     model.hyperparams.update(
@@ -329,10 +333,10 @@ def test_IvnFA():
             "num_epochs": 100,
             "lr": 0.005,
             "beta": 1,
+            "llambda": 10,
             "num_valid": 1000,
-            "sparse_reg": 10,
-            "width": 1,
-            "depth": 0,
+            "width": 3,
+            "depth": 2,
             "context_dims": 5,
         }
     )

@@ -4,6 +4,7 @@ import os
 import pickle
 import warnings
 from datetime import datetime
+from itertools import chain
 from pathlib import Path
 from typing import Iterator, List
 
@@ -16,6 +17,7 @@ from scipy.optimize import minimize
 from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.nn.functional import lp_pool2d
+from torch.nn.parameter import Parameter
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
@@ -1155,6 +1157,220 @@ class DevMedilInterv2(NeuroCausalFactorAnalysis):
         return loss
 
 
+class BlockLinear(nn.Module):
+    def __init__(
+        self,
+        context_dims,
+        width,
+        bias=True,
+        device=None,
+        dtype=None,
+    ):
+        factory_kwargs = {"device": device, "dtype": dtype}
+        super().__init__()
+        self.block_mask = torch.eye(context_dims).kron(torch.ones(width, width))
+        num_features = context_dims * width
+        self.weight = Parameter(
+            torch.empty((num_features, num_features), **factory_kwargs)
+        )
+        if bias:
+            self.bias = Parameter(torch.empty(num_features, **factory_kwargs))
+        else:
+            self.register_parameter("bias", None)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        # nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        nn.init.orthogonal_(self.weight)
+        # nn.init.sparse_(self.weight, 2 / 3)
+        if self.bias is not None:
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / torch.sqrt(torch.tensor(fan_in)) if fan_in > 0 else 0
+            nn.init.uniform_(self.bias, -bound, bound)
+
+    def forward(self, input):
+        # masked linear layer
+        return nn.functional.linear(input, self.weight * self.block_mask, self.bias)
+
+    def extra_repr(self):
+        return "in_features={}, out_features={}, bias={}".format(
+            self.in_features, self.out_features, self.bias is not None
+        )
+
+
+class Intervenable(nn.Module):
+    def __init__(
+        self,
+        in_features,
+        out_features,
+        mask=None,
+        bias=True,
+        device=None,
+        dtype=None,
+    ):
+        self.factory_kwargs = {"device": device, "dtype": dtype}
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.mask = mask
+        self.weight = Parameter(
+            torch.empty((out_features, in_features), **self.factory_kwargs)
+        )
+
+        if bias:
+            self.bias = Parameter(torch.empty(out_features, **self.factory_kwargs))
+        else:
+            self.register_parameter("bias", None)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.orthogonal_(self.weight)
+        if self.bias is not None:
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / torch.sqrt(torch.tensor(fan_in)) if fan_in > 0 else 0
+            nn.init.uniform_(self.bias, -bound, bound)
+
+    def forward(self, input, obs_weight, interv_idx):
+        if interv_idx != -1:
+            min_weight = torch.minimum(self.weight, obs_weight)
+            num_vars = len(self.weight)
+            interv_mask = torch.ones(num_vars, num_vars, **self.factory_kwargs)
+            interv_mask[interv_idx] = 0
+            interv_mask[interv_idx, interv_idx] = 1
+            self.weight.data = min_weight * interv_mask
+        if self.mask is None:
+            return nn.functional.linear(input, self.weight, self.bias)
+        else:
+            return nn.functional.linear(input, self.weight * self.mask, self.bias)
+
+    def extra_repr(self):
+        return "in_features={}, out_features={}, bias={}".format(
+            self.in_features, self.out_features, self.bias is not None
+        )
+
+
+class VAE(nn.Module):
+    def __init__(self, input_dims, context_dims, width, depth, hidden_dims):
+        super().__init__()
+        latent_dims = context_dims * width
+        self.input_dims = input_dims
+        self.width = width
+
+        # Encoder
+        self.encoder = nn.Sequential(
+            nn.Linear(input_dims, hidden_dims),
+            nn.BatchNorm1d(hidden_dims),
+            nn.GELU(),
+            nn.Linear(hidden_dims, hidden_dims),
+            nn.BatchNorm1d(hidden_dims),
+            nn.GELU(),
+        )
+        self.fc_mu = nn.Linear(hidden_dims, latent_dims)
+        self.fc_var = nn.Linear(hidden_dims, latent_dims)
+
+        # Our module
+        unchained = BlockLinear(context_dims, width), nn.GELU()
+        deeply_expressive = chain(*(unchained for _ in range(depth)))
+        self.expressive_layer = nn.Sequential(*deeply_expressive, nn.AvgPool1d(width))
+        self.causal_layer = nn.ModuleDict(
+            {
+                str(interv_idx): Intervenable(
+                    in_features=context_dims,
+                    out_features=context_dims,
+                )
+                for interv_idx in range(-1, context_dims)
+            }
+        )
+
+        # Decoder
+        self.decoder = nn.Sequential(
+            nn.Linear(latent_dims, hidden_dims),
+            nn.BatchNorm1d(hidden_dims),
+            nn.GELU(),
+            nn.Linear(hidden_dims, input_dims),
+        )
+
+    def encode(self, x):
+        h = self.encoder(x)
+        return self.fc_mu(h), self.fc_var(h)
+
+    def reparameterize(self, mu, log_var):
+        std = torch.exp(0.5 * log_var)
+        eps = torch.randn_like(std)
+        return mu + eps * std
+
+    def decode(self, z):
+        epsilon = self.expressive_layer(z)
+        obs_weight = self.causal_layer[str(-1)].weight
+        l = self.causal_layer[str(self.batch_label)](
+            epsilon, obs_weight, self.batch_label
+        )
+        h = l.kron(torch.ones(self.width))
+        return self.decoder(h)
+
+    def forward(self, x, label):
+        self.batch_label = label
+        mu, log_var = self.encode(x)
+        z = self.reparameterize(mu, log_var)
+        return self.decode(z), mu, log_var
+
+
+def _numpy_to_pytorch_dataset(np_dataset):
+    """
+    Converts a NumPy dataset into a PyTorch dataset.
+
+    Parameters:
+    - np_dataset: NumPy array where rows are samples and columns are features.
+
+    Returns:
+    - A PyTorch TensorDataset containing samples and labels.
+    """
+
+    # Ensure the input is a NumPy array
+    if not isinstance(np_dataset, np.ndarray):
+        raise ValueError("Input must be a NumPy array.")
+
+    # Split the dataset into features (X) and labels (y)
+    X = np_dataset[:, :-1]  # Features are all columns except the last
+    y = np_dataset[:, -1]  # Labels are the last column
+
+    # Convert NumPy arrays to PyTorch tensors
+    X_tensor = torch.from_numpy(X).float()
+    y_tensor = (
+        torch.from_numpy(y).float().unsqueeze(-1)
+    )  # Optional: unsqueeze for consistency
+
+    # Create a PyTorch TensorDataset
+    dataset = TensorDataset(X_tensor, y_tensor)
+
+    return dataset
+
+
+class _sampler(torch.utils.data.Sampler):
+    def __init__(self, dataset, batch_size: int) -> None:
+        self.data = dataset
+        self.batch_size = batch_size
+        self.labels = dataset.tensors[1]
+        self.contexts, self.inv, self.counts = torch.unique(
+            self.labels, return_inverse=True, return_counts=True
+        )
+
+    def __len__(self) -> int:
+        return (len(self.data) + self.batch_size - 1) // self.batch_size
+
+    def __iter__(self):
+        context_idcs = torch.multinomial(
+            self.counts / self.counts.sum(), len(self), replacement=True
+        )
+        # contexts = self.contexts[context_idcs]
+        for context_idx in context_idcs:
+            context_data_idcs = torch.where(self.inv == context_idx)[0]
+            batch_idcs = context_data_idcs[torch.randperm(len(context_data_idcs))][
+                : self.batch_size
+            ]
+            yield batch_idcs
+
+
 class IvnFA(object):
     def __init__(self):
         self.hyperparams = {
@@ -1171,17 +1387,42 @@ class IvnFA(object):
         }
         self.checkpoint_save_path = None
         self.final_save_path = None
+        self.loss_dict = {
+            "elbo_train": [],
+            "recon_train": [],
+            "elbo_valid": [],
+            "recon_valid": [],
+        }
 
-    def fit(self, dataset):
+    def fit(self, dataset, split_idcs=None):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.train_loader = DataLoader(torch.tensor(dataset, dtype=torch.float32))
-        input_dims, context_dims, width, hidden_dims = (
-            dataset.shape[1],
+
+        input_dims = dataset.shape[1] - 1
+
+        # random train/val split if explicit indices not provided
+        if split_idcs is None:
+            train_split, valid_split = train_test_split(dataset, train_size=0.7)
+        else:
+            train_split = dataset[split_idcs[0]]
+            valid_split = dataset[split_idcs[1]]
+
+        # train
+        dataset = _numpy_to_pytorch_dataset(train_split)
+        sampler = _sampler(dataset, self.hyperparams["batch_size"])
+        self.train_loader = DataLoader(dataset, batch_sampler=sampler)
+
+        # valid
+        dataset = _numpy_to_pytorch_dataset(valid_split)
+        sampler = _sampler(dataset, self.hyperparams["batch_size"])
+        self.valid_loader = DataLoader(dataset, batch_sampler=sampler)
+
+        context_dims, width, depth, hidden_dims = (
             self.hyperparams["context_dims"],
             self.hyperparams["width"],
+            self.hyperparams["depth"],
             self.hyperparams["hidden_dims"],
         )
-        self.model = self.VAE(input_dims, context_dims, width, hidden_dims).to(
+        self.model = VAE(input_dims, context_dims, width, depth, hidden_dims).to(
             self.device
         )
         self.optimizer = torch.optim.Adam(
@@ -1195,6 +1436,7 @@ class IvnFA(object):
 
         for epoch in pbar:
             loss = self._train()
+            self._validate()
             losses.append(loss)
             pbar.set_postfix({"loss": f"{loss:.4f}"})
 
@@ -1221,83 +1463,75 @@ class IvnFA(object):
                 },
                 f"{self.final_save_path}.pt",
             )
+        self.losses = losses
+        self.causal_weight_dict = {
+            k: v.weight.detach().numpy() for k, v in self.model.causal_layer.items()
+        }
 
-    class VAE(nn.Module):
-        def __init__(self, input_dims, context_dims, width, hidden_dims):
-            super().__init__()
-            latent_dims = context_dims * width
-            self.input_dims = input_dims
-
-            # Encoder
-            self.encoder = nn.Sequential(
-                nn.Linear(input_dims, hidden_dims),
-                nn.BatchNorm1d(hidden_dims),
-                nn.GELU(),
-                nn.Linear(hidden_dims, hidden_dims),
-                nn.BatchNorm1d(hidden_dims),
-                nn.GELU(),
-            )
-            self.fc_mu = nn.Linear(hidden_dims, latent_dims)
-            self.fc_var = nn.Linear(hidden_dims, latent_dims)
-
-            self.causal_layer = nn.Linear(latent_dims, latent_dims)
-
-            # Decoder
-            self.decoder = nn.Sequential(
-                self.causal_layer,
-                nn.Linear(latent_dims, hidden_dims),
-                nn.BatchNorm1d(hidden_dims),
-                nn.GELU(),
-                nn.Linear(hidden_dims, hidden_dims),
-                nn.BatchNorm1d(hidden_dims),
-                nn.GELU(),
-                nn.Linear(hidden_dims, input_dims),
-            )
-
-        def encode(self, x):
-            h = self.encoder(x)
-            return self.fc_mu(h), self.fc_var(h)
-
-        def reparameterize(self, mu, log_var):
-            std = torch.exp(0.5 * log_var)
-            eps = torch.randn_like(std)
-            return mu + eps * std
-
-        def decode(self, z):
-            return self.decoder(z)
-
-        def forward(self, x):
-            mu, log_var = self.encode(x)
-            z = self.reparameterize(mu, log_var)
-            return self.decode(z), mu, log_var
-
-    def _loss_function(recon_x, x, mu, logvar, causal_weights):
-        MSE = nn.MSELoss(recon_x, x, reduction="mean")
+    def _loss_function(self, recon_x, x, mu, log_var, causal_weights):
+        MSE = nn.MSELoss(reduction="mean")
+        mse_loss = MSE(recon_x, x)
 
         # see Appendix B from VAE paper:
         # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
         # https://arxiv.org/abs/1312.6114
         # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
-        KLD = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+        KLD = -0.5 * torch.mean(1 + log_var - mu.pow(2) - log_var.exp())
 
         causal_weights = torch.abs(causal_weights)
         sparse_reg = causal_weights.pow(2).mean()
 
-        return MSE + KLD + 1000 * sparse_reg
+        return (
+            mse_loss
+            + self.hyperparams["beta"] * KLD
+            + self.hyperparams["llambda"] * sparse_reg
+        ), (mse_loss, KLD)
 
     def _train(self):
         self.model.train()
+        batch_size = len(self.train_loader.dataset)
         train_loss = 0
-        # for batch_idx, (data, _) in enumerate(self.train_loader):
-        for batch_idx, data in enumerate(self.train_loader):
+        mse = 0
+        kl = 0
+        pbar = tqdm(
+            self.train_loader, desc="training epoch...", unit="batch", leave=False
+        )
+        for batch_idx, (data, labels) in enumerate(pbar):
             data = data.to(self.device)
+            label = torch.unique(labels).to(int).item()
             self.optimizer.zero_grad()
-            recon_batch, mu, log_var = self.model(data)
-            causal_weights_batch = self.model.causal_layer.weight
-            loss = self._loss_function(
+            recon_batch, mu, log_var = self.model(data, label)
+            causal_weights_batch = self.model.causal_layer[str(label)].weight
+            loss, (mse, kl) = self._loss_function(
                 recon_batch, data, mu, log_var, causal_weights_batch
             )
             loss.backward()
             train_loss += loss.item()
+            mse += mse.item()
+            kl += kl.item()
             self.optimizer.step()
-        return train_loss / len(self.train_loader.dataset)
+        mse = mse / batch_size
+        self.loss_dict["recon_train"].append(mse.item())
+        elbo = mse + (kl / batch_size)
+        self.loss_dict["elbo_train"].append(elbo.item())
+        return train_loss / batch_size
+
+    def _validate(self):
+        self.model.eval()
+        batch_size = len(self.valid_loader.dataset)
+        mse = 0
+        kl = 0
+        for batch_idx, (data, labels) in enumerate(self.valid_loader):
+            data = data.to(self.device)
+            label = torch.unique(labels).to(int).item()
+            recon_batch, mu, log_var = self.model(data, label)
+            causal_weights_batch = self.model.causal_layer[str(label)].weight
+            _, (mse, kl) = self._loss_function(
+                recon_batch, data, mu, log_var, causal_weights_batch
+            )
+            mse += mse.item()
+            kl += kl.item()
+        mse = mse / batch_size
+        self.loss_dict["recon_valid"].append(mse.item())
+        elbo = mse + (kl / batch_size)
+        self.loss_dict["elbo_valid"].append(elbo.item())
