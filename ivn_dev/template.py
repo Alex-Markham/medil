@@ -13,60 +13,66 @@ from torch.nn.parameter import Parameter
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-
 ## Directions
 #############
-#
-#
-#
+# 1. specify dimensions and training params in Lines 25--33
+# 2. insert encoder on Line 42 and set encode_dim (size of output of encoder) on Line 39
+# 3. insert decoder on Line 51 and set decode_dim (size of input of encoder) on Line 48
+# 4. can change dataset at Line 472 and disable training at Line 478
 #############
+
+## dimensions
+concept_dim = 7  # set this to the number concepts you want to learn/the number dataset settings you have
+width = 3  # increase this for more expressivity
+depth = 1  # can also increase for more expressivity
+latent_dim = concept_dim * width  # number of nodes in Z; don't manually change
+
+## training params
+batch_size = 512
+learning_rate = 1e-3
+epochs = 100
 
 
 class VAE(nn.Module):
     def __init__(self):
         super(VAE, self).__init__()
+        encode_dim = 2  # change this!!
         # Encoder
         self.encoder = nn.Sequential(
-            #
+            nn.Flatten(),  # replace this!!
+            nn.Linear(28 * 28, encode_dim),  # replace this!!
+            # add encoder here; if it can't be coaxed into an nn.Sequential module, enter on Line XXX instead!!
         )
 
-        self.fc_mu = nn.Linear(hidden_dims, latent_dims)
-        self.fc_var = nn.Linear(hidden_dims, latent_dims)
+        # Decoder
+        decode_dim = 2  # change this!!
+        self.decoder = nn.Sequential(
+            nn.Linear(concept_dim, decode_dim),  # leave this!!
+            nn.Linear(decode_dim, 28 * 28),  # replace this!!
+            nn.Unflatten(-1, (1, 28, 28)),  # replace this!!
+            nn.Sigmoid(),  # replace this!!
+            # add decoder here; if it can't be coaxed into an nn.Sequential module, enter on Line XXX instead!!
+        )
+
+        # Reparametrizer
+        self.fc_mu = nn.Linear(encode_dim, latent_dim)
+        self.fc_var = nn.Linear(encode_dim, latent_dim)
 
         # Our module
-        unchained = BlockLinear(context_dims, width), nn.GELU()
+        unchained = BlockLinear(concept_dim, width), nn.GELU()
         deeply_expressive = chain(*(unchained for _ in range(depth)))
         self.expressive_layer = nn.Sequential(*deeply_expressive, nn.AvgPool1d(width))
         self.causal_layer = nn.ModuleDict(
             {
                 str(interv_idx): Intervenable(
-                    in_features=context_dims, out_features=context_dims, device=device
+                    in_features=concept_dim, out_features=concept_dim, device=device
                 )
-                for interv_idx in chain((-1,), range(1, context_dims))
+                for interv_idx in chain((-1,), range(1, concept_dim))
             }
         )
 
-        # Decoder
-        self.decoder_linear = nn.Sequential(
-            nn.Linear(latent_dims, hidden_dims),
-            nn.ReLU(),
-            nn.Linear(hidden_dims, 128),
-            nn.ReLU(),
-        )
-
-        self.decoder_conv = nn.Sequential(
-            nn.ConvTranspose2d(128, 64, 7),  # 7x7
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.ConvTranspose2d(64, 32, 4, stride=2, padding=1),  # 14x14
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.ConvTranspose2d(32, 1, 4, stride=2, padding=1),  # 28x28
-            nn.Sigmoid(),
-        )
-
     def encode(self, x):
-        h = self.encoder(x)
+        h = self.encoder(x)  # can change this if you have to and know what you're doing
         return self.fc_mu(h), self.fc_var(h)
 
     def reparameterize(self, mu, log_var):
@@ -75,38 +81,22 @@ class VAE(nn.Module):
         return mu + eps * std
 
     def decode(self, z):
+        ### leave this
         epsilon = self.expressive_layer(z)
         obs_weight = self.causal_layer[str(-1)].weight
-        l = self.causal_layer[str(self.batch_label)](
+        c = self.causal_layer[str(self.batch_label)](
             epsilon, obs_weight, self.batch_label
         )
-        h = l.kron(torch.ones(width))
-        h = self.decoder_linear(h)
-        h = h.view(-1, 128, 1, 1)
-        return self.decoder_conv(h)
+        ### leave the above
+        return self.decoder(
+            c
+        )  # can change this if you have to and know what you're doing
 
     def forward(self, x, label):
         self.batch_label = label
         mu, log_var = self.encode(x)
         z = self.reparameterize(mu, log_var)
         return self.decode(z), mu, log_var
-
-
-# Hyperparameters
-context_dims = (
-    7  # number of interventions + obs (needed for constructing the intervenable layer)
-)
-width = 2  # >=1; width/degrees of freedom/num neurons per context in the block weight matrix
-depth = 1  # >=0; w>1 requires d>0; w=1 & d=0 implies Z ≡ ε; number of hidden layers and activations between Z and ε
-latent_dims = (
-    context_dims
-    * width  # actual number of latents in VAE (also number of epsilon/L in this case)
-)
-hidden_dims = 128  # same as hidden_dims in vanilla arch
-batch_size = 512
-learning_rate = 1e-3
-epochs = 100
-append_path = "-dev"
 
 
 class IvnDataset(Dataset):
@@ -124,12 +114,6 @@ class IvnDataset(Dataset):
         image = torch.tensor(nump[:-1].reshape(1, 28, 28), dtype=torch.float32)
         label = int(nump[-1])
         return image, label
-
-
-dataset = IvnDataset("mnist_images_concat5000.csv")
-
-# train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-# check why `train_loader.dataset[400000]` appears to be all 0s!!!
 
 
 # Custom Sampler for grouping by label
@@ -160,10 +144,6 @@ class SameLabelBatchSampler(torch.utils.data.Sampler):
 
     def __len__(self):
         return len(self.batches)
-
-
-sampler = SameLabelBatchSampler(dataset, batch_size)
-train_loader = DataLoader(dataset, batch_sampler=sampler)
 
 
 class BlockLinear(nn.Module):
@@ -321,7 +301,7 @@ def _plot_latent_traversal(ivn):
                 axs[i, col].set_title(f"3")
     fig.suptitle(f"{label_dict[ivn]}")
     plt.tight_layout()
-    dir_path = f"ivn-latent_traversal{append_path}"
+    dir_path = f"latent_traversal"
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
     plt.savefig(f"{dir_path}/ivn_{ivn}.png", dpi=150, bbox_inches="tight")
@@ -353,7 +333,7 @@ def plot_reconstructions():
     axes[0, 0].set_title("Original")
     axes[1, 0].set_title("Reconstructed")
     plt.tight_layout()
-    plt.savefig(f"ivn-reconstructions{append_path}.png")
+    plt.savefig(f"reconstructions.png")
     plt.close()
 
 
@@ -363,7 +343,7 @@ def plot_training_loss():
     plt.title("Training Loss")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.savefig(f"ivn-training_loss{append_path}.png")
+    plt.savefig(f"training_loss.png")
     plt.close()
 
 
@@ -396,7 +376,7 @@ def _plot_random_samples(ivn, num_samples=8):
 
     fig.suptitle(f"Context: {label_dict[ivn]}")
     plt.tight_layout()
-    dir_path = f"ivn-random_samples{append_path}"
+    dir_path = f"random_samples"
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
     plt.savefig(f"{dir_path}/ivn_{ivn}.png", dpi=150, bbox_inches="tight")
@@ -422,7 +402,7 @@ def plot_causal():
     ax2.set_title("Weight distribution")
 
     plt.tight_layout()
-    plt.savefig(f"ivn-causal{append_path}.png")
+    plt.savefig(f"causal.png")
     plt.close()
 
 
@@ -458,7 +438,7 @@ def train_model():
         pbar.set_postfix({"loss": f"{loss:.4f}"})
 
         # Save checkpoint after each epoch
-        dir_path = f"ivn-vae_mnist_checkpoints{append_path}"
+        dir_path = f"vae_mnist_checkpoints"
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
         torch.save(
@@ -471,11 +451,10 @@ def train_model():
             },
             f"{dir_path}/epoch_{epoch}.pth",
         )
-        if device.type == "cpu":
-            plot_reconstructions()
-            plot_random_samples()
-            plot_latent_traversal()
-
+        # if device.type == "cpu":
+        #     plot_reconstructions()
+        #     plot_random_samples()
+        #     plot_latent_traversal()
         # plot_causal()
 
     # Save model and training losses
@@ -485,23 +464,29 @@ def train_model():
             "optimizer_state_dict": optimizer.state_dict(),
             "losses": losses,
         },
-        f"ivn-vae_mnist{append_path}.pth",
+        f"vae_mnist.pth",
     )
 
 
-train_model()
-
-# Load trained model
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = VAE().to(device)
-checkpoint = torch.load(f"ivn-vae_mnist{append_path}.pth", weights_only=False)
-model.load_state_dict(checkpoint["model_state_dict"])
-losses = checkpoint["losses"]
+# Set up dataloader
+dataset = IvnDataset("mnist_images_concat5000.csv")  # change this after debugging
+sampler = SameLabelBatchSampler(dataset, batch_size)
+train_loader = DataLoader(dataset, batch_sampler=sampler)
 
 
-# Generate all visualizations
-plot_training_loss()
-plot_reconstructions()
-plot_random_samples()
-plot_latent_traversal()
-# plot_causal()
+if __name__ == "__main__":
+    train_model()  # can comment out to avoid retraining
+
+    # Load trained model
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = VAE().to(device)
+    checkpoint = torch.load(f"vae_mnist.pth", weights_only=False)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    losses = checkpoint["losses"]
+
+    # Generate all visualizations
+    plot_training_loss()
+    plot_reconstructions()
+    plot_random_samples()
+    # plot_latent_traversal()
+    # plot_causal()
