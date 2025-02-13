@@ -273,7 +273,7 @@ def loss_function(recon_x, x, mu, logvar, causal_weights):
 
 def _decode_eps(model, eps_i, ivn):
     # take a random sample of eps_i as input, fix all other eps_j
-    fixed_eps = torch.zeros(concept_dims)  # concept_dims globally defined at top
+    fixed_eps = torch.zeros(context_dims)  # concept_dims globally defined at top
     fixed_eps[ivn] = eps_i
 
     # pass through causal layer ivn and blackbox decoder to get reconstruction
@@ -288,8 +288,8 @@ def _decode_eps(model, eps_i, ivn):
 def plot_concept_traversal(model):
     # un/comment dict items below to in/exclude from plot
     concept_dict = {
-        -1: "raw",
-        0: "free",
+        # -1: "raw",
+        # 0: "free",
         1: "scaled",
         2: "shear",
         3: "shift",
@@ -325,7 +325,101 @@ def plot_concept_traversal(model):
             elif col == 4:
                 axs[i, col].set_title(f"{concept_dict[row]}")
     plt.tight_layout()
+    fig.suptitle("Direct concept traversal")
     plt.savefig(f"concept_traversal.png", dpi=150, bbox_inches="tight")
+    plt.close()
+
+
+def plot_concept_sample(model):
+    # un/comment dict items below to in/exclude from plot
+    concept_dict = {
+        # -1: "raw",
+        # 0: "free",
+        1: "scaled",
+        2: "shear",
+        3: "shift",
+        4: "swel",
+        5: "thic",
+        6: "thin",
+    }
+
+    model.eval()
+
+    traversed_dims = len(concept_dict)
+    # Create figure with 1 row per concept and 10 columns
+    fig, axs = plt.subplots(traversed_dims, 10, figsize=(20, 16))
+    for i, row in enumerate(concept_dict.keys()):
+        # fix seed to reuse in each row
+        gen = lambda seed: torch.Generator(device="cuda").manual_seed(seed)
+        gen = gen(0)
+        for col in range(10):
+            # sample eps_i | Z ~ N(0,1); eps_j | Z=0
+            z = torch.zeros(1, latent_dims)
+            z[0, row * width : (row + 1) * width] = torch.randn(width, generator=gen)
+            with torch.no_grad():
+                model.batch_label = row
+                img = model.decode(z).cpu().view(28, 28)
+
+            axs[i, col].imshow(img, cmap="gray")
+            axs[i, col].axis("off")
+
+            # Add labels only for first and last column
+            if col == 0:
+                axs[i, col].set_title(f"-3")
+            elif col == 9:
+                axs[i, col].set_title(f"3")
+            elif col == 4:
+                axs[i, col].set_title(f"{concept_dict[row]}")
+    plt.tight_layout()
+    fig.suptitle("Conditional concept sampling")
+    plt.savefig(f"concept_sample.png", dpi=150, bbox_inches="tight")
+    plt.close()
+
+
+def plot_concept_z_traversal(model):
+    # un/comment dict items below to in/exclude from plot
+    concept_dict = {
+        # -1: "raw",
+        # 0: "free",
+        1: "scaled",
+        2: "shear",
+        3: "shift",
+        4: "swel",
+        5: "thic",
+        6: "thin",
+    }
+
+    model.eval()
+
+    traversed_dims = len(concept_dict)
+    # Create figure with 1 row per concept and 10 columns
+    fig, axs = plt.subplots(traversed_dims, 10, figsize=(20, 16))
+
+    # Values to traverse for joint width concept block
+    traverse_values = torch.linspace(-3, 3, 10)
+
+    for i, row in enumerate(concept_dict.keys()):
+        for col in range(10):
+            # sample eps_i | Z ~ N(0,1); eps_j | Z=0
+            z = torch.zeros(1, latent_dims)
+            z[0, row * width : (row + 1) * width] = traverse_values[col]
+            with torch.no_grad():
+                model.batch_label = row
+                img = model.decode(z).cpu().view(28, 28)
+
+            axs[i, col].imshow(img, cmap="gray")
+            axs[i, col].axis("off")
+
+            # Add labels only for first and last column
+            if col == 0:
+                axs[i, col].set_title(f"-3")
+            elif col == 9:
+                axs[i, col].set_title(f"3")
+            elif col == 4:
+                axs[i, col].set_title(f"{concept_dict[row]}")
+    plt.tight_layout()
+    fig.suptitle("Z diag traversal")
+    plt.savefig(f"concept_z_traversal.png", dpi=150, bbox_inches="tight")
     plt.close()
 
 
@@ -339,3 +433,5 @@ losses = checkpoint["losses"]
 
 # Generate plots
 plot_concept_traversal(model)
+plot_concept_sample(model)
+plot_concept_z_traversal(model)
