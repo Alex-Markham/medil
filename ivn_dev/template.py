@@ -15,10 +15,11 @@ from tqdm import tqdm
 
 ## Directions
 #############
-# 1. specify dimensions and training params in Lines 25--33
-# 2. insert encoder on Line 42 and set encode_dim (size of output of encoder) on Line 39
-# 3. insert decoder on Line 51 and set decode_dim (size of input of encoder) on Line 48
-# 4. can change dataset at Line 472 and disable training at Line 478
+# 1. specify dimensions, training params, and save directory in Lines 26--34
+# 2. specify how often to save (e.g. every 10 epochs) and directory to save results in Lines 37,38
+# 3. insert encoder on Line 49 and set encode_dim (size of output of encoder) on Line 46
+# 4. insert decoder on Line 58 and set decode_dim (size of input of encoder) on Line 55
+# 5. can change dataset at Line 479 and disable training at Line 485
 #############
 
 ## dimensions
@@ -32,26 +33,32 @@ batch_size = 512
 learning_rate = 1e-3
 epochs = 100
 
+## how often to save and which directory
+epochs_per_checkpoint = 10
+save_dir = "results/"  # make sure it ends with /
+if not os.path.exists(save_dir):
+    os.makedirs(save_dir)
+
 
 class VAE(nn.Module):
     def __init__(self):
         super(VAE, self).__init__()
-        encode_dim = 2  # change this!!
+        encode_dim = 2  # change this!
         # Encoder
         self.encoder = nn.Sequential(
-            nn.Flatten(),  # replace this!!
-            nn.Linear(28 * 28, encode_dim),  # replace this!!
-            # add encoder here; if it can't be coaxed into an nn.Sequential module, enter on Line XXX instead!!
+            nn.Flatten(),  # replace this!
+            nn.Linear(28 * 28, encode_dim),  # replace this!
+            # add encoder here; if it can't be coaxed into an nn.Sequential module, enter on Line XXX instead!
         )
 
         # Decoder
-        decode_dim = 2  # change this!!
+        decode_dim = 2  # change this!
         self.decoder = nn.Sequential(
-            nn.Linear(concept_dim, decode_dim),  # leave this!!
-            nn.Linear(decode_dim, 28 * 28),  # replace this!!
-            nn.Unflatten(-1, (1, 28, 28)),  # replace this!!
-            nn.Sigmoid(),  # replace this!!
-            # add decoder here; if it can't be coaxed into an nn.Sequential module, enter on Line XXX instead!!
+            nn.Linear(concept_dim, decode_dim),  # leave this
+            nn.Linear(decode_dim, 28 * 28),  # replace this!
+            nn.Unflatten(-1, (1, 28, 28)),  # replace this!
+            nn.Sigmoid(),  # replace this!
+            # add decoder here; if it can't be coaxed into an nn.Sequential module, enter on Line XXX instead!
         )
 
         # Reparametrizer
@@ -273,12 +280,12 @@ def _plot_latent_traversal(ivn):
     model.eval()
     model.batch_label = ivn
 
-    selected_dims = [i for i in range(latent_dims)]
+    selected_dims = [i for i in range(latent_dim)]
     # Create figure with 8 rows and 10 columns
-    fig, axs = plt.subplots(latent_dims, 10, figsize=(20, 16))
+    fig, axs = plt.subplots(latent_dim, 10, figsize=(20, 16))
 
     # Create base latent vector
-    z_base = torch.zeros(1, latent_dims).to(device)
+    z_base = torch.zeros(1, latent_dim).to(device)
 
     # Values to traverse for each dimension
     traverse_values = torch.linspace(-3, 3, 10)
@@ -301,7 +308,7 @@ def _plot_latent_traversal(ivn):
                 axs[i, col].set_title(f"3")
     fig.suptitle(f"{label_dict[ivn]}")
     plt.tight_layout()
-    dir_path = f"latent_traversal"
+    dir_path = f"{save_dir}latent_traversal"
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
     plt.savefig(f"{dir_path}/ivn_{ivn}.png", dpi=150, bbox_inches="tight")
@@ -309,7 +316,7 @@ def _plot_latent_traversal(ivn):
 
 
 def plot_latent_traversal():
-    for ivn in chain((-1,), range(1, context_dims)):
+    for ivn in chain((-1,), range(1, concept_dim)):
         _plot_latent_traversal(ivn)
 
 
@@ -333,7 +340,7 @@ def plot_reconstructions():
     axes[0, 0].set_title("Original")
     axes[1, 0].set_title("Reconstructed")
     plt.tight_layout()
-    plt.savefig(f"reconstructions.png")
+    plt.savefig(f"{save_dir}reconstructions.png")
     plt.close()
 
 
@@ -343,7 +350,7 @@ def plot_training_loss():
     plt.title("Training Loss")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.savefig(f"training_loss.png")
+    plt.savefig(f"{save_dir}training_loss.png")
     plt.close()
 
 
@@ -364,7 +371,7 @@ def _plot_random_samples(ivn, num_samples=8):
         # fix seed
         gen = lambda seed: torch.Generator().manual_seed(seed)
         # Sample from standard normal distribution
-        z = torch.randn(num_samples, latent_dims, generator=gen(0)).to(device)
+        z = torch.randn(num_samples, latent_dim, generator=gen(0)).to(device)
         # Decode latent vectors
         samples = model.decode(z)
 
@@ -376,7 +383,7 @@ def _plot_random_samples(ivn, num_samples=8):
 
     fig.suptitle(f"Context: {label_dict[ivn]}")
     plt.tight_layout()
-    dir_path = f"random_samples"
+    dir_path = f"{save_dir}random_samples"
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
     plt.savefig(f"{dir_path}/ivn_{ivn}.png", dpi=150, bbox_inches="tight")
@@ -384,25 +391,25 @@ def _plot_random_samples(ivn, num_samples=8):
 
 
 def plot_random_samples():
-    for ivn in chain((-1,), range(1, context_dims)):
+    for ivn in chain((-1,), range(1, concept_dim)):
         _plot_random_samples(ivn)
 
 
-def plot_causal():
-    to_plot = model.causal_layer.weight.detach().cpu().numpy()
+def plot_sparsity():
+    to_plot = model.causal_layer["-1"].weight.detach().cpu().numpy()
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
     # Plot the heatmap
     sns.heatmap(np.abs(to_plot), ax=ax1, cmap="viridis")
-    ax1.set_title("DAG adjacency")
+    ax1.set_title("Sparse layer")
 
     # Plot the histogram
     ax2.hist(to_plot.flatten())
     ax2.set_title("Weight distribution")
 
     plt.tight_layout()
-    plt.savefig(f"causal.png")
+    plt.savefig(f"{save_dir}sparsity.png")
     plt.close()
 
 
@@ -437,25 +444,25 @@ def train_model():
         losses.append(loss)
         pbar.set_postfix({"loss": f"{loss:.4f}"})
 
-        # Save checkpoint after each epoch
-        dir_path = f"vae_mnist_checkpoints"
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-        torch.save(
-            {
-                "epoch": epoch,
-                "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-                "loss": loss,
-                "losses": losses,
-            },
-            f"{dir_path}/epoch_{epoch}.pth",
-        )
-        # if device.type == "cpu":
-        #     plot_reconstructions()
-        #     plot_random_samples()
-        #     plot_latent_traversal()
-        # plot_causal()
+        # Save checkpoint after specified number of epochs
+        if epoch % epochs_per_checkpoint == 0:
+            dir_path = f"{save_dir}vae_mnist_checkpoints"
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "loss": loss,
+                    "losses": losses,
+                },
+                f"{dir_path}/epoch_{epoch}.pth",
+            )
+            plot_reconstructions()
+            plot_random_samples()
+            plot_latent_traversal()
+            plot_sparsity()
 
     # Save model and training losses
     torch.save(
@@ -464,7 +471,7 @@ def train_model():
             "optimizer_state_dict": optimizer.state_dict(),
             "losses": losses,
         },
-        f"vae_mnist.pth",
+        f"{save_dir}vae_mnist.pth",
     )
 
 
@@ -480,7 +487,7 @@ if __name__ == "__main__":
     # Load trained model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = VAE().to(device)
-    checkpoint = torch.load(f"vae_mnist.pth", weights_only=False)
+    checkpoint = torch.load(f"{save_dir}vae_mnist.pth", weights_only=False)
     model.load_state_dict(checkpoint["model_state_dict"])
     losses = checkpoint["losses"]
 
@@ -488,5 +495,5 @@ if __name__ == "__main__":
     plot_training_loss()
     plot_reconstructions()
     plot_random_samples()
-    # plot_latent_traversal()
-    # plot_causal()
+    plot_latent_traversal()
+    plot_sparsity()
