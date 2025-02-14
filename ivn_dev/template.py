@@ -369,7 +369,7 @@ def _plot_random_samples(ivn, num_samples=8):
     model.batch_label = ivn
     with torch.no_grad():
         # fix seed
-        gen = lambda seed: torch.Generator().manual_seed(seed)
+        gen = lambda seed: torch.Generator(device=device).manual_seed(seed)
         # Sample from standard normal distribution
         z = torch.randn(num_samples, latent_dim, generator=gen(0)).to(device)
         # Decode latent vectors
