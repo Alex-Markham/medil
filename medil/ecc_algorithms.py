@@ -246,7 +246,7 @@ def find_heuristic_1pc(graph):
 
     uncovered_edges = deque(
         {
-            edge
+            tuple(edge)
             for edge in np.argwhere(np.triu(graph, 1))
             if not np.logical_and(the_cover[:, edge[0]], the_cover[:, edge[1]]).any()
         }
