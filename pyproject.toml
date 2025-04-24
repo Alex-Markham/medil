@@ -41,3 +41,6 @@ dev = [
 
 [tool.uv]
 cache-dir = "./.uv_cache"
+
+# [tool.uv.workspace]
+# members = ["concept-learning-template"]
