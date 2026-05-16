@@ -37,6 +37,10 @@ dev = [
     "sempler>=0.2.13",
     "torchvision>=0.20.1",
     "ipython>=8.32.0",
+    "snakemake>=9.21.0",
+    "snakefmt>=1.1.0",
+    "causalchamber>=0.2.8",
+    "dcor>=0.7",
 ]
 
 [tool.uv]
