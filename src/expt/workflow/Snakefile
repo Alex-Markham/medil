@@ -1,4 +1,4 @@
-config = {"methods": ["fa", "vae", "lgminmcm", "ncfa"], "seeds": range(10)}
+config = {"methods": ["fa", "vae", "lgminmcm", "ncfa"], "seeds": range(100)}
 vae_config = {
     "num_epochs": 200,
     "lr": 1e-3,
@@ -49,8 +49,10 @@ rule fit_and_eval_linear:
     input:
         dataset=lambda wildcards: input_path(wildcards, "dataset.txt"),
         latent_sample=lambda wildcards: input_path(wildcards, "latent_sample.txt"),
+        graph=lambda wildcards: input_path(wildcards, "graph.txt"),
     output:
         result="results/{dataset}/seed={seed}/{method}_eval.txt",
+        graph="results/{dataset}/seed={seed}/{method}_graph.txt",
     wildcard_constraints:
         dataset=r"(simulated|causalchamber)",
         method=r"(fa|lgminmcm)",
@@ -64,8 +66,10 @@ rule fit_and_eval_nonlinear:
     input:
         dataset=lambda wildcards: input_path(wildcards, "dataset.txt"),
         latent_sample=lambda wildcards: input_path(wildcards, "latent_sample.txt"),
+        graph=lambda wildcards: input_path(wildcards, "graph.txt"),
     output:
         result="results/{dataset}/seed={seed}/{method}_eval.txt",
+        graph="results/{dataset}/seed={seed}/{method}_graph.txt",
     wildcard_constraints:
         dataset=r"(simulated|causalchamber)",
         method=r"(vae|ncfa)",
