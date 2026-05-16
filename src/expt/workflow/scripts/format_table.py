@@ -8,6 +8,21 @@ metrics = ["mse", "mcc", "dcor", "time", "num_params"]
 datasets = ["simulated", "causalchamber"]
 methods = ["fa", "vae", "lgminmcm", "ncfa"]
 
+method_display = {
+    "fa": "FA",
+    "vae": "VAE",
+    "lgminmcm": "LG-minMCM",
+    "ncfa": "NCFA",
+}
+
+metric_display = {
+    "mse": "MSE",
+    "mcc": "MCC",
+    "dcor": "dCor",
+    "time": "Time",
+    "num_params": r"\# Params",
+}
+
 
 def mad(x):
     return (x - x.median()).abs().median()
@@ -26,33 +41,33 @@ for method in methods:
 
 out = pd.DataFrame(rows)
 
-header1 = (
-    "Method & "
-    + " & ".join([f"\\multicolumn{{5}}{{c}}{{{ds.capitalize()}}}" for ds in datasets])
-    + r" \\"
-)
-header2 = "& " + " & ".join(metrics * len(datasets)) + r" \\"
 
-body = []
-for _, r in out.iterrows():
-    vals = [r["method"]]
-    for ds in datasets:
+def make_table(dataset_name):
+    header = "Method & " + " & ".join(metric_display[m] for m in metrics) + r" \\"
+
+    body = []
+    for _, r in out.iterrows():
+        vals = [method_display[r["method"]]]
         for metric in metrics:
-            vals.append(r[f"{ds}_{metric}"])
-    body.append(" & ".join(vals) + r" \\")
+            vals.append(r[f"{dataset_name}_{metric}"])
+        body.append(" & ".join(vals) + r" \\")
 
-tex = "\n".join(
-    [
-        r"\begin{tabular}{rcccccccccc}",
-        r"\toprule",
-        header1,
-        r"\cmidrule(lr){2-6} \cmidrule(lr){7-11}",
-        header2,
-        r"\midrule",
-        *body,
-        r"\bottomrule",
-        r"\end{tabular}",
-    ]
-)
+    tex = "\n".join(
+        [
+            rf"{{{dataset_name}}}:",
+            "",
+            r"\begin{tabular}{rccccc}",
+            r"\toprule",
+            header,
+            r"\midrule",
+            *body,
+            r"\bottomrule",
+            r"\end{tabular}",
+        ]
+    )
+    return tex
+
+
+tex = make_table("simulated") + "\n\n\n" + make_table("causalchamber")
 
 Path(str(snakemake.output)).write_text(tex)
