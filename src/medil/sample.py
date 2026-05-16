@@ -4,8 +4,8 @@ import numpy as np
 import numpy.typing as npt
 from numpy.random import default_rng
 
-from .models import GaussianMCM
 from .ecc_algorithms import find_clique_min_cover
+from .models import GaussianMCM
 
 
 def mcm(
@@ -15,9 +15,9 @@ def mcm(
     **kwargs,
 ) -> GaussianMCM:
     if biadj.size == 0:
-        biadj = _biadj(**kwargs)
+        biadj = _biadj(rng=rng, **kwargs)
     if parameterization == "Gaussian":
-        mcm = GaussianMCM(biadj=biadj)
+        mcm = GaussianMCM(biadj=biadj, rng=rng)
         params = mcm.parameters
 
         num_edges = biadj.sum()
