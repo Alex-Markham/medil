@@ -4,7 +4,7 @@ import pandas as pd
 
 df = pd.read_csv(str(snakemake.input))
 
-metrics = ["mse", "mcc", "dcor", "time", "num_params"]
+metrics = ["mse", "mcc", "dcor", "sfd", "time", "num_params"]
 datasets = ["simulated", "causalchamber"]
 methods = ["fa", "vae", "lgminmcm", "ncfa"]
 
@@ -16,10 +16,11 @@ method_display = {
 }
 
 metric_display = {
-    "mse": "MSE",
-    "mcc": "MCC",
-    "dcor": "dCor",
-    "time": "Time",
+    "mse": r"MSE $\downarrow$",
+    "mcc": r"MCC $\uparrow$",
+    "dcor": r"dCor $\uparrow$",
+    "sfd": r"SFD $\downarrow$",
+    "time": r"Time",
     "num_params": r"\# Params",
 }
 

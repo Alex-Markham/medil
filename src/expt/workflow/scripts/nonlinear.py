@@ -3,12 +3,14 @@ import time
 import numpy as np
 import pandas as pd
 from medil import NeuroCausalFactorAnalysis as ncfa
+from medil.evaluate import sfd
 from torch import tensor
 
 from eval_helper import dcor, mcc, mse
 
 dataset = np.loadtxt(snakemake.input["dataset"])
 latent_sample = np.loadtxt(snakemake.input["latent_sample"])
+true_biadj = np.loadtxt(snakemake.input["graph"])
 seed = int(snakemake.wildcards["seed"])
 method = snakemake.wildcards["method"]
 
@@ -60,8 +62,10 @@ result = {
     "mse": [mse(val, reconstructed)],
     "mcc": [mcc(latent_val, latent_recon)],
     "dcor": [dcor(latent_val, latent_recon)],
+    "sfd": [sfd(true_biadj, model.biadj)],
     "time": end - start,
     "num_params": [sum(p.numel() for p in mp.vae.parameters() if p.requires_grad)],
 }
 result = pd.DataFrame(dict(snakemake.wildcards) | result)
 result.to_csv(snakemake.output["result"], index=False)
+np.savetxt(snakemake.output["graph"], model.biadj.astype(int), fmt="%d")

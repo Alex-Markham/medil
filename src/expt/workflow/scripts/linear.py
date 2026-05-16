@@ -3,11 +3,13 @@ import time
 import numpy as np
 import pandas as pd
 from medil import GaussianMCM
+from medil.evaluate import sfd
 
 from eval_helper import dcor, mcc, mse
 
 dataset = np.loadtxt(snakemake.input["dataset"])
 latent_sample = np.loadtxt(snakemake.input["latent_sample"])
+true_biadj = np.loadtxt(snakemake.input["graph"])
 seed = int(snakemake.wildcards["seed"])
 method = snakemake.wildcards["method"]
 
@@ -42,16 +44,15 @@ latent_recon = Xc @ np.linalg.solve(Sigma, mp.biadj_weights.T)
 reconstructed = latent_recon @ mp.biadj_weights + mp.error_means
 
 # evaluate
-mse = mse(val, reconstructed)
-mcc = mcc(latent_val, latent_recon)
-dcor = dcor(latent_val, latent_recon)
 result = {
     "method": [method],
-    "mse": [mse],
-    "mcc": [mcc],
-    "dcor": [dcor],
+    "mse": [mse(val, reconstructed)],
+    "mcc": [mcc(latent_val, latent_recon)],
+    "dcor": [dcor(latent_val, latent_recon)],
+    "sfd": [sfd(true_biadj, model.biadj)],
     "time": end - start,
     "num_params": [len(mp.error_means) + len(mp.error_variances) + model.biadj.sum()],
 }
 result = pd.DataFrame(dict(snakemake.wildcards) | result)
 result.to_csv(snakemake.output["result"], index=False)
+np.savetxt(snakemake.output["graph"], model.biadj.astype(int), fmt="%d")
