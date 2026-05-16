@@ -1,30 +1,25 @@
 """MeDIL causal model base class and a preconfigured NCFA class."""
 
+import copy
 import os
 import pickle
+import random
 import warnings
 from datetime import datetime
-from itertools import chain
 from pathlib import Path
-from typing import Iterator, List
 
 import numpy as np
 import numpy.typing as npt
 import torch
+import torch.nn.functional as F
 from numpy.random import default_rng
-from scipy.linalg import norm
 from scipy.optimize import minimize
 from sklearn.model_selection import train_test_split
-from torch import nn
-from torch.nn.functional import lp_pool2d
-from torch.nn.parameter import Parameter
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
 from .ecc_algorithms import find_heuristic_1pc
 from .independence_testing import estimate_UDG
-from .interv_vae import VariationalAutoencoder as InterVAE
-from .interv_vae2 import VariationalAutoencoder as InterVAE2
 from .vae import VariationalAutoencoder
 
 
@@ -64,16 +59,7 @@ class Parameters(object):
             self.biadj_weights = np.array([])
         elif parameterization == "VAE":
             self.weights = np.array([])
-            with warnings.catch_warnings(action="ignore"):
-                self.vae = VariationalAutoencoder(0, 0, 0, 0)
-        elif parameterization == "InterVAE":
-            self.weights = np.array([])
-            with warnings.catch_warnings(action="ignore"):
-                self.vae = InterVAE(0, 0, 0, 0, 0, 0)
-        elif parameterization == "InterVAE2":
-            self.weights = np.array([])
-            with warnings.catch_warnings(action="ignore"):
-                self.vae = InterVAE2(0, 0, 0, 0, 0, 0)
+            self.vae = None
 
     def __str__(self) -> str:
         return "\n".join(
@@ -142,7 +128,7 @@ class GaussianMCM(MedilCausalModel):
         udg = udg_triu + udg_triu.T
         self.udg = udg
 
-    def sample(self, sample_size: int) -> npt.NDArray:
+    def sample(self, sample_size: int, include_latent: bool = False) -> npt.NDArray:
         """Sample a dataset from a GaussianMCM, after structure and
         parameters have been specified or estimated."""
         num_latent = len(self.biadj)
@@ -155,11 +141,12 @@ class GaussianMCM(MedilCausalModel):
             sample_size,
         )
         sample = latent_sample @ self.parameters.biadj_weights + error_sample
-        return sample
+
+        return sample, latent_sample if include_latent else sample
 
 
 class NeuroCausalFactorAnalysis(MedilCausalModel):
-    """A MeDIL causal model represented by a deep generative model."""
+    """A MeDIL causal model represented by a masked variational autoencoder."""
 
     def __init__(
         self,
@@ -169,27 +156,31 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         **kwargs,
     ):
         super().__init__(**kwargs)
+
         if log_path:
             Path(log_path).mkdir(exist_ok=True)
+
         self.log_path = log_path
         self.verbose = verbose
         self.seed = seed
+
         self.hyperparams = {
-            "heuristic": True,
             "method": "xicor",
             "alpha": 0.05,
             "batch_size": 128,
             "num_epochs": 200,
-            "lr": 0.005,
-            "beta": 1,
-            "num_valid": 1000,
-            "mu": 0.01,
-            "lambda": 0.01,
-            "deg_of_free": 2,
-            "width_per_meas": 2,
+            "lr": 1e-3,
+            "beta": 1.0,
+            "latent_width": 2,
+            "meas_width": 2,
             "num_hidden_layers": 1,
-            "prior_biadj": None,
+            "encoder_hidden_dim": 64,
+            "shuffle": True,
+            "early_stopping": True,
+            "patience": 20,
+            "min_delta": 1e-4,
         }
+
         self.parameters = Parameters("VAE")
         self.loss = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -197,17 +188,37 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
     def log(self, entry: str) -> None:
         if not (self.log_path or self.verbose):
             return
+
         time_stamped_entry = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {entry}"
+
         if self.log_path:
-            with open(f"{self.log_path}training.log", "a") as log_file:
+            with open(os.path.join(self.log_path, "training.log"), "a") as log_file:
                 log_file.write(time_stamped_entry + "\n")
+
         if self.verbose:
             print(time_stamped_entry)
 
+    def _set_deterministic_seed(self):
+        os.environ["PYTHONHASHSEED"] = str(self.seed)
+        random.seed(self.seed)
+        np.random.seed(self.seed)
+
+        torch.manual_seed(self.seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed(self.seed)
+            torch.cuda.manual_seed_all(self.seed)
+
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        torch.use_deterministic_algorithms(True)
+
     def fit(self, dataset: npt.NDArray, split_idcs=None) -> "NeuroCausalFactorAnalysis":
+        self._set_deterministic_seed()
         self.dataset = dataset
 
-        # random train/val split if explicit indices not provided
+        if self.biadj.size == 0:
+            self._compute_biadj()
+
         if split_idcs is None:
             train_split, valid_split = train_test_split(
                 dataset, train_size=0.7, random_state=self.seed
@@ -219,20 +230,19 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         train_loader = self._data_loader(train_split)
         valid_loader = self._data_loader(valid_split)
 
-        np.random.seed(self.seed)
-
         model_recon, loss_recon, error_recon = self._train_vae(
             train_loader, valid_loader
         )
+
         if self.log_path:
-            torch.save(model_recon, os.path.join(self.log_path, "model_recon.pt"))
+            torch.save(
+                model_recon.state_dict(), os.path.join(self.log_path, "model_recon.pt")
+            )
             with open(os.path.join(self.log_path, "loss_recon.pkl"), "wb") as handle:
                 pickle.dump(loss_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
             with open(os.path.join(self.log_path, "error_recon.pkl"), "wb") as handle:
                 pickle.dump(error_recon, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        # self.parameters.weights = (
-        #     model_recon.decoder.mean_linear_fulcon.weight.detach().numpy().T
-        # )
+
         self.parameters.vae = model_recon
         self.loss = {
             "elbo_train": loss_recon[0],
@@ -240,6 +250,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             "recon_train": error_recon[0],
             "recon_valid": error_recon[1],
         }
+
         return self
 
     def _compute_biadj(self):
@@ -248,7 +259,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         self.biadj = find_heuristic_1pc(self.udg)
 
     def _estimate_udg(self):
-        self.udg, pvals = estimate_UDG(
+        self.udg, _ = estimate_UDG(
             self.dataset,
             method=self.hyperparams["method"],
             significance_level=self.hyperparams["alpha"],
@@ -256,1280 +267,135 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
     def _data_loader(self, sample):
         sample_x = sample.astype(np.float32)
-        sample_z = np.empty(shape=(sample_x.shape[0], 0)).astype(np.float32)
-        dataset = TensorDataset(torch.tensor(sample_x), torch.tensor(sample_z))
-        data_loader = DataLoader(
-            dataset, batch_size=self.hyperparams["batch_size"], shuffle=False
-        )
-        return data_loader
-
-    def _train_vae(self, train_loader, valid_loader):
-        """Training VAE with the specified image dataset
-        :param m: dimension of the latent variable
-        :param n: dimension of the observed variable
-        :param train_loader: training image dataset loader
-        :param valid_loader: validation image dataset loader
-        :param biadj_mat: the adjacency matrix of the directed graph
-        :param seed: random seed for the experiments
-        :return: trained model and training loss history
-        """
-
-        num_meas = self.dataset.shape[1]
-        self.num_meas = num_meas
-        num_vae_latent = self.hyperparams["deg_of_free"] * num_meas
-        num_hidden_layers = self.hyperparams["num_hidden_layers"]
-        width_per_meas = self.hyperparams["width_per_meas"]
-        prior_biadj = self.hyperparams["prior_biadj"]
-
-        # building VAE
-        model = VariationalAutoencoder(
-            num_vae_latent, num_meas, num_hidden_layers, width_per_meas, prior_biadj
-        )
-        model = model.to(self.device)
-        optimizer = torch.optim.AdamW(
-            model.parameters(), lr=self.hyperparams["lr"], weight_decay=1e-5
-        )
-        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 50, gamma=0.90)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, patience=10, factor=0.5
-        )
-        num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-        self.log(f"Number of parameters: {num_params}")
-
-        # training loop
-        model.train()
-        train_elbo, train_error = [], []
-        valid_elbo, valid_error = [], []
-
-        pbar = tqdm(
-            range(self.hyperparams["num_epochs"]), desc="Training NCFA", unit="epoch"
-        )
-        for idx in pbar:
-            self.log(f"Training on epoch {idx}...")
-            train_lb, train_er, nbatch = 0.0, 0.0, 0
-
-            for x_batch, _ in train_loader:
-                batch_size = x_batch.shape[0]
-                x_batch = x_batch.to(self.device)
-                recon_batch, logcov_batch, mu_batch, logvar_batch = model(x_batch)
-                weight_batch = model.decoder.mean_linear_fulcon.weight
-                loss = self._elbo_gaussian(
-                    x_batch,
-                    recon_batch,
-                    logcov_batch,
-                    mu_batch,
-                    logvar_batch,
-                    weight_batch,
-                    self.hyperparams["beta"],
-                )
-                error = self._recon_error(
-                    x_batch, recon_batch, logcov_batch, weighted=False
-                )
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-
-                # update loss and nbatch
-                train_lb += loss.item() / batch_size
-                train_er += error.item() / batch_size
-                nbatch += 1
-
-            # finish training epoch
-            # scheduler.step()
-            train_lb = train_lb / nbatch
-            train_er = train_er / nbatch
-            train_elbo.append(train_lb)
-            train_error.append(train_er)
-            self.log(f"Finish training epoch {idx} with loss {train_lb}")
-
-            # append validation loss
-            valid_lb, valid_er = self._valid_vae(model, valid_loader)
-            valid_elbo.append(valid_lb)
-            valid_error.append(valid_er)
-
-            # decrease learning rate if validation plateaus
-            scheduler.step(valid_lb)
-
-            # update tqdm progress bar
-            pbar.set_postfix({"loss": train_lb})  # , "validation loss": valid_lb
-
-        train_elbo, train_error = np.array(train_elbo), np.array(train_error)
-        valid_elbo, valid_error = np.array(valid_elbo), np.array(valid_error)
-        elbo = [train_elbo, valid_elbo]
-        error = [train_error, valid_error]
-
-        return model, elbo, error
-
-    def _valid_vae(self, model, valid_loader):
-        """Training VAE with the specified image dataset
-        :param model: trained VAE model
-        :param valid_loader: validation image dataset loader
-        :return: validation loss
-        """
-        # set to evaluation mode
-        model.eval()
-        valid_lb, valid_er, nbatch = 0.0, 0.0, 0
-
-        for x_batch, _ in valid_loader:
-            with torch.no_grad():
-                batch_size = x_batch.shape[0]
-                x_batch = x_batch.to(self.device)
-                recon_batch, logcov_batch, mu_batch, logvar_batch = model(x_batch)
-                loss = self._elbo_gaussian(
-                    x_batch,
-                    recon_batch,
-                    logcov_batch,
-                    mu_batch,
-                    logvar_batch,
-                    None,
-                    self.hyperparams["beta"],
-                )
-                error = self._recon_error(
-                    x_batch, recon_batch, logcov_batch, weighted=False
-                )
-
-                # update loss and nbatch
-                valid_lb += loss.item() / batch_size
-                valid_er += error.item() / batch_size
-                nbatch += 1
-
-        # report validation loss
-        valid_lb = valid_lb / nbatch
-        valid_er = valid_er / nbatch
-        self.log(f"Finish validation with loss {valid_lb}")
-
-        return valid_lb, valid_er
-
-    def _elbo_gaussian(self, x, x_recon, logcov, mu, logvar, weight, beta):
-        """Calculating loss for variational autoencoder
-        :param x: original image
-        :param x_recon: reconstruction in the output layer
-        :param logcov: log of covariance matrix of the data distribution
-        :param mu: mean in the fitted variational distribution
-        :param logvar: log of the variance in the variational distribution
-        :param beta: beta
-        :return: reconstruction loss + KL
-        """
-
-        # KL-divergence
-        # https://github.com/AntixK/PyTorch-VAE/blob/master/models/vanilla_vae.py
-        # https://github.com/AntixK/PyTorch-VAE/blob/master/models/beta_vae.py
-        # https://arxiv.org/pdf/1312.6114.pdf
-        kl_div = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-
-        # reconstruction loss
-        cov = torch.exp(logcov)
-        cov = self._apply_along_axis(torch.diag, cov, axis=0)
-        cov = cov.mean(axis=0)
-
-        diff = x - x_recon
-        recon_loss = torch.sum(
-            torch.det(cov)
-            + torch.diagonal(
-                torch.mm(
-                    torch.mm(diff, torch.inverse(cov)), torch.transpose(diff, 0, 1)
-                )
-            )
-        ).mul(-1 / 2)
-
-        # elbo
-        loss = -beta * kl_div + recon_loss
-        if weight is not None:
-            llambda, mu = self.hyperparams["lambda"], self.hyperparams["mu"]
-            norm_type = 2
-            kernel_size = (
-                self.hyperparams["width_per_meas"],
-                self.hyperparams["deg_of_free"],
-            )
-            weight = weight[None, None, :, :]
-            mu_weight = lp_pool2d(
-                weight, norm_type, kernel_size
-            ).squeeze()  # penalize num edges
-            self.parameters.biadj = mu_weight.detach().numpy().T
-            ll_kernel_size = (
-                self.hyperparams["width_per_meas"] * self.num_meas,
-                self.hyperparams["deg_of_free"],
-            )
-            ll_weight = lp_pool2d(
-                weight, norm_type, ll_kernel_size
-            ).squeeze()  # penalize num latents
-            return -loss + llambda * ll_weight.norm(1) + mu * mu_weight.norm(1)
-        return -loss
-
-    def _recon_error(self, x, x_recon, logcov, weighted):
-        """Reconstruction error given x and x_recon
-        :param x: original image
-        :param x_recon: reconstruction in the output layer
-        :param logcov: covariance matrix of the data distribution
-        :param weighted: whether to use weighted reconstruction
-
-        Returns
-        -------
-        error: reconstruction error
-        """
-
-        # reconstruction loss
-        cov = torch.exp(logcov)
-        cov = self._apply_along_axis(torch.diag, cov, axis=0)
-        cov = cov.mean(axis=0)
-
-        diff = x - x_recon
-        if weighted:
-            error = torch.sum(
-                torch.det(cov)
-                + torch.diagonal(
-                    torch.mm(
-                        torch.mm(diff, torch.inverse(cov)), torch.transpose(diff, 0, 1)
-                    )
-                )
-            ).mul(-1 / 2)
-        else:
-            error = torch.linalg.norm(diff, ord=2)
-
-        return error
-
-    @staticmethod
-    def _apply_along_axis(function, x, axis=0):
-        """Helper function to return along a particular axis
-        Parameters
-        ----------
-        function: function to be applied
-        x: data
-        axis: axis to apply the function
-
-        Returns
-        -------
-        The output applied to the axis
-        """
-
-        return torch.stack(
-            [function(x_i) for x_i in torch.unbind(x, dim=axis)], dim=axis
-        )
-
-
-# implement penalized mle and penalized lse with a new class
-class DevMedil(MedilCausalModel):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.init_W = None
-
-    # penalized MLE
-    def fit_penalized_mle(
-        self,
-        dataset: npt.NDArray,
-        lambda_reg: float = 0.1,
-        mu_reg: float = 0.1,
-    ) -> "DevMedil":
-        num_meas = dataset.shape[1]
-        if self.one_pure_child:
-            num_latent = num_meas
-        else:
-            num_latent = (num_meas**2) // 4
-        Sigma_hat = np.cov(dataset.T)
-
-        def penalized_mle_loss(W_and_D):
-            W = W_and_D[: num_latent * num_meas].reshape(num_latent, num_meas)
-            D = np.diag(W_and_D[num_latent * num_meas :])
-
-            Sigma = self.compute_sigma(W, D)
-            Sigma_inv = np.linalg.inv(Sigma)
-            sign, logdet = np.linalg.slogdet(Sigma_inv)
-
-            if sign <= 0:
-                return np.inf
-
-            loss = np.trace(np.dot(Sigma_hat, Sigma_inv)) - sign * logdet
-            loss += lambda_reg * self.rho(W) + mu_reg * self.sigma(W)
-
-            return loss
-
-        initial_W = (
-            self.rng.standard_normal((num_latent, num_meas))
-            if self.init_W is None
-            else self.init_W
-        )
-        initial_D = self.rng.random(num_meas)
-        initial_W_and_D = np.hstack([initial_W.flatten(), initial_D])
-
-        result = minimize(penalized_mle_loss, initial_W_and_D, method="BFGS")
-        self.result = result
-        self.W_hat = result.x[: num_latent * num_meas].reshape(num_latent, num_meas)
-        self.D_hat = np.diag(result.x[num_latent * num_meas :])
-        self.convergence_success_mle = result.success
-        self.convergence_message_mle = result.message
-
-        return self
-
-    def validation_mle(self, lambda_reg, mu_reg, data):
-        W = self.W_hat
-        D = self.D_hat
-        Sigma_hat = np.cov(data, rowvar=False)
-        Sigma = self.compute_sigma(W, D)
-        Sigma_inv = np.linalg.inv(Sigma)
-        sign, logdet = np.linalg.slogdet(Sigma_inv)
-
-        if sign <= 0:
-            return np.inf
-
-        loss = np.trace(np.dot(Sigma_hat, Sigma_inv)) - sign * logdet
-        loss += lambda_reg * self.rho(W) + mu_reg * self.sigma(W)
-        return loss
-
-    # penalized LSE
-    def fit_penalized_lse(
-        self,
-        dataset: npt.NDArray,
-        lambda_reg: float = 0.1,
-        mu_reg: float = 0.1,
-    ) -> "DevMedil":
-        num_meas = dataset.shape[1]
-        if self.one_pure_child:
-            num_latent = num_meas
-        else:
-            num_latent = (num_meas**2) // 4
-        Sigma_hat = np.cov(dataset.T)
-
-        def penalized_lse_loss(W_and_D):
-            W = W_and_D[: num_latent * num_meas].reshape(num_latent, num_meas)
-            D = np.diag(W_and_D[num_latent * num_meas :])
-
-            loss = norm(Sigma_hat - W.T @ W - D, "fro") ** 2
-            # nuclear norm for the first penalty term
-            loss += lambda_reg * self.rho(W)
-            # L1 norm for the second penalty function
-            loss += mu_reg * self.sigma(W)
-
-            return loss
-
-        initial_W = self.rng.standard_normal((num_latent, num_meas))
-        initial_D = np.abs(self.rng.standard_normal(num_meas))
-        initial_params = np.concatenate([initial_W.flatten(), initial_D])
-
-        result = minimize(penalized_lse_loss, initial_params, method="BFGS")
-        self.result = result
-        self.W_hat = result.x[: num_latent * num_meas].reshape(num_latent, num_meas)
-        self.D_hat = np.diag(np.abs(result.x[num_latent * num_meas :]))
-        self.convergence_success_lse = result.success
-        self.convergence_message_lse = result.message
-
-        return self
-
-    def validation_lse(self, lambda_reg, mu_reg, data):
-        W = self.W_hat
-        D = self.D_hat
-        Sigma_hat = np.cov(data, rowvar=False)
-        loss = norm(Sigma_hat - W.T @ W - D, "fro") ** 2
-        loss += lambda_reg * self.rho(W)
-        loss += mu_reg * self.sigma(W)
-        return loss
-
-    # compute sigma
-    def compute_sigma(self, W: npt.NDArray, D: npt.NDArray) -> npt.NDArray:
-        Sigma = np.dot(W.T, W) + D
-        return Sigma
-
-    # ρ(W)
-    def rho(self, W: npt.NDArray) -> float:
-        return norm(W, "nuc")
-
-    # σ(W), the sum of absolute values of elements (L1 norm)
-    def sigma(self, W: npt.NDArray) -> float:
-        return np.sum(np.abs(W))
-
-    def sample(self, sample_size: int, method: str = "mle") -> npt.NDArray:
-        if method not in ["mle", "lse"]:
-            raise ValueError("Method must be either 'mle' or 'lse'")
-
-        if method == "mle":
-            if not hasattr(self, "W_hat_mle") or not hasattr(self, "D_hat_mle"):
-                raise ValueError("MLE model must be fitted before sampling")
-            W_hat, D_hat = self.W_hat_mle, self.D_hat_mle
-        else:
-            if not hasattr(self, "W_hat_lse") or not hasattr(self, "D_hat_lse"):
-                raise ValueError("LSE model must be fitted before sampling")
-            W_hat, D_hat = self.W_hat_lse, self.D_hat_lse
-
-        k, n = W_hat.shape
-        L = self.rng.standard_normal((sample_size, k))
-        epsilon = self.rng.multivariate_normal(np.zeros(n), D_hat, sample_size)
-        return np.dot(L, W_hat) + epsilon
-
-    def fit(
-        self, dataset: npt.NDArray, method: str = "mle", lambda_reg=0.1, mu_reg=0.1
-    ) -> "DevMedil":
-        if method == "mle":
-            return self.fit_penalized_mle(dataset, lambda_reg, mu_reg)
-        elif method == "lse":
-            return self.fit_penalized_lse(dataset, lambda_reg, mu_reg)
-        else:
-            raise ValueError("Method must be either 'mle' or 'lse'")
-
-
-class DevMedilInterv(NeuroCausalFactorAnalysis):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.parameters = Parameters("InterVAE")
-        self.hyperparams.update(
-            {
-                "batch_size": 128,
-                "num_epochs": 200,
-                "lr": 0.005,
-                "beta": 1,
-                "num_valid": 1000,
-                "lambda": 0.01,
-                "meas_width": 1,
-                "meas_depth": 0,
-                "num_latent": 5,
-                "latent_width": 1,
-                "latent_depth": 0,
-            }
-        )
-
-    def _train_vae(self, train_loader, valid_loader):
-        """Training VAE with the specified image dataset
-        :param m: dimension of the latent variable
-        :param n: dimension of the observed variable
-        :param train_loader: training image dataset loader
-        :param valid_loader: validation image dataset loader
-        :param biadj_mat: the adjacency matrix of the directed graph
-        :param seed: random seed for the experiments
-        :return: trained model and training loss history
-        """
-
-        num_meas = self.dataset.shape[1] - 1  # one column for interv labels;
-        self.num_meas = num_meas
-
-        # building VAE
-        model = InterVAE(
-            num_meas,
-            self.hyperparams["meas_width"],
-            self.hyperparams["meas_depth"],
-            self.hyperparams["num_latent"],
-            self.hyperparams["latent_width"],
-            self.hyperparams["latent_depth"],
-        )
-        model = model.to(self.device)
-        optimizer = torch.optim.AdamW(
-            model.parameters(), lr=self.hyperparams["lr"], weight_decay=1e-5
-        )
-        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 50, gamma=0.90)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, patience=10, factor=0.5
-        )
-        num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-        self.log(f"Number of parameters: {num_params}")
-
-        # training loop
-        model.train()
-        train_elbo, train_error = [], []
-        valid_elbo, valid_error = [], []
-
-        pbar = tqdm(
-            range(self.hyperparams["num_epochs"]), desc="Training NCFA", unit="epoch"
-        )
-        for idx in pbar:
-            self.log(f"Training on epoch {idx}...")
-            train_lb, train_er, nbatch = 0.0, 0.0, 0
-
-            for batch, _ in train_loader:
-                x_batch = batch[:, :-1]
-                interv_idx_batch = batch[:, -1, None]
-                batch_size = x_batch.shape[0]
-                x_batch = x_batch.to(self.device)
-                recon_batch, logcov_batch, mu_batch, logvar_batch = model(
-                    x_batch, interv_idx_batch
-                )
-                causal_biadj_batch = model.decoder.mean_causal.weight
-                loss = self._elbo_gaussian(
-                    x_batch,
-                    recon_batch,
-                    logcov_batch,
-                    mu_batch,
-                    logvar_batch,
-                    causal_biadj_batch,
-                    self.hyperparams["beta"],
-                )
-                error = self._recon_error(
-                    x_batch, recon_batch, logcov_batch, weighted=False
-                )
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-
-                # update loss and nbatch
-                train_lb += loss.item() / batch_size
-                train_er += error.item() / batch_size
-                nbatch += 1
-
-            # finish training epoch
-            # scheduler.step()
-            train_lb = train_lb / nbatch
-            train_er = train_er / nbatch
-            train_elbo.append(train_lb)
-            train_error.append(train_er)
-            self.log(f"Finish training epoch {idx} with loss {train_lb}")
-
-            # append validation loss
-            valid_lb, valid_er = self._valid_vae(model, valid_loader)
-            valid_elbo.append(valid_lb)
-            valid_error.append(valid_er)
-
-            # decrease learning rate if validation plateaus
-            scheduler.step(valid_lb)
-
-            # update tqdm progress bar
-            pbar.set_postfix({"loss": train_lb})  # , "validation loss": valid_lb
-
-        train_elbo, train_error = np.array(train_elbo), np.array(train_error)
-        valid_elbo, valid_error = np.array(valid_elbo), np.array(valid_error)
-        elbo = [train_elbo, valid_elbo]
-        error = [train_error, valid_error]
-
-        return model, elbo, error
-
-    def _valid_vae(self, model, valid_loader):
-        """Training VAE with the specified image dataset
-        :param model: trained VAE model
-        :param valid_loader: validation image dataset loader
-        :return: validation loss
-        """
-        # set to evaluation mode
-        model.eval()
-        valid_lb, valid_er, nbatch = 0.0, 0.0, 0
-
-        for batch, _ in valid_loader:
-            x_batch = batch[:, :-1]
-            interv_idx_batch = batch[:, -1, None]
-
-            with torch.no_grad():
-                batch_size = x_batch.shape[0]
-                x_batch = x_batch.to(self.device)
-                recon_batch, logcov_batch, mu_batch, logvar_batch = model(
-                    x_batch, interv_idx_batch
-                )
-                loss = self._elbo_gaussian(
-                    x_batch,
-                    recon_batch,
-                    logcov_batch,
-                    mu_batch,
-                    logvar_batch,
-                    None,
-                    self.hyperparams["beta"],
-                )
-                error = self._recon_error(
-                    x_batch, recon_batch, logcov_batch, weighted=False
-                )
-
-                # update loss and nbatch
-                valid_lb += loss.item() / batch_size
-                valid_er += error.item() / batch_size
-                nbatch += 1
-
-        # report validation loss
-        valid_lb = valid_lb / nbatch
-        valid_er = valid_er / nbatch
-        self.log(f"Finish validation with loss {valid_lb}")
-
-        return valid_lb, valid_er
-
-    def _elbo_gaussian(self, x, x_recon, logcov, mu, logvar, causal_biadj, beta):
-        """Calculating loss for variational autoencoder
-        :param x: original image
-        :param x_recon: reconstruction in the output layer
-        :param logcov: log of covariance matrix of the data distribution
-        :param mu: mean in the fitted variational distribution
-        :param logvar: log of the variance in the variational distribution
-        :param beta: beta
-        :return: reconstruction loss + KL
-        """
-
-        # KL-divergence
-        # https://github.com/AntixK/PyTorch-VAE/blob/master/models/vanilla_vae.py
-        # https://github.com/AntixK/PyTorch-VAE/blob/master/models/beta_vae.py
-        # https://arxiv.org/pdf/1312.6114.pdf
-        kl_div = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-
-        # reconstruction loss
-        cov = torch.exp(logcov)
-        cov = self._apply_along_axis(torch.diag, cov, axis=0)
-        cov = cov.mean(axis=0)
-
-        diff = x - x_recon
-        recon_loss = torch.sum(
-            torch.det(cov)
-            + torch.diagonal(
-                torch.mm(
-                    torch.mm(diff, torch.inverse(cov)), torch.transpose(diff, 0, 1)
-                )
-            )
-        ).mul(-1 / 2)
-
-        # elbo
-        loss = -beta * kl_div + recon_loss
-        if causal_biadj is not None:
-            llambda = self.hyperparams["lambda"]
-            norm_type = 2
-            kernel_size = (
-                self.hyperparams["latent_width"],
-                self.hyperparams["latent_width"],
-            )
-            causal_biadj = causal_biadj[None, None, :, :]
-            causal_biadj = lp_pool2d(
-                causal_biadj, norm_type, kernel_size
-            ).squeeze()  # penalize num edges
-            self.parameters.causal_biadj = causal_biadj.detach().numpy().T
-            return -loss + llambda * causal_biadj.norm(1)
-        return -loss
-
-
-class DevMedilInterv2(NeuroCausalFactorAnalysis):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.parameters = Parameters("InterVAE2")
-        self.hyperparams.update(
-            {
-                "batch_size": 128,
-                "num_epochs": 200,
-                "lr": 0.005,
-                "beta": 1,
-                "num_valid": 1000,
-                "sparse_reg": 10,
-                "dag_reg": 10,
-                "meas_width": 1,
-                "meas_depth": 0,
-                "num_latent": 5,
-                "latent_width": 1,
-                "latent_depth": 0,
-            }
-        )
-
-    def _data_loader(self, sample):
-        sample_x = sample.astype(np.float32)
-        sample_z = np.empty(shape=(sample_x.shape[0], 0)).astype(np.float32)
-        dataset = TensorDataset(torch.tensor(sample_x), torch.tensor(sample_z))
-        data_loader = DataLoader(
+        dataset = TensorDataset(torch.tensor(sample_x))
+        return DataLoader(
             dataset,
-            batch_sampler=self._sampler(dataset, self.hyperparams["batch_size"]),
+            batch_size=self.hyperparams["batch_size"],
+            shuffle=self.hyperparams["shuffle"],
+            num_workers=0,
         )
-        return data_loader
-
-    class _sampler(torch.utils.data.Sampler):
-        def __init__(self, data: List[str], batch_size: int) -> None:
-            self.data = data
-            self.batch_size = batch_size
-            sample_x = data[:][0]
-            self.labels = sample_x[:, -1]
-            self.contexts, self.inv, self.counts = torch.unique(
-                self.labels, return_inverse=True, return_counts=True
-            )
-
-        def __len__(self) -> int:
-            # self.chunk_sizes = [
-            #     (count + self.batch_size - 1) // self.batch_size
-            #     for count in self.counts
-            # ]
-            # return sum(self.chunk_sizes)
-            return (len(self.data) + self.batch_size - 1) // self.batch_size
-
-        def __iter__(self) -> Iterator[List[int]]:
-            context_idcs = torch.multinomial(
-                self.counts / self.counts.sum(), len(self), replacement=True
-            )
-            # contexts = self.contexts[context_idcs]
-            for context_idx in context_idcs:
-                context_data_idcs = torch.where(self.inv == context_idx)[0]
-                batch_idcs = context_data_idcs[torch.randperm(len(context_data_idcs))][
-                    : self.batch_size
-                ]
-                yield batch_idcs
 
     def _train_vae(self, train_loader, valid_loader):
-        """Training VAE with the specified image dataset
-        :param m: dimension of the latent variable
-        :param n: dimension of the observed variable
-        :param train_loader: training image dataset loader
-        :param valid_loader: validation image dataset loader
-        :param biadj_mat: the adjacency matrix of the directed graph
-        :param seed: random seed for the experiments
-        :return: trained model and training loss history
-        """
+        num_meas = self.dataset.shape[1]
+        biadj = torch.tensor(self.biadj.T, dtype=torch.float32)
 
-        num_meas = self.dataset.shape[1] - 1  # one column for interv labels;
-        self.num_meas = num_meas
+        model = VariationalAutoencoder(
+            num_latent=biadj.shape[1],
+            num_meas=num_meas,
+            num_hidden_layers=self.hyperparams["num_hidden_layers"],
+            latent_width=self.hyperparams["latent_width"],
+            meas_width=self.hyperparams["meas_width"],
+            biadj=biadj,
+            encoder_hidden_dim=self.hyperparams["encoder_hidden_dim"],
+        ).to(self.device)
 
-        # building VAE
-        model = InterVAE2(
-            num_meas,
-            self.hyperparams["meas_width"],
-            self.hyperparams["meas_depth"],
-            self.hyperparams["num_latent"],
-            self.hyperparams["latent_width"],
-            self.hyperparams["latent_depth"],
-        )
-        model = model.to(self.device)
-        optimizer = torch.optim.AdamW(
-            model.parameters(), lr=self.hyperparams["lr"], weight_decay=1e-5
-        )
-        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 50, gamma=0.90)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, patience=10, factor=0.5
-        )
+        optimizer = torch.optim.AdamW(model.parameters(), lr=self.hyperparams["lr"])
+
         num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         self.log(f"Number of parameters: {num_params}")
 
-        # training loop
-        model.train()
         train_elbo, train_error = [], []
         valid_elbo, valid_error = [], []
 
+        best_valid = float("inf")
+        best_state = copy.deepcopy(model.state_dict())
+        epochs_without_improvement = 0
+
         pbar = tqdm(
             range(self.hyperparams["num_epochs"]), desc="Training NCFA", unit="epoch"
-        )
-        for idx in pbar:
-            self.log(f"Training on epoch {idx}...")
-            train_lb, train_er, nbatch = 0.0, 0.0, 0
-
-            for batch, _ in train_loader:
-                x_batch = batch[:, :-1]
-                interv_idx_batch = batch[:, -1, None]
-                interv_idx = torch.unique(interv_idx_batch).to(int)
-                assert len(interv_idx) == 1
-                interv_idx = int(interv_idx)
-                batch_size = x_batch.shape[0]
-                x_batch = x_batch.to(self.device)
-                recon_batch, logcov_batch, mu_batch, logvar_batch = model(
-                    x_batch, interv_idx_batch
-                )
-                causal_biadj_batch = model.decoder.mean_causal[interv_idx].weight
-                loss = self._elbo_gaussian(
-                    x_batch,
-                    recon_batch,
-                    logcov_batch,
-                    mu_batch,
-                    logvar_batch,
-                    causal_biadj_batch,
-                    self.hyperparams["beta"],
-                )
-                error = self._recon_error(
-                    x_batch, recon_batch, logcov_batch, weighted=False
-                )
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-
-                # update loss and nbatch
-                train_lb += loss.item() / batch_size
-                train_er += error.item() / batch_size
-                nbatch += 1
-
-            # finish training epoch
-            # scheduler.step()
-            train_lb = train_lb / nbatch
-            train_er = train_er / nbatch
-            train_elbo.append(train_lb)
-            train_error.append(train_er)
-            self.log(f"Finish training epoch {idx} with loss {train_lb}")
-
-            # append validation loss
-            valid_lb, valid_er = self._valid_vae(model, valid_loader)
-            valid_elbo.append(valid_lb)
-            valid_error.append(valid_er)
-
-            # decrease learning rate if validation plateaus
-            scheduler.step(valid_lb)
-
-            # update tqdm progress bar
-            pbar.set_postfix({"loss": train_lb})  # , "validation loss": valid_lb
-
-        train_elbo, train_error = np.array(train_elbo), np.array(train_error)
-        valid_elbo, valid_error = np.array(valid_elbo), np.array(valid_error)
-        elbo = [train_elbo, valid_elbo]
-        error = [train_error, valid_error]
-
-        temp = {
-            k: v.weight.detach().numpy().T for k, v in model.decoder.mean_causal.items()
-        }
-        norm_type = 2
-        kernel_size = (
-            self.hyperparams["latent_width"],
-            self.hyperparams["latent_width"],
-        )
-        temp = {
-            t: lp_pool2d(
-                v.weight.detach()[None, None, :, :], norm_type, kernel_size
-            ).squeeze()
-            for t, v in model.decoder.mean_causal.items()
-        }
-        self.parameters.causal_biadj_dict = {k: v.numpy().T for k, v in temp.items()}
-
-        return model, elbo, error
-
-    def _valid_vae(self, model, valid_loader):
-        """Training VAE with the specified image dataset
-        :param model: trained VAE model
-        :param valid_loader: validation image dataset loader
-        :return: validation loss
-        """
-        # set to evaluation mode
-        model.eval()
-        valid_lb, valid_er, nbatch = 0.0, 0.0, 0
-
-        for batch, _ in valid_loader:
-            x_batch = batch[:, :-1]
-            interv_idx_batch = batch[:, -1, None]
-
-            with torch.no_grad():
-                batch_size = x_batch.shape[0]
-                x_batch = x_batch.to(self.device)
-                recon_batch, logcov_batch, mu_batch, logvar_batch = model(
-                    x_batch, interv_idx_batch
-                )
-                loss = self._elbo_gaussian(
-                    x_batch,
-                    recon_batch,
-                    logcov_batch,
-                    mu_batch,
-                    logvar_batch,
-                    None,
-                    self.hyperparams["beta"],
-                )
-                error = self._recon_error(
-                    x_batch, recon_batch, logcov_batch, weighted=False
-                )
-
-                # update loss and nbatch
-                valid_lb += loss.item() / batch_size
-                valid_er += error.item() / batch_size
-                nbatch += 1
-
-        # report validation loss
-        valid_lb = valid_lb / nbatch
-        valid_er = valid_er / nbatch
-        self.log(f"Finish validation with loss {valid_lb}")
-
-        return valid_lb, valid_er
-
-    def _elbo_gaussian(self, x, x_recon, logcov, mu, logvar, causal_biadj, beta):
-        """Calculating loss for variational autoencoder
-        :param x: original image
-        :param x_recon: reconstruction in the output layer
-        :param logcov: log of covariance matrix of the data distribution
-        :param mu: mean in the fitted variational distribution
-        :param logvar: log of the variance in the variational distribution
-        :param beta: beta
-        :return: reconstruction loss + KL
-        """
-
-        # KL-divergence
-        # https://github.com/AntixK/PyTorch-VAE/blob/master/models/vanilla_vae.py
-        # https://github.com/AntixK/PyTorch-VAE/blob/master/models/beta_vae.py
-        # https://arxiv.org/pdf/1312.6114.pdf
-        kl_div_loss = torch.mean(
-            -0.5 * torch.sum(1 + logvar - mu**2 - logvar.exp(), dim=1), dim=0
-        )
-
-        recon_loss = torch.nn.functional.mse_loss(x_recon, x)
-
-        # elbo loss
-        loss = beta * kl_div_loss + recon_loss
-        if causal_biadj is not None:
-            sparse_reg = self.hyperparams["sparse_reg"]
-            dag_reg = self.hyperparams["dag_reg"]
-            norm_type = 2
-            kernel_size = (
-                self.hyperparams["latent_width"],
-                self.hyperparams["latent_width"],
-            )
-            pooled = causal_biadj[None, None, :, :]
-            pooled = lp_pool2d(
-                pooled, norm_type, kernel_size
-            ).squeeze()  # penalize num edges
-            density = pooled.mean()  # L1 norm / num_entries
-
-            # https://dagma.readthedocs.io/en/latest/#the-log-det-acyclicity-characterization
-            s = torch.tensor([5])
-            d = len(pooled)
-            nondagness = -torch.logdet(
-                s * torch.eye(d) - torch.square(pooled - torch.diag(pooled))
-            ) + d * torch.log(s)
-
-            return loss + sparse_reg * density + dag_reg * nondagness
-        return loss
-
-
-class BlockLinear(nn.Module):
-    def __init__(
-        self,
-        context_dims,
-        width,
-        bias=True,
-        device=None,
-        dtype=None,
-    ):
-        factory_kwargs = {"device": device, "dtype": dtype}
-        super().__init__()
-        self.block_mask = torch.eye(context_dims).kron(torch.ones(width, width))
-        num_features = context_dims * width
-        self.weight = Parameter(
-            torch.empty((num_features, num_features), **factory_kwargs)
-        )
-        if bias:
-            self.bias = Parameter(torch.empty(num_features, **factory_kwargs))
-        else:
-            self.register_parameter("bias", None)
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        # nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
-        nn.init.orthogonal_(self.weight)
-        # nn.init.sparse_(self.weight, 2 / 3)
-        if self.bias is not None:
-            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
-            bound = 1 / torch.sqrt(torch.tensor(fan_in)) if fan_in > 0 else 0
-            nn.init.uniform_(self.bias, -bound, bound)
-
-    def forward(self, input):
-        # masked linear layer
-        return nn.functional.linear(input, self.weight * self.block_mask, self.bias)
-
-    def extra_repr(self):
-        return "in_features={}, out_features={}, bias={}".format(
-            self.in_features, self.out_features, self.bias is not None
-        )
-
-
-class Intervenable(nn.Module):
-    def __init__(
-        self,
-        in_features,
-        out_features,
-        mask=None,
-        bias=True,
-        device=None,
-        dtype=None,
-    ):
-        self.factory_kwargs = {"device": device, "dtype": dtype}
-        super().__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.mask = mask
-        self.weight = Parameter(
-            torch.empty((out_features, in_features), **self.factory_kwargs)
-        )
-
-        if bias:
-            self.bias = Parameter(torch.empty(out_features, **self.factory_kwargs))
-        else:
-            self.register_parameter("bias", None)
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        nn.init.orthogonal_(self.weight)
-        if self.bias is not None:
-            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
-            bound = 1 / torch.sqrt(torch.tensor(fan_in)) if fan_in > 0 else 0
-            nn.init.uniform_(self.bias, -bound, bound)
-
-    def forward(self, input, obs_weight, interv_idx):
-        if interv_idx != -1:
-            min_weight = torch.minimum(self.weight, obs_weight)
-            interv_mask = torch.ones_like(min_weight, **self.factory_kwargs)
-            interv_mask[interv_idx] = 0
-            interv_mask[interv_idx, interv_idx] = 1
-            self.weight.data = min_weight * interv_mask
-        if self.mask is None:
-            return nn.functional.linear(input, self.weight, self.bias)
-        else:
-            return nn.functional.linear(input, self.weight * self.mask, self.bias)
-
-    def extra_repr(self):
-        return "in_features={}, out_features={}, bias={}".format(
-            self.in_features, self.out_features, self.bias is not None
-        )
-
-
-class VAE(nn.Module):
-    def __init__(self, input_dims, context_dims, width, depth, hidden_dims):
-        super().__init__()
-        latent_dims = context_dims * width
-        self.input_dims = input_dims
-        self.width = width
-
-        # Encoder
-        self.encoder = nn.Sequential(
-            nn.Linear(input_dims, hidden_dims),
-            nn.BatchNorm1d(hidden_dims),
-            nn.GELU(),
-            nn.Linear(hidden_dims, hidden_dims),
-            nn.BatchNorm1d(hidden_dims),
-            nn.GELU(),
-        )
-        self.fc_mu = nn.Linear(hidden_dims, latent_dims)
-        self.fc_var = nn.Linear(hidden_dims, latent_dims)
-
-        # Our module
-        unchained = BlockLinear(context_dims, width), nn.GELU()
-        deeply_expressive = chain(*(unchained for _ in range(depth)))
-        self.expressive_layer = nn.Sequential(*deeply_expressive, nn.AvgPool1d(width))
-        self.causal_layer = nn.ModuleDict(
-            {
-                str(interv_idx): Intervenable(
-                    in_features=context_dims,
-                    out_features=input_dims,
-                )
-                for interv_idx in range(-1, context_dims)
-            }
-        )
-
-        # Decoder
-        self.decoder = nn.Sequential(
-            nn.Linear(input_dims, hidden_dims),
-            nn.BatchNorm1d(hidden_dims),
-            nn.GELU(),
-            nn.Linear(hidden_dims, input_dims),
-        )
-
-    def encode(self, x):
-        h = self.encoder(x)
-        return self.fc_mu(h), self.fc_var(h)
-
-    def reparameterize(self, mu, log_var):
-        std = torch.exp(0.5 * log_var)
-        eps = torch.randn_like(std)
-        return mu + eps * std
-
-    def decode(self, z):
-        epsilon = self.expressive_layer(z)
-        obs_weight = self.causal_layer[str(-1)].weight
-        l = self.causal_layer[str(self.batch_label)](
-            epsilon, obs_weight, self.batch_label
-        )
-        return self.decoder(l)
-
-    def forward(self, x, label):
-        self.batch_label = label
-        mu, log_var = self.encode(x)
-        z = self.reparameterize(mu, log_var)
-        return self.decode(z), mu, log_var
-
-
-def _numpy_to_pytorch_dataset(np_dataset):
-    """
-    Converts a NumPy dataset into a PyTorch dataset.
-
-    Parameters:
-    - np_dataset: NumPy array where rows are samples and columns are features.
-
-    Returns:
-    - A PyTorch TensorDataset containing samples and labels.
-    """
-
-    # Ensure the input is a NumPy array
-    if not isinstance(np_dataset, np.ndarray):
-        raise ValueError("Input must be a NumPy array.")
-
-    # Split the dataset into features (X) and labels (y)
-    X = np_dataset[:, :-1]  # Features are all columns except the last
-    y = np_dataset[:, -1]  # Labels are the last column
-
-    # Convert NumPy arrays to PyTorch tensors
-    X_tensor = torch.from_numpy(X).float()
-    y_tensor = (
-        torch.from_numpy(y).float().unsqueeze(-1)
-    )  # Optional: unsqueeze for consistency
-
-    # Create a PyTorch TensorDataset
-    dataset = TensorDataset(X_tensor, y_tensor)
-
-    return dataset
-
-
-class _sampler(torch.utils.data.Sampler):
-    def __init__(self, dataset, batch_size: int) -> None:
-        self.data = dataset
-        self.batch_size = batch_size
-        self.labels = dataset.tensors[1]
-        self.contexts, self.inv, self.counts = torch.unique(
-            self.labels, return_inverse=True, return_counts=True
-        )
-
-    def __len__(self) -> int:
-        return (len(self.data) + self.batch_size - 1) // self.batch_size
-
-    def __iter__(self):
-        context_idcs = torch.multinomial(
-            self.counts / self.counts.sum(), len(self), replacement=True
-        )
-        # contexts = self.contexts[context_idcs]
-        for context_idx in context_idcs:
-            context_data_idcs = torch.where(self.inv == context_idx)[0]
-            batch_idcs = context_data_idcs[torch.randperm(len(context_data_idcs))][
-                : self.batch_size
-            ]
-            yield batch_idcs
-
-
-class IvnFA(object):
-    def __init__(self):
-        self.hyperparams = {
-            "batch_size": 128,
-            "num_epochs": 100,
-            "lr": 0.005,
-            "beta": 1,
-            "num_valid": 1000,
-            "sparse_reg": 10,
-            "width": 1,
-            "depth": 0,
-            "context_dims": 5,
-            "hidden_dims": 50,
-        }
-        self.checkpoint_save_path = None
-        self.final_save_path = None
-        self.loss_dict = {
-            "elbo_train": [],
-            "recon_train": [],
-            "elbo_valid": [],
-            "recon_valid": [],
-        }
-
-    def fit(self, dataset, split_idcs=None):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        input_dims = dataset.shape[1] - 1
-
-        # random train/val split if explicit indices not provided
-        if split_idcs is None:
-            train_split, valid_split = train_test_split(dataset, train_size=0.7)
-        else:
-            train_split = dataset[split_idcs[0]]
-            valid_split = dataset[split_idcs[1]]
-
-        # train
-        dataset = _numpy_to_pytorch_dataset(train_split)
-        sampler = _sampler(dataset, self.hyperparams["batch_size"])
-        self.train_loader = DataLoader(dataset, batch_sampler=sampler)
-
-        # valid
-        dataset = _numpy_to_pytorch_dataset(valid_split)
-        sampler = _sampler(dataset, self.hyperparams["batch_size"])
-        self.valid_loader = DataLoader(dataset, batch_sampler=sampler)
-
-        context_dims, width, depth, hidden_dims = (
-            self.hyperparams["context_dims"],
-            self.hyperparams["width"],
-            self.hyperparams["depth"],
-            self.hyperparams["hidden_dims"],
-        )
-        self.model = VAE(input_dims, context_dims, width, depth, hidden_dims).to(
-            self.device
-        )
-        self.optimizer = torch.optim.Adam(
-            self.model.parameters(), lr=self.hyperparams["lr"]
-        )
-
-        losses = []
-        pbar = tqdm(
-            range(self.hyperparams["num_epochs"]), desc="Training...", unit="epoch"
         )
 
         for epoch in pbar:
-            loss = self._train()
-            self._validate()
-            losses.append(loss)
-            pbar.set_postfix({"loss": f"{loss:.4f}"})
+            model.train()
+            train_lb, train_er, nbatch = 0.0, 0.0, 0
 
-            # Save checkpoint after each epoch
-            if self.checkpoint_save_path is not None:
-                torch.save(
-                    {
-                        "epoch": epoch,
-                        "model_state_dict": self.model.state_dict(),
-                        "optimizer_state_dict": self.optimizer.state_dict(),
-                        "loss": loss,
-                        "losses": losses,
-                    },
-                    f"{self.checkpoint_save_path}.pt",
+            for (x_batch,) in train_loader:
+                x_batch = x_batch.to(self.device)
+
+                x_recon, mu, logvar = model(x_batch)
+                loss = self._vae_loss(
+                    x_batch, x_recon, mu, logvar, beta=self.hyperparams["beta"]
                 )
+                error = self._recon_error(x_batch, x_recon)
 
-        # Save model and training losses
-        if self.final_save_path is not None:
-            torch.save(
-                {
-                    "model_state_dict": self.model.state_dict(),
-                    "optimizer_state_dict": self.optimizer.state_dict(),
-                    "losses": losses,
-                },
-                f"{self.final_save_path}.pt",
-            )
-        self.losses = losses
-        self.causal_weight_dict = {
-            k: v.weight.detach().numpy() for k, v in self.model.causal_layer.items()
-        }
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-    def _loss_function(self, recon_x, x, mu, log_var, causal_weights):
-        MSE = nn.MSELoss(reduction="mean")
-        mse_loss = MSE(recon_x, x)
+                train_lb += loss.item() / x_batch.shape[0]
+                train_er += error.item() / x_batch.shape[0]
+                nbatch += 1
 
-        # see Appendix B from VAE paper:
-        # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
-        # https://arxiv.org/abs/1312.6114
-        # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
-        KLD = -0.5 * torch.mean(1 + log_var - mu.pow(2) - log_var.exp())
+            train_lb, train_er = self._eval_loss(model, train_loader)
+            train_elbo.append(train_lb)
+            train_error.append(train_er)
 
-        causal_weights = torch.abs(causal_weights)
-        sparse_reg = causal_weights.pow(2).mean()
+            valid_lb, valid_er = self._eval_loss(model, valid_loader)
+            valid_elbo.append(valid_lb)
+            valid_error.append(valid_er)
+
+            pbar.set_postfix({"train": train_lb, "valid": valid_lb})
+
+            improved = valid_lb < (best_valid - self.hyperparams["min_delta"])
+            if improved:
+                best_valid = valid_lb
+                best_state = copy.deepcopy(model.state_dict())
+                epochs_without_improvement = 0
+            else:
+                epochs_without_improvement += 1
+
+            if (
+                self.hyperparams["early_stopping"]
+                and epochs_without_improvement >= self.hyperparams["patience"]
+            ):
+                self.log(f"Early stopping at epoch {epoch}")
+                break
+
+        model.load_state_dict(best_state)
 
         return (
-            mse_loss
-            + self.hyperparams["beta"] * KLD
-            + self.hyperparams["llambda"] * sparse_reg
-        ), (mse_loss, KLD)
-
-    def _train(self):
-        self.model.train()
-        batch_size = len(self.train_loader.dataset)
-        train_loss = 0
-        mse = 0
-        kl = 0
-        pbar = tqdm(
-            self.train_loader, desc="training epoch...", unit="batch", leave=False
+            model,
+            [np.array(train_elbo), np.array(valid_elbo)],
+            [np.array(train_error), np.array(valid_error)],
         )
-        for batch_idx, (data, labels) in enumerate(pbar):
-            data = data.to(self.device)
-            label = torch.unique(labels).to(int).item()
-            self.optimizer.zero_grad()
-            recon_batch, mu, log_var = self.model(data, label)
-            causal_weights_batch = self.model.causal_layer[str(label)].weight
-            loss, (mse, kl) = self._loss_function(
-                recon_batch, data, mu, log_var, causal_weights_batch
-            )
-            loss.backward()
-            train_loss += loss.item()
-            mse += mse.item()
-            kl += kl.item()
-            self.optimizer.step()
-        mse = mse / batch_size
-        self.loss_dict["recon_train"].append(mse.item())
-        elbo = mse + (kl / batch_size)
-        self.loss_dict["elbo_train"].append(elbo.item())
-        return train_loss / batch_size
 
-    def _validate(self):
-        self.model.eval()
-        batch_size = len(self.train_loader.dataset)
-        mse = 0
-        kl = 0
-        for batch_idx, (data, labels) in enumerate(self.valid_loader):
-            data = data.to(self.device)
-            label = torch.unique(labels).to(int).item()
-            recon_batch, mu, log_var = self.model(data, label)
-            causal_weights_batch = self.model.causal_layer[str(label)].weight
-            _, (mse, kl) = self._loss_function(
-                recon_batch, data, mu, log_var, causal_weights_batch
-            )
-            mse += mse.item()
-            kl += kl.item()
-        mse = mse / batch_size
-        self.loss_dict["recon_valid"].append(mse.item())
-        elbo = mse + (kl / batch_size)
-        self.loss_dict["elbo_valid"].append(elbo.item())
+    def _eval_loss(self, model, loader):
+        model.eval()
+        total_loss = 0.0
+        total_recon = 0.0
+        n = 0
+
+        with torch.no_grad():
+            for (x_batch,) in loader:
+                x_batch = x_batch.to(self.device)
+                x_recon, mu, logvar = model(x_batch)
+                loss = self._vae_loss(
+                    x_batch, x_recon, mu, logvar, beta=self.hyperparams["beta"]
+                )
+                recon = self._recon_error(x_batch, x_recon)
+
+                bs = x_batch.shape[0]
+                total_loss += loss.item()
+                total_recon += recon.item()
+                n += bs
+
+        return total_loss / n, total_recon / n
+
+    @staticmethod
+    def _vae_loss(x, x_recon, mu, logvar, beta=1.0):
+        recon_loss = F.mse_loss(x_recon, x, reduction="sum")
+        kl_div = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+        return recon_loss + beta * kl_div
+
+    @staticmethod
+    def _recon_error(x, x_recon):
+        return torch.linalg.norm(x - x_recon, ord=2)
+
+    def set_full_decoder_mask(self, num_meas=None):
+        if num_meas is None:
+            if not hasattr(self, "dataset"):
+                raise ValueError("Provide num_meas or set dataset first.")
+            num_meas = self.dataset.shape[1]
+
+        num_latent = num_meas
+        self.biadj = np.ones((num_latent, num_meas), dtype=float)

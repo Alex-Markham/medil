@@ -2,159 +2,159 @@ import math
 
 import torch
 from torch import nn
-from torch.nn.parameter import Parameter
+from torch.nn import functional as F
 
 
 class VariationalAutoencoder(nn.Module):
     def __init__(
         self,
-        num_vae_latent,
+        num_latent,
         num_meas,
         num_hidden_layers,
-        width_per_meas,
-        prior_biadj=None,
+        latent_width,
+        meas_width,
+        biadj=None,
+        encoder_hidden_dim=None,
     ):
-        super(VariationalAutoencoder, self).__init__()
-        self.encoder = Encoder(num_vae_latent, num_meas)
+        super().__init__()
+
+        if encoder_hidden_dim is None:
+            encoder_hidden_dim = max(num_meas, 64)
+
+        self.encoder = Encoder(
+            num_latent=num_latent * latent_width,
+            num_meas=num_meas,
+            hidden_dim=encoder_hidden_dim,
+        )
+
         self.decoder = Decoder(
-            num_vae_latent, num_meas, num_hidden_layers, width_per_meas, prior_biadj
+            num_latent=num_latent,
+            num_meas=num_meas,
+            num_hidden_layers=num_hidden_layers,
+            latent_width=latent_width,
+            meas_width=meas_width,
+            biadj=biadj,
         )
 
     def forward(self, x):
         mu, logvar = self.encoder(x)
-        latent = self.latent_sample(mu, logvar)
-        x_recon, logcov = self.decoder(latent)
-
-        return x_recon, logcov, mu, logvar
+        z = self.latent_sample(mu, logvar)
+        x_recon = self.decoder(z)
+        return x_recon, mu, logvar
 
     def latent_sample(self, mu, logvar):
-        # the re-parameterization trick
         if self.training:
-            std = logvar.mul(0.5).exp_()
-            eps = torch.empty_like(std).normal_()
-            return eps.mul(std).add_(mu)
-        else:
-            return mu
+            std = torch.exp(0.5 * logvar)
+            eps = torch.randn_like(std)
+            return mu + eps * std
+        return mu
 
 
-class Block(nn.Module):
-    def __init__(self, num_vae_latent, num_meas, width_per_meas=1):
-        super(Block, self).__init__()
-        self.input_dim = num_meas
-        self.latent_dim = num_vae_latent
-        self.hidden_dim = num_meas * width_per_meas
-        self.output_dim = num_meas
-
-
-class Encoder(Block):
-    def __init__(self, num_vae_latent, num_meas):
-        super(Encoder, self).__init__(num_vae_latent, num_meas)
-
-        # first encoder layer
-        self.inter_dim = self.input_dim
-        self.enc1 = nn.Linear(in_features=self.input_dim, out_features=self.inter_dim)
-
-        # second encoder layer
-        self.enc2 = nn.Linear(in_features=self.inter_dim, out_features=self.inter_dim)
-
-        # map to mu and variance
-        self.fc_mu = nn.Linear(in_features=self.inter_dim, out_features=self.latent_dim)
-        self.fc_logvar = nn.Linear(
-            in_features=self.inter_dim, out_features=self.latent_dim
-        )
+class Encoder(nn.Module):
+    def __init__(self, num_latent, num_meas, hidden_dim=64):
+        super().__init__()
+        self.enc1 = nn.Linear(num_meas, hidden_dim)
+        self.bn1 = nn.BatchNorm1d(hidden_dim)
+        self.enc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.bn2 = nn.BatchNorm1d(hidden_dim)
+        self.activation = nn.GELU()
+        self.fc_mu = nn.Linear(hidden_dim, num_latent)
+        self.fc_logvar = nn.Linear(hidden_dim, num_latent)
 
     def forward(self, x):
-        # encoder layers
-        norm = nn.BatchNorm1d(self.inter_dim)
-        inter = torch.relu(norm(self.enc1(x)))
-        inter = torch.relu(norm(self.enc2(inter)))
-
-        # calculate mu & logvar
-        mu = self.fc_mu(inter)
-        logvar = self.fc_logvar(inter)
-
+        h = self.activation(self.bn1(self.enc1(x)))
+        h = self.activation(self.bn2(self.enc2(h)))
+        mu = self.fc_mu(h)
+        logvar = self.fc_logvar(h)
         return mu, logvar
 
 
-class Decoder(Block):
+class Decoder(nn.Module):
     def __init__(
-        self, num_vae_latent, num_meas, num_hidden_layers, width_per_meas, prior_biadj
+        self,
+        num_latent,
+        num_meas,
+        num_hidden_layers,
+        latent_width,
+        meas_width,
+        biadj=None,
     ):
-        super(Decoder, self).__init__(num_vae_latent, num_meas, width_per_meas)
+        super().__init__()
 
-        # # decoder layer -- estimate mean
-        # self.dec_mean = SparseLinear(
-        #     in_features=self.latent_dim, out_features=self.output_dim
-        # )
+        self.num_latent = num_latent
+        self.num_meas = num_meas
+        self.latent_width = latent_width
+        self.meas_width = meas_width
 
-        # # decoder layer -- estimate log-covariance
-        # self.fc_logcov = SparseLinear(
-        #     in_features=self.latent_dim, out_features=self.output_dim
-        # )
+        self.latent_dim = num_latent * latent_width
+        self.hidden_dim = num_meas * meas_width
 
-        # new arch
-        self.mean_linear_fulcon = SparseLinear(
-            in_features=self.latent_dim, out_features=self.hidden_dim, mask=prior_biadj
-        )
-        self.cov_linear_fulcon = SparseLinear(
-            in_features=self.latent_dim, out_features=self.hidden_dim
-        )
+        if biadj is None:
+            biadj = torch.ones(num_meas, num_latent)
+        else:
+            biadj = torch.as_tensor(biadj, dtype=torch.float32)
 
-        hidden_block = torch.ones(width_per_meas, width_per_meas)
-        hidden_blocks = [hidden_block for _ in range(num_meas)]
-        hidden_mask = torch.block_diag(*hidden_blocks)
+        first_mask = self._expand_biadj(biadj, meas_width, latent_width)
+        hidden_mask = self._make_hidden_block_mask(num_meas, meas_width)
+        output_mask = self._make_output_mask(num_meas, meas_width)
 
-        self.mean_linear_hidden = {
-            layer_idx: SparseLinear(
-                in_features=self.hidden_dim,
-                out_features=self.hidden_dim,
-                mask=hidden_mask,
-            )
-            for layer_idx in range(num_hidden_layers)
-        }
-        self.cov_linear_hidden = {
-            layer_idx: SparseLinear(
-                in_features=self.hidden_dim,
-                out_features=self.hidden_dim,
-                mask=hidden_mask,
-            )
-            for layer_idx in range(num_hidden_layers)
-        }
-
-        output_block = torch.ones(1, width_per_meas)
-        output_blocks = [output_block for _ in range(num_meas)]
-        output_mask = torch.block_diag(*output_blocks)
-        self.mean_linear_output = SparseLinear(
-            in_features=self.hidden_dim, out_features=self.output_dim, mask=output_mask
-        )
-        self.cov_linear_output = SparseLinear(
-            in_features=self.hidden_dim, out_features=self.output_dim, mask=output_mask
+        self.linear_in = SparseLinear(
+            in_features=self.latent_dim,
+            out_features=self.hidden_dim,
+            mask=first_mask,
         )
 
-        self.activation = torch.nn.GELU()
+        self.bn_in = nn.BatchNorm1d(self.hidden_dim)
+
+        self.hidden_layers = nn.ModuleList(
+            [
+                SparseLinear(
+                    in_features=self.hidden_dim,
+                    out_features=self.hidden_dim,
+                    mask=hidden_mask,
+                )
+                for _ in range(num_hidden_layers)
+            ]
+        )
+
+        self.hidden_bns = nn.ModuleList(
+            [nn.BatchNorm1d(self.hidden_dim) for _ in range(num_hidden_layers)]
+        )
+
+        self.linear_out = SparseLinear(
+            in_features=self.hidden_dim,
+            out_features=self.num_meas,
+            mask=output_mask,
+        )
+
+        self.activation = nn.GELU()
+
+    @staticmethod
+    def _expand_biadj(biadj, meas_width, latent_width):
+        return biadj.repeat_interleave(meas_width, dim=0).repeat_interleave(
+            latent_width, dim=1
+        )
+
+    @staticmethod
+    def _make_hidden_block_mask(num_meas, width_per_meas):
+        block = torch.ones(width_per_meas, width_per_meas)
+        blocks = [block for _ in range(num_meas)]
+        return torch.block_diag(*blocks)
+
+    @staticmethod
+    def _make_output_mask(num_meas, width_per_meas):
+        block = torch.ones(1, width_per_meas)
+        blocks = [block for _ in range(num_meas)]
+        return torch.block_diag(*blocks)
 
     def forward(self, z):
-        # linear layer
-        # mean = self.dec_mean(z)
-        # logcov = self.fc_logcov(z)
+        h = self.activation(self.bn_in(self.linear_in(z)))
 
-        # new arch
-        norm = nn.BatchNorm1d(self.hidden_dim)
-        mean = self.mean_linear_fulcon(z)
-        mean = self.activation(norm(mean))
-        for hidden_layer in self.mean_linear_hidden.values():
-            mean = hidden_layer(norm(mean))
-            mean = self.activation(mean)
-        mean = self.mean_linear_output(mean)
+        for layer, bn in zip(self.hidden_layers, self.hidden_bns):
+            h = self.activation(bn(layer(h)))
 
-        logcov = self.cov_linear_fulcon(z)
-        logcov = self.activation(norm(logcov))
-        for hidden_layer in self.cov_linear_hidden.values():
-            logcov = hidden_layer(logcov)
-            logcov = self.activation(norm(logcov))
-        logcov = self.cov_linear_output(logcov)
-
-        return mean, logcov
+        x_recon = self.linear_out(h)
+        return x_recon
 
 
 class SparseLinear(nn.Module):
@@ -167,38 +167,40 @@ class SparseLinear(nn.Module):
         device=None,
         dtype=None,
     ):
+        super().__init__()
         factory_kwargs = {"device": device, "dtype": dtype}
-        super(SparseLinear, self).__init__()
+
         self.in_features = in_features
         self.out_features = out_features
+
         if mask is None:
-            self.mask = torch.ones(1)
+            mask = torch.ones(out_features, in_features)
         else:
-            self.mask = mask
-        self.weight = Parameter(
+            if mask.shape != (out_features, in_features):
+                raise ValueError(
+                    f"mask must have shape {(out_features, in_features)}, "
+                    f"got {tuple(mask.shape)}"
+                )
+
+        self.register_buffer("mask", mask.float())
+
+        self.weight = nn.Parameter(
             torch.empty((out_features, in_features), **factory_kwargs)
         )
 
         if bias:
-            self.bias = Parameter(torch.empty(out_features, **factory_kwargs))
+            self.bias = nn.Parameter(torch.empty(out_features, **factory_kwargs))
         else:
             self.register_parameter("bias", None)
+
         self.reset_parameters()
 
     def reset_parameters(self):
-        # nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
         nn.init.orthogonal_(self.weight)
-        # nn.init.sparse_(self.weight, 2 / 3)
         if self.bias is not None:
             fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
             nn.init.uniform_(self.bias, -bound, bound)
 
-    def forward(self, input):
-        # masked linear layer
-        return nn.functional.linear(input, self.weight * self.mask, self.bias)
-
-    def extra_repr(self):
-        return "in_features={}, out_features={}, bias={}".format(
-            self.in_features, self.out_features, self.bias is not None
-        )
+    def forward(self, x):
+        return F.linear(x, self.weight * self.mask, self.bias)
