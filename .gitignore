@@ -34,3 +34,7 @@ devenv.local.nix
 *_checkpoints
 mnist_dev/
 new_arch/
+/src/expt/.snakemake/
+/src/expt/data/
+/src/expt/results/causalchamber/
+/src/expt/results/simulated/
