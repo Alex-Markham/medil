@@ -1,4 +1,4 @@
-config = {"methods": ["fa", "vae", "lgminmcm", "ncfa"], "seeds": range(100)}
+config = {"methods": ["fa", "vae", "lgminmcm", "ncfa"], "seeds": range(101)}
 vae_config = {
     "num_epochs": 200,
     "lr": 1e-3,
