@@ -142,7 +142,7 @@ class GaussianMCM(MedilCausalModel):
         )
         sample = latent_sample @ self.parameters.biadj_weights + error_sample
 
-        return sample, latent_sample if include_latent else sample
+        return (sample, latent_sample) if include_latent else sample
 
 
 class NeuroCausalFactorAnalysis(MedilCausalModel):
