@@ -4,10 +4,7 @@ import numpy as np
 import pytest
 import torch
 from medil.models import (
-    DevMedilInterv,
-    DevMedilInterv2,
     GaussianMCM,
-    IvnFA,
     MedilCausalModel,
     NeuroCausalFactorAnalysis,
 )
@@ -34,6 +31,7 @@ class TestGaussianMCM:
         params.error_variances = np.ones(3)
 
         s = mcm.sample(10000)
+        print(s)
         assert np.allclose(s.mean(0), mcm.parameters.error_means, atol=0.02)
 
     def test_sample_empty(self):
@@ -116,54 +114,6 @@ class TestGaussianMCM:
         assert np.allclose(params_est.error_means, params.error_means, atol=0.05)
         assert np.allclose(params_est.error_variances, params.error_variances, atol=0.7)
 
-    # def test_ncfa_assign_dof(self):
-    #     biadj_mat = np.array([[0, 0, 1, 1, 1], [0, 1, 0, 1, 0], [1, 0, 1, 0, 0]])
-    #     variances = np.array([2.5, 0.33, 2.5, 0.66, 0.88])
-
-    #     warnings.filterwarnings("error")
-    #     try:
-    #         test_insufficient = assign_DoF(biadj_mat, 2, "uniform")
-    #         assert False
-    #     except UserWarning:
-    #         warnings.resetwarnings()
-    #         warnings.simplefilter("ignore")
-    #         test_insufficient = assign_DoF(biadj_mat, 2, "uniform")
-    #         assert (test_insufficient == biadj_mat).all()
-
-    #     test_uniform = assign_DoF(biadj_mat, 8, "uniform")
-    #     unique_uniform, counts_uniform = np.unique(
-    #         test_uniform, axis=0, return_counts=True
-    #     )
-    #     assert (biadj_mat == unique_uniform).all()
-    #     assert min(counts_uniform) == 2
-    #     assert max(counts_uniform) == 3
-    #     assert counts_uniform.sum() == 8
-
-    #     test_clique = assign_DoF(biadj_mat, 11, "clique_size")
-    #     unique_clique, counts_clique = np.unique(
-    #         test_clique, axis=0, return_counts=True
-    #     )
-    #     assert (biadj_mat == unique_clique).all()
-    #     assert min(counts_clique) == 3
-    #     assert max(counts_clique) == 4
-    #     assert counts_clique.sum() == 11
-
-    #     test_tot = assign_DoF(biadj_mat, 13, "tot_var", variances)
-    #     unique_tot, counts_tot = np.unique(test_tot, axis=0, return_counts=True)
-    #     assert (biadj_mat == unique_tot).all()
-    #     assert ((5, 2, 6) == counts_tot).all()
-
-    #     test_avg = assign_DoF(biadj_mat, 29, "avg_var", variances)
-    #     unique_avg, counts_avg = np.unique(test_avg, axis=0, return_counts=True)
-    #     assert (biadj_mat == unique_avg).all()
-    #     assert ((9, 4, 16) == counts_avg).all()
-
-    #     for dof in range(3, 12):
-    #         for method in ("uniform", "clique_size", "tot_var", "avg_var"):
-    #             test_rounding = assign_DoF(biadj_mat, dof, method, variances)
-    #             assert (np.unique(test_rounding, axis=0) == biadj_mat).all()
-    #             assert dof == len(test_rounding)
-
 
 class TestNeuroCausalFactorAnalysis:
     def test_fit_m_gaussian(self):
@@ -199,8 +149,6 @@ class TestNeuroCausalFactorAnalysis:
         d = torch.Tensor(dataset[:5])
         recon_d = ncfa.parameters.vae(d)[0]
 
-        ncfa.parameters.biadj
-
         ncfa = NeuroCausalFactorAnalysis(verbose=False)
         ncfa.hyperparams.update(
             {
@@ -217,127 +165,3 @@ class TestNeuroCausalFactorAnalysis:
 
         torch.Tensor(dataset[:5])  # d
         ncfa.parameters.vae(torch.Tensor(dataset[:5]))[0]  # recon_d
-
-        ncfa.parameters.biadj
-
-
-class TestDevMedilInterv:
-    def test_fit_m_gaussian(self):
-        """Simple "M" graph, with 2 latent and 3 measurement vars, sampled from GaussianMCM."""
-        biadj = np.zeros((2, 3), bool)
-        biadj[[0, 0, 1, 1], [0, 1, 1, 2]] = True
-        mcm = GaussianMCM(biadj=biadj)
-        params = mcm.parameters
-        params.biadj_weights = biadj.astype(float)
-        params.error_means = np.zeros(3)
-        params.error_variances = np.ones(3)
-
-        samp_size = 2000
-        dataset = mcm.sample(samp_size)
-
-        # standardize
-        dataset -= dataset.mean(0)
-        dataset /= dataset.std(0)
-        dataset = np.hstack((dataset, -np.ones((samp_size, 1))))
-
-        ncfa = DevMedilInterv(verbose=False)
-        ncfa.hyperparams.update(
-            {
-                "num_epochs": 200,
-                "lr": 0.01,
-                "lambda": 0.001,
-                "meas_width": 3,
-                "meas_depth": 3,
-                "num_latent": 3,
-                "latent_width": 3,
-                "latent_depth": 0,
-            }
-        )
-        ncfa.fit(dataset)
-
-        d = torch.Tensor(dataset[:5])
-        x = d[:, :-1]
-        l = d[:, -1, None]
-        recon_x = ncfa.parameters.vae(x, l)[0]
-
-        ncfa.parameters.causal_biadj
-
-
-class TestDevMedilInterv2:
-    def test_fit_m_gaussian(self):
-        """Simple "M" graph, with 2 latent and 3 measurement vars, sampled from GaussianMCM."""
-
-        biadj = np.zeros((2, 3), bool)
-        biadj[[0, 0, 1, 1], [0, 1, 1, 2]] = True
-        mcm = GaussianMCM(biadj=biadj)
-        params = mcm.parameters
-        params.biadj_weights = biadj.astype(float)
-        params.error_means = np.zeros(3)
-        params.error_variances = np.ones(3)
-
-        samp_size = 1000
-        dataset = mcm.sample(samp_size)
-
-        # standardize
-        dataset -= dataset.mean(0)
-        dataset /= dataset.std(0)
-        dataset1 = np.hstack((dataset, -np.ones((samp_size, 1))))
-        dataset2 = np.hstack((dataset, np.zeros((samp_size, 1))))
-        dataset = np.vstack((dataset1, dataset2))
-
-        ncfa = DevMedilInterv2(verbose=False)
-        ncfa.hyperparams.update(
-            {
-                "num_epochs": 20,
-                "lr": 0.01,
-                "lambda": 0.001,
-                "meas_width": 3,
-                "meas_depth": 3,
-                "num_latent": 5,
-                "latent_width": 3,
-                "latent_depth": 0,
-            }
-        )
-        ncfa.fit(dataset)
-
-
-def gen_test_ivn_data():
-    """Simple "M" graph, with 2 latent and 3 measurement vars, sampled from GaussianMCM."""
-    biadj = np.zeros((2, 3), bool)
-    biadj[[0, 0, 1, 1], [0, 1, 1, 2]] = True
-    mcm = GaussianMCM(biadj=biadj)
-    params = mcm.parameters
-    params.biadj_weights = biadj.astype(float)
-    params.error_means = np.zeros(3)
-    params.error_variances = np.ones(3)
-
-    samp_size = 1000
-    dataset = mcm.sample(samp_size)
-
-    # standardize
-    dataset -= dataset.mean(0)
-    dataset /= dataset.std(0)
-    dataset1 = np.hstack((dataset, -np.ones((samp_size, 1))))
-    dataset2 = np.hstack((dataset, np.zeros((samp_size, 1))))
-    dataset = np.vstack((dataset1, dataset2))
-    return dataset
-
-
-def test_IvnFA():
-    dataset = gen_test_ivn_data()
-
-    model = IvnFA()
-    model.hyperparams.update(
-        {
-            "batch_size": 128,
-            "num_epochs": 10,
-            "lr": 0.005,
-            "beta": 1,
-            "llambda": 10,
-            "num_valid": 1000,
-            "width": 3,
-            "depth": 2,
-            "context_dims": 1,
-        }
-    )
-    model.fit(dataset)
