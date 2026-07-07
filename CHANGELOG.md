@@ -4,18 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased ##
-- differentiable NCFA
-- interventions
-
 ## [2.0.0] - 202X-XX-XX ##
+
+### Added ###
+- `NeuroCausalFactorAnalysis.sample()` — fulfils the base class contract; supports `include_latent=True` matching `GaussianMCM` interface
+- `sample` and `evaluate` submodules exported from top-level `medil` package for discoverability
+- tests for `independence_testing` module (`xicorr`, `dcov`, `estimate_UDG`)
 
 ### Changed ###
 - pyproject.toml based packaging, managed by uv and devenv
+- `find_clique_min_cover`: `verbose` parameter now actually controls output (was hardcoded `if True`)
+
+### Fixed ###
+- `estimate_UDG`: unimplemented `g-test` branch now raises `NotImplementedError` instead of silently returning uninitialized variables
 
 ### Removed ###
+- `setup.py` (superseded by `pyproject.toml`)
 - `dcor` dependency
 - `visualize` submodule and dependencies
+- Dead `convert_to_nde()` method from `graph.py`
+- Broken `scripts/pgm_demo.py` (imported removed modules)
+- Stale `tests/test_simulate.py` (referenced removed modules)
+- `docs/gues.rst` (documented removed `gues` module)
 
 ## [1.1.0] - 2024-08-19 ##
 
