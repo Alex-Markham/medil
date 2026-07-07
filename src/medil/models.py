@@ -1,4 +1,4 @@
-"""MeDIL causal model base class and a preconfigured NCFA class."""
+"""MeDIL causal model classes for linear Gaussian and deep generative settings."""
 
 import copy
 import os
@@ -14,7 +14,7 @@ from numpy.random import default_rng
 from scipy.optimize import minimize
 from sklearn.model_selection import train_test_split
 
-from .ecc_algorithms import _find_heuristic_1pc
+from ._ecc_algorithms import _find_heuristic_1pc
 from .independence_testing import _estimate_UDG
 
 try:
@@ -73,15 +73,55 @@ class _Parameters(object):
 
 
 class GaussianMCM(_MedilCausalModel):
-    """A linear MeDIL causal model with Gaussian random variables."""
+    """Linear Gaussian MeDIL causal model.
+
+    Learns a bipartite latent→measurement causal structure and estimates
+    linear Gaussian parameters (edge weights, error means, error variances)
+    by constraint-based structure learning and least-squares optimisation
+    of the covariance matrix.
+
+    Parameters
+    ----------
+    biadj : ndarray of shape (num_latent, num_meas), optional
+        Boolean biadjacency matrix. If empty (default), estimated from data
+        during :meth:`fit`.
+    udg : ndarray of shape (num_meas, num_meas), optional
+        Boolean undirected dependence graph over observed variables. If empty
+        (default), estimated from data during :meth:`fit`.
+    rng : numpy.random.Generator, optional
+        Random number generator used during :meth:`sample`.
+
+    Attributes
+    ----------
+    biadj : ndarray of shape (num_latent, num_meas)
+        Boolean biadjacency matrix (set after :meth:`fit` or at init).
+    parameters : object
+        Learned parameters with attributes ``biadj_weights``
+        (shape ``(num_latent, num_meas)``), ``error_means``
+        (shape ``(num_meas,)``), and ``error_variances``
+        (shape ``(num_meas,)``).
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.parameters = _Parameters("Gaussian")
 
     def fit(self, dataset: npt.NDArray) -> "GaussianMCM":
-        """Fit a Gaussian MCM to a dataset with constraint-based
-        structure learning and least squares parameter estimation."""
+        """Fit a GaussianMCM to a dataset.
+
+        Estimates the biadjacency matrix via constraint-based structure
+        learning (if not pre-specified), then estimates edge weights and
+        error variances by least-squares optimisation of the covariance.
+
+        Parameters
+        ----------
+        dataset : ndarray of shape (n_samples, n_features)
+            Observed data matrix. Rows are observations, columns are variables.
+
+        Returns
+        -------
+        self : GaussianMCM
+        """
         self.dataset = dataset
         if self.biadj.size == 0:
             self._compute_biadj()
@@ -134,8 +174,23 @@ class GaussianMCM(_MedilCausalModel):
         self.udg = udg
 
     def sample(self, sample_size: int, include_latent: bool = False) -> npt.NDArray:
-        """Sample a dataset from a GaussianMCM, after structure and
-        parameters have been specified or estimated."""
+        """Sample observations from a GaussianMCM.
+
+        Requires ``biadj`` and ``parameters`` to be set, either by calling
+        :meth:`fit` or by constructing the model via :func:`medil.sample.mcm`.
+
+        Parameters
+        ----------
+        sample_size : int
+            Number of observations to draw.
+        include_latent : bool, optional
+            If True, also return the sampled latent variables.
+
+        Returns
+        -------
+        samples : ndarray of shape (sample_size, num_meas)
+        latent_samples : ndarray of shape (sample_size, num_latent), only if include_latent=True
+        """
         num_latent = len(self.biadj)
         latent_sample = self.rng.multivariate_normal(
             np.zeros(num_latent), np.eye(num_latent), sample_size
@@ -151,7 +206,61 @@ class GaussianMCM(_MedilCausalModel):
 
 
 class NeuroCausalFactorAnalysis(_MedilCausalModel):
-    """A MeDIL causal model represented by a masked variational autoencoder."""
+    """Nonlinear MeDIL causal model represented by a masked variational autoencoder.
+
+    Jointly learns the causal factor structure (``biadj``) and nonlinear
+    generative mechanisms via a masked VAE whose decoder connectivity encodes
+    the latent→measurement graph :cite:`markham2023neuro`.
+
+    Requires PyTorch: ``pip install medil[ncfa]``.
+
+    Input data should be standardised (zero mean, unit variance per feature)
+    before calling :meth:`fit`.
+
+    Parameters
+    ----------
+    seed : int, optional
+        Random seed for reproducibility. Default 0.
+    log_path : str, optional
+        Directory for training artefacts (model weights, loss history).
+        Created if it does not exist. No artefacts written if empty (default).
+    verbose : bool, optional
+        Print timestamped training log entries to stdout. Default False.
+    biadj : ndarray of shape (num_latent, num_meas), optional
+        Boolean biadjacency matrix. If empty (default), estimated from data
+        during :meth:`fit` using xi correlation.
+    **kwargs
+        Additional keyword arguments passed to the base class (``udg``, ``rng``).
+
+    Attributes
+    ----------
+    biadj : ndarray of shape (num_latent, num_meas)
+        Boolean biadjacency matrix (set after :meth:`fit` or at init).
+    parameters : object
+        Learned VAE, accessible as ``parameters.vae``.
+    loss : dict or None
+        Train/validation ELBO and reconstruction losses after :meth:`fit`,
+        keyed by ``"elbo_train"``, ``"elbo_valid"``, ``"recon_train"``,
+        ``"recon_valid"``.
+    hyperparams : dict
+        Training hyperparameters. Modify via ``model.hyperparams.update({...})``
+        before calling :meth:`fit`. Keys:
+
+        - ``"method"`` : independence test for structure learning
+          (``"xicor"`` or ``"dcov_fast"``; default ``"xicor"``)
+        - ``"alpha"`` : significance level for independence tests (default 0.05)
+        - ``"num_epochs"`` : maximum training epochs (default 200)
+        - ``"lr"`` : AdamW learning rate (default 1e-3)
+        - ``"beta"`` : KL weight in the ELBO (default 1.0)
+        - ``"latent_width"`` : hidden units per latent variable in the decoder (default 2)
+        - ``"meas_width"`` : hidden units per measurement variable in the decoder (default 2)
+        - ``"num_hidden_layers"`` : number of decoder hidden layers (default 1)
+        - ``"encoder_hidden_dim"`` : hidden dimension of the encoder MLP (default 64)
+        - ``"batch_size"`` : mini-batch size (default 128)
+        - ``"early_stopping"`` : stop when validation ELBO stagnates (default True)
+        - ``"patience"`` : early stopping patience in epochs (default 20)
+        - ``"min_delta"`` : minimum ELBO improvement to reset patience (default 1e-4)
+    """
 
     def __init__(
         self,
@@ -228,6 +337,8 @@ class NeuroCausalFactorAnalysis(_MedilCausalModel):
         Parameters
         ----------
         dataset : ndarray of shape (n_samples, n_features)
+            Observed data matrix. Should be standardised (zero mean, unit
+            variance per feature) for best results.
         split_idcs : tuple of index arrays, optional
             (train_indices, valid_indices). If None, a 70/30 train/valid split
             is created automatically using self.seed.

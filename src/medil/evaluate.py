@@ -20,8 +20,12 @@ def sfd(
 
     Parameters
     ----------
-    predicted_biadj: learned bipartite directed graph
-    true_biadj: true bipartite directed graph
+    true_biadj : ndarray
+        Ground-truth biadjacency matrix.
+    predicted_biadj : ndarray
+        Learned biadjacency matrix.
+    to_return : str, optional
+        ``"raw"`` (default), ``"normalized"``, or ``"both"``.
 
     Returns
     -------

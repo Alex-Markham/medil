@@ -1,4 +1,4 @@
-"""Implementations of edge clique clover finding algorithms."""
+"""Implementations of edge clique cover finding algorithms."""
 
 from collections import deque
 

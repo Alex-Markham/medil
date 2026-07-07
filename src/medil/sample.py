@@ -4,7 +4,7 @@ import numpy as np
 import numpy.typing as npt
 from numpy.random import default_rng
 
-from .ecc_algorithms import _find_clique_min_cover
+from ._ecc_algorithms import _find_clique_min_cover
 from .models import GaussianMCM, NeuroCausalFactorAnalysis
 
 
@@ -33,7 +33,8 @@ def mcm(
     Returns
     -------
     GaussianMCM or NeuroCausalFactorAnalysis
-        A fitted model with randomly generated structure and parameters.
+        A model with randomly generated structure and parameters, ready to
+        call :meth:`~medil.models.GaussianMCM.sample` on without fitting to data.
     """
     if biadj.size == 0:
         biadj = _biadj(rng=rng, **kwargs)
@@ -90,9 +91,34 @@ def biadj(
     num_latent: int = 0,
     rng: np.random.Generator = default_rng(0),
 ) -> npt.NDArray:
-    """Randomly generate biadjacency matrix for graphical minMCM."""
+    """Randomly generate a biadjacency matrix for a minimum MeDIL causal model.
+
+    Parameters
+    ----------
+    num_meas : int
+        Number of measurement (observed) variables.
+    density : float, optional
+        Controls how many measurement variables share latent parents.
+        0 gives one latent per measurement (no sharing); 1 gives maximum
+        sharing. Default 0.2.
+    one_pure_child : bool, optional
+        If True (default), each latent variable has at least one measurement
+        variable that it is the sole parent of (the one-pure-child assumption).
+        If False, the graph is drawn from an Erdős–Rényi random graph over
+        observed variables and the minimum edge clique cover is computed.
+    num_latent : int, optional
+        Number of latent variables. Only used when ``one_pure_child=True``.
+        If 0 (default), drawn uniformly from ``[1, num_meas)``.
+    rng : numpy.random.Generator, optional
+        Random number generator. Default is ``default_rng(0)``.
+
+    Returns
+    -------
+    biadj : ndarray of shape (num_latent, num_meas), dtype bool
+        Boolean biadjacency matrix where ``biadj[i, j]`` is True iff
+        latent variable ``i`` is a parent of measurement variable ``j``.
+    """
     if one_pure_child:
-        """Define a maximum independent set of size `num_latent`, and then grow these into a minimum edge clique cover with average max clique size `2 + (num_meas - num_latent) * density`."""
         if num_latent == 0:
             num_latent = rng.integers(1, num_meas)
         if density is None:
@@ -124,8 +150,6 @@ def biadj(
         biadj = rng.permutation(biadj, axis=1)
 
     else:
-        """Generate minMCM from Erdős–Rényi random undirected graph
-        over observed variables."""
         if num_latent != 0:
             msg = "`num_latent` can only be specified when `one_pure_child==True`."
             raise ValueError(msg)
