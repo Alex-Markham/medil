@@ -29,7 +29,7 @@ latent_val = latent_sample[val_idx]
 # fit to the training set
 model = ncfa(seed=seed)
 if method == "vae":
-    model.set_full_decoder_mask(num_meas=dataset.shape[1])
+    model._set_full_decoder_mask(num_meas=dataset.shape[1])
 model.hyperparams.update(
     {
         "num_epochs": snakemake.params["num_epochs"],

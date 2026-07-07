@@ -1,5 +1,4 @@
-"""This package is for causal inference, focusing on the Measurement
-Dependence Inducing Latent (MeDIL) Causal Model framework."""
+"""Causal factor analysis with the MeDIL causal model framework."""
 
 from . import evaluate, sample
 from .models import GaussianMCM, NeuroCausalFactorAnalysis

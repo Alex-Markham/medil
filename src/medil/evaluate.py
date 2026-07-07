@@ -1,3 +1,5 @@
+"""Evaluation metrics for learned MeDIL causal model structures."""
+
 import numpy as np
 import numpy.typing as npt
 
@@ -61,7 +63,7 @@ def sfd(
             raise ValueError("`to_return` should be 'raw', 'normalized', or 'both'")
 
 
-def shd(
+def _shd(
     true_biadj: npt.NDArray,
     *,
     predicted_biadj: npt.NDArray = np.array([]),
@@ -85,9 +87,9 @@ def shd(
             "Must provide `predicted_biadj` or `predicted_adj` but not both."
         )
     elif bool(len(predicted_biadj)):
-        predicted_adj = recover_ug(predicted_biadj)
+        predicted_adj = _recover_ug(predicted_biadj)
 
-    ug = recover_ug(true_biadj)
+    ug = _recover_ug(true_biadj)
 
     shd = np.logical_xor(ug, predicted_adj).sum()
 
@@ -106,16 +108,7 @@ def shd(
             raise ValueError("`to_return` should be 'raw', 'normalized', or 'both'")
 
 
-def recover_ug(biadj_mat: npt.NDArray) -> npt.NDArray:
-    """Recover the undirected graph from the directed bipartite graph
-    Parameters
-    ----------
-    biadj_mat: learned directed graph
-
-    Returns
-    -------
-    ug: the recovered undirected graph
-    """
+def _recover_ug(biadj_mat: npt.NDArray) -> npt.NDArray:
     ug = biadj_mat.T @ biadj_mat
     np.fill_diagonal(ug, False)
     return ug

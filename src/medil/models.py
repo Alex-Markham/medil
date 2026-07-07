@@ -14,21 +14,21 @@ from numpy.random import default_rng
 from scipy.optimize import minimize
 from sklearn.model_selection import train_test_split
 
-from .ecc_algorithms import find_heuristic_1pc
-from .independence_testing import estimate_UDG
+from .ecc_algorithms import _find_heuristic_1pc
+from .independence_testing import _estimate_UDG
 
 try:
     import torch
     import torch.nn.functional as F
     from torch.utils.data import DataLoader, TensorDataset
     from tqdm import tqdm
-    from .vae import VariationalAutoencoder
+    from ._vae import VariationalAutoencoder
     _TORCH_AVAILABLE = True
 except ImportError:
     _TORCH_AVAILABLE = False
 
 
-class MedilCausalModel(object):
+class _MedilCausalModel(object):
     """Base class using principle of polymorphism to establish common
     interface for derived parametric estimators.
     """
@@ -45,14 +45,14 @@ class MedilCausalModel(object):
         self.one_pure_child = one_pure_child
         self.rng = rng
 
-    def fit(self, dataset: npt.NDArray) -> "MedilCausalModel":
+    def fit(self, dataset: npt.NDArray) -> "_MedilCausalModel":
         raise NotImplementedError
 
     def sample(self, sample_size: int) -> npt.NDArray:
         raise NotImplementedError
 
 
-class Parameters(object):
+class _Parameters(object):
     "Different parameterizations of MeDIL causal Models."
 
     def __init__(self, parameterization: str) -> None:
@@ -72,12 +72,12 @@ class Parameters(object):
         )
 
 
-class GaussianMCM(MedilCausalModel):
+class GaussianMCM(_MedilCausalModel):
     """A linear MeDIL causal model with Gaussian random variables."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.parameters = Parameters("Gaussian")
+        self.parameters = _Parameters("Gaussian")
 
     def fit(self, dataset: npt.NDArray) -> "GaussianMCM":
         """Fit a Gaussian MCM to a dataset with constraint-based
@@ -119,7 +119,7 @@ class GaussianMCM(MedilCausalModel):
         """Constraint-based structure learning."""
         if self.udg.size == 0:
             self._estimate_udg()
-        self.biadj = find_heuristic_1pc(self.udg)
+        self.biadj = _find_heuristic_1pc(self.udg)
 
     def _estimate_udg(self):
         """Constraint-based structure learning."""
@@ -150,7 +150,7 @@ class GaussianMCM(MedilCausalModel):
         return (sample, latent_sample) if include_latent else sample
 
 
-class NeuroCausalFactorAnalysis(MedilCausalModel):
+class NeuroCausalFactorAnalysis(_MedilCausalModel):
     """A MeDIL causal model represented by a masked variational autoencoder."""
 
     def __init__(
@@ -191,11 +191,11 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
             "min_delta": 1e-4,
         }
 
-        self.parameters = Parameters("VAE")
+        self.parameters = _Parameters("VAE")
         self.loss = None
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    def log(self, entry: str) -> None:
+    def _log(self, entry: str) -> None:
         if not (self.log_path or self.verbose):
             return
 
@@ -279,10 +279,10 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
     def _compute_biadj(self):
         if self.udg.size == 0:
             self._estimate_udg()
-        self.biadj = find_heuristic_1pc(self.udg)
+        self.biadj = _find_heuristic_1pc(self.udg)
 
     def _estimate_udg(self):
-        self.udg, _ = estimate_UDG(
+        self.udg, _ = _estimate_UDG(
             self.dataset,
             method=self.hyperparams["method"],
             significance_level=self.hyperparams["alpha"],
@@ -315,7 +315,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.hyperparams["lr"])
 
         num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-        self.log(f"Number of parameters: {num_params}")
+        self._log(f"Number of parameters: {num_params}")
 
         train_elbo, train_error = [], []
         valid_elbo, valid_error = [], []
@@ -365,7 +365,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
                 self.hyperparams["early_stopping"]
                 and epochs_without_improvement >= self.hyperparams["patience"]
             ):
-                self.log(f"Early stopping at epoch {epoch}")
+                self._log(f"Early stopping at epoch {epoch}")
                 break
 
         model.load_state_dict(best_state)
@@ -435,7 +435,7 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         out = x_recon.cpu().numpy()
         return (out, z.cpu().numpy()) if include_latent else out
 
-    def set_full_decoder_mask(self, num_meas=None):
+    def _set_full_decoder_mask(self, num_meas=None):
         if num_meas is None:
             if not hasattr(self, "dataset"):
                 raise ValueError("Provide num_meas or set dataset first.")

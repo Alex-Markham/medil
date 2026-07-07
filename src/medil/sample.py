@@ -4,7 +4,7 @@ import numpy as np
 import numpy.typing as npt
 from numpy.random import default_rng
 
-from .ecc_algorithms import find_clique_min_cover
+from .ecc_algorithms import _find_clique_min_cover
 from .models import GaussianMCM, NeuroCausalFactorAnalysis
 
 
@@ -14,6 +14,27 @@ def mcm(
     biadj: npt.NDArray = np.array([]),
     **kwargs,
 ) -> GaussianMCM | NeuroCausalFactorAnalysis:
+    """Randomly generate a minimum MeDIL causal model with parameters.
+
+    Parameters
+    ----------
+    rng : numpy.random.Generator, optional
+        Random number generator. Default is ``default_rng(0)``.
+    parameterization : str, optional
+        Either ``"Gaussian"`` (default) for a linear Gaussian model or
+        ``"VAE"`` for a randomly initialized masked VAE model.
+    biadj : ndarray, optional
+        Biadjacency matrix to use. If empty (default), one is generated
+        randomly using :func:`biadj` with any extra keyword arguments.
+    **kwargs
+        Additional keyword arguments passed to :func:`biadj` when
+        generating a random biadjacency matrix.
+
+    Returns
+    -------
+    GaussianMCM or NeuroCausalFactorAnalysis
+        A fitted model with randomly generated structure and parameters.
+    """
     if biadj.size == 0:
         biadj = _biadj(rng=rng, **kwargs)
     if parameterization == "Gaussian":
@@ -35,7 +56,7 @@ def mcm(
     elif parameterization == "VAE":
         try:
             import torch
-            from .vae import VariationalAutoencoder
+            from ._vae import VariationalAutoencoder
         except ImportError:
             raise ImportError(
                 "parameterization='VAE' requires PyTorch. "
@@ -122,7 +143,7 @@ def biadj(
         np.fill_diagonal(udg, True)
 
         # find latent connections (minimum edge clique cover)
-        biadj = find_clique_min_cover(udg).astype(bool)
+        biadj = _find_clique_min_cover(udg).astype(bool)
 
     return biadj
 

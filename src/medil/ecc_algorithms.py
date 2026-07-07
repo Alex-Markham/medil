@@ -4,10 +4,10 @@ from collections import deque
 
 import numpy as np
 
-from .graph import UndirectedDependenceGraph
+from ._graph import UndirectedDependenceGraph
 
 
-def find_clique_min_cover(graph, verbose=False):
+def _find_clique_min_cover(graph, verbose=False):
     """Returns the clique-minimum edge clique cover.
 
     Parameters
@@ -25,9 +25,9 @@ def find_clique_min_cover(graph, verbose=False):
 
     See Also
     --------
-    graph.UndirectedDependenceGraph : Defines auxilliary data structure
-                                      and reduction rules used by this
-                                      algorithm.
+    _graph.UndirectedDependenceGraph : Defines auxilliary data structure
+                                       and reduction rules used by this
+                                       algorithm.
 
     Notes
     -----
@@ -59,13 +59,13 @@ def find_clique_min_cover(graph, verbose=False):
                     num_cliques, max_intersect_num
                 )
             )
-        the_cover = branch(graph, num_cliques, the_cover, iteration=0, iteration_max=3)
+        the_cover = _branch(graph, num_cliques, the_cover, iteration=0, iteration_max=3)
         num_cliques += 1
 
-    return add_isolated_verts(the_cover)
+    return _add_isolated_verts(the_cover)
 
 
-def branch(graph, k_num_cliques, the_cover, iteration, iteration_max):
+def _branch(graph, k_num_cliques, the_cover, iteration, iteration_max):
     """Helper function for `find_clique_min_cover()`.
 
     Describing the solution search space as a tree.
@@ -113,8 +113,8 @@ def branch(graph, k_num_cliques, the_cover, iteration, iteration_max):
         )  # not in paper, but speeds it up slightly; or rather return None?
 
     chosen_nbrhood = branch_graph.choose_nbrhood()
-    # print("num cliques: {}".format(len([x for x in max_cliques(chosen_nbrhood)])))
-    for clique_nodes in max_cliques(chosen_nbrhood):
+    # print("num cliques: {}".format(len([x for x in _max_cliques(chosen_nbrhood)])))
+    for clique_nodes in _max_cliques(chosen_nbrhood):
         if len(clique_nodes) == 1:  # then this vert has been rmed; quirk of max_cliques
             continue
         clique = np.zeros(branch_graph.unreduced.num_vertices, dtype=int)
@@ -129,7 +129,7 @@ def branch(graph, k_num_cliques, the_cover, iteration, iteration_max):
         if iteration > iteration_max:
             return branch_graph.the_cover
 
-        the_cover_prime = branch(
+        the_cover_prime = _branch(
             branch_graph,
             k_num_cliques - 1,
             union,
@@ -141,7 +141,7 @@ def branch(graph, k_num_cliques, the_cover, iteration, iteration_max):
     return None
 
 
-def max_cliques(nbrhood):
+def _max_cliques(nbrhood):
     """Adaptation of NetworkX code for finding all maximal cliques.
 
     Parameters
@@ -204,7 +204,7 @@ def max_cliques(nbrhood):
     # looped through once
 
 
-def add_isolated_verts(cover):
+def _add_isolated_verts(cover):
     cover = cover.astype(bool)
     iso_vert_idx = np.flatnonzero(cover.sum(0) == 0)
     num_rows = len(iso_vert_idx)
@@ -214,14 +214,14 @@ def add_isolated_verts(cover):
     return np.vstack((cover, iso_vert_cover))
 
 
-def find_heuristic_1pc(graph):
+def _find_heuristic_1pc(graph):
     num_meas = len(graph)
 
     # nx_graph = nx.from_numpy_array(graph)
     # indep_set =
     # list(nx.approximation.maximum_independent_set(nx_graph))
 
-    indep_sets = max_cliques(np.logical_not(graph))
+    indep_sets = _max_cliques(np.logical_not(graph))
     max_indep_set = next(indep_sets)
     for indep_set in indep_sets:
         if len(indep_set) > len(max_indep_set):

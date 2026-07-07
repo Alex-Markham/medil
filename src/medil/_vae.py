@@ -1,3 +1,5 @@
+"""Variational autoencoder components for NeuroCausalFactorAnalysis."""
+
 import math
 
 import torch

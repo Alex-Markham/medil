@@ -9,7 +9,7 @@ from scipy.spatial.distance import pdist, squareform
 from scipy.stats import chatterjeexi, chi2
 
 
-def dcov(samples):
+def _dcov(samples):
     r"""Compute sample distance covariance matrix.
 
     Parameters
@@ -17,6 +17,7 @@ def dcov(samples):
     samples : 2d numpy array of floats
               A :math:`N \times M` matrix with :math:`N` samples of
               :math:`M` random variables.
+
     Returns
     -------
     2d numpy array
@@ -49,14 +50,14 @@ def dcov(samples):
     return dists @ dists.T / num_samps**2, d_bars
 
 
-def estimate_UDG(sample, method="dcov_fast", significance_level=0.05):
+def _estimate_UDG(sample, method="dcov_fast", significance_level=0.05):
     samp_size, num_feats = sample.shape
 
     if isinstance(method, np.ndarray):
         p_vals = method
         udg = p_vals < significance_level
     elif method == "dcov_fast":
-        cov, d_bars = dcov(sample)
+        cov, d_bars = _dcov(sample)
         crit_val = chi2(1).ppf(1 - significance_level)
         test_val = samp_size * cov / np.outer(d_bars, d_bars)
         udg = test_val >= crit_val
@@ -71,7 +72,7 @@ def estimate_UDG(sample, method="dcov_fast", significance_level=0.05):
         # if method == "dcov_big":
         #     can use distance_correlation_t_test from dcor package
         if method == "xicor":
-            test = xicor_test
+            test = _xicor_test
         with Pool(max(1, int(0.75 * cpu_count()))) as p:
             p_vals[idxs, jdxs] = p_vals[jdxs, idxs] = np.fromiter(
                 p.imap(test, sample_iter, 100), float
@@ -81,53 +82,25 @@ def estimate_UDG(sample, method="dcov_fast", significance_level=0.05):
     return udg, p_vals
 
 
-def xicor_test(x_y):
+def _xicor_test(x_y):
     x, y = x_y
-    xi, pvalue = xicorr(x, y)
+    xi, pvalue = _xicorr(x, y)
     return pvalue
 
 
-class XiCorrResult(NamedTuple):
+class _XiCorrResult(NamedTuple):
     correlation: float
     pvalue: Optional[float]
 
 
-def xicorr(x: npt.ArrayLike, y: npt.ArrayLike, ties: bool = True) -> XiCorrResult:
-    """Compute Chatterjee's xi correlation coefficient.
-
-    Parameters
-    ----------
-    x, y : array_like
-        Arrays of the same length. Flattened to 1-D if needed.
-    ties : bool, optional
-        If True (default), uses the variance formula for tied data.
-        There is no harm in leaving this True even when there are no ties.
-
-    Returns
-    -------
-    correlation : float
-        Chatterjee's xi correlation coefficient.
-    pvalue : float
-        P-value computed by the asymptotic theory.
-
-    References
-    ----------
-    Chatterjee, S., "A new coefficient of correlation",
-    Journal of the American Statistical Association, 116(536), 2021.
-    https://doi.org/10.1080/01621459.2020.1758115
-
-    Examples
-    --------
-    >>> x1 = [12, 2, 1, 12, 2]
-    >>> x2 = [1, 4, 7, 1, 0]
-    >>> xi, pvalue = xicorr(x1, x2)
-    """
+def _xicorr(x: npt.ArrayLike, y: npt.ArrayLike, ties: bool = True) -> _XiCorrResult:
+    """Compute Chatterjee's xi correlation coefficient."""
     x = np.asarray(x).ravel()
     y = np.asarray(y).ravel()
     if x.size != y.size:
         raise ValueError(
-            "All inputs to `xicorr` must be of the same "
+            "All inputs to `_xicorr` must be of the same "
             f"size, found x-size {x.size} and y-size {y.size}"
         )
     result = chatterjeexi(x, y, y_continuous=not ties)
-    return XiCorrResult(result.statistic, result.pvalue)
+    return _XiCorrResult(result.statistic, result.pvalue)
