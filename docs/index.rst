@@ -4,9 +4,8 @@ MeDIL
 MeDIL is a Python package for causal factor analysis, using the measurement dependence inducing latent (MeDIL) causal model framework :cite:`Markham_2020_UAI`.
 The package is under active development---see the ``develop`` branch of the repository on `GitLab <https://gitlab.com/alex-markham/medil/-/tree/develop>`_ or its `Github mirror <https://github.com/Alex-Markham/medil>`_.
 
-..
-   .. image:: https://gitlab.com/alex-markham/medil/badges/develop/coverage.svg
-       :target: https://medil.causal.dev/htmlcov/
+.. image:: https://gitlab.com/alex-markham/medil/badges/develop/coverage.svg
+   :target: https://medil.causal.dev/htmlcov/
 
 :Version: |version|
 :Date: |today|
