@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added ###
 - `NeuroCausalFactorAnalysis.sample()` — fulfils the base class contract; supports `include_latent=True` matching `GaussianMCM` interface
+- `sample.mcm(parameterization="VAE")` — randomly initialized NCFA with structured VAE weights, immediately sampleable
 - `sample` and `evaluate` submodules exported from top-level `medil` package for discoverability
 - tests for `independence_testing` module (`xicorr`, `dcov`, `estimate_UDG`)
 

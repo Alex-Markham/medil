@@ -31,9 +31,6 @@ def test_biadg():
 
 
 def test_mcm():
-    with pytest.raises(NotImplementedError):
-        mcm(num_meas=2, parameterization="VAE")
-
     with pytest.raises(ValueError):
         mcm(num_meas=2, parameterization="test")
 
@@ -43,3 +40,9 @@ def test_mcm():
     assert ~params.biadj_weights[~m.biadj].any()
     assert params.error_variances.all()
     assert params.error_means.all()
+
+    m = mcm(num_meas=5, parameterization="VAE")
+    assert m.parameters.vae is not None
+    assert m.biadj.shape[1] == 5
+    out = m.sample(10)
+    assert out.shape == (10, 5)

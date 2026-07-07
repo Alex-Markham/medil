@@ -2,10 +2,12 @@
 
 import numpy as np
 import numpy.typing as npt
+import torch
 from numpy.random import default_rng
 
 from .ecc_algorithms import find_clique_min_cover
-from .models import GaussianMCM
+from .models import GaussianMCM, NeuroCausalFactorAnalysis
+from .vae import VariationalAutoencoder
 
 
 def mcm(
@@ -13,7 +15,7 @@ def mcm(
     parameterization: str = "Gaussian",
     biadj: npt.NDArray = np.array([]),
     **kwargs,
-) -> GaussianMCM:
+) -> GaussianMCM | NeuroCausalFactorAnalysis:
     if biadj.size == 0:
         biadj = _biadj(rng=rng, **kwargs)
     if parameterization == "Gaussian":
@@ -33,7 +35,20 @@ def mcm(
         params.error_variances = (rng.random(num_meas) * 1.5) + 0.5
 
     elif parameterization == "VAE":
-        raise (NotImplementedError)
+        model = NeuroCausalFactorAnalysis(biadj=biadj, rng=rng)
+        num_latent, num_meas = biadj.shape
+        biadj_tensor = torch.tensor(biadj.T, dtype=torch.float32)
+        vae = VariationalAutoencoder(
+            num_latent=num_latent,
+            num_meas=num_meas,
+            num_hidden_layers=model.hyperparams["num_hidden_layers"],
+            latent_width=model.hyperparams["latent_width"],
+            meas_width=model.hyperparams["meas_width"],
+            biadj=biadj_tensor,
+            encoder_hidden_dim=model.hyperparams["encoder_hidden_dim"],
+        ).to(model.device)
+        model.parameters.vae = vae
+        return model
 
     else:
         raise ValueError(f"Parameterization '{parameterization}' is invalid.")
