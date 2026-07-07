@@ -4,26 +4,35 @@ Tutorial
 Quick start
 -----------
 
-If you already have a dataset (with each row an observation and each column a feature) loaded into Python, learning a neuro-causal factor analysis model is as simple as:
+The simplest way to get started is to generate a synthetic dataset and fit a model to it:
 
 .. code-block:: python
 
-   >>> from medil import NeuroCausalFactorAnalysis
+   >>> from medil import GaussianMCM, NeuroCausalFactorAnalysis, sample
    >>>
+   >>> # Generate a random causal model and draw 1000 observations from it
+   >>> true_model = sample.mcm(num_meas=6, density=0.3)
+   >>> dataset = true_model.sample(1000)
+   >>>
+   >>> # Fit a linear Gaussian model (structure + parameters learned jointly)
+   >>> model = GaussianMCM().fit(dataset)
+   >>> print(model.biadj)   # learned bipartite graph
+   >>> print(model.parameters)
+
+For the nonlinear setting, standardize first and use ``NeuroCausalFactorAnalysis``:
+
+.. code-block:: python
+
+   >>> dataset = (dataset - dataset.mean(0)) / dataset.std(0)
    >>> model = NeuroCausalFactorAnalysis(verbose=True).fit(dataset)
 
-This jointly learns the causal factor structure (``model.biadj``) and the nonlinear generative mechanisms (a masked VAE stored in ``model.parameters.vae``).
+This jointly learns the causal factor structure (``model.biadj``) and the
+nonlinear generative mechanisms (a masked VAE stored in ``model.parameters.vae``).
 
-To save training artifacts, pass a ``log_path`` argument; MeDIL will create that directory and write the learned model (in `PyTorch format <https://pytorch.org/tutorials/beginner/saving_loading_models.html>`_) and pickled training/reconstruction errors to it.
-
-For a linear Gaussian causal factor model:
-
-.. code-block:: python
-
-   >>> from medil import GaussianMCM
-   >>>
-   >>> model = GaussianMCM().fit(dataset)
-   >>> print(model.parameters)
+To save training artifacts, pass a ``log_path`` argument; MeDIL will create
+that directory and write the learned model (in
+`PyTorch format <https://pytorch.org/tutorials/beginner/saving_loading_models.html>`_)
+and pickled training/reconstruction losses to it.
 
 
 Sampling
@@ -44,7 +53,8 @@ Generate a random Gaussian MeDIL causal model and draw a synthetic dataset:
                               [-1.95188928  0.         -0.52205946  1.79546014  1.97179256]]
    >>> dataset = model.sample(1000)
 
-You can also generate a randomly initialized NCFA model (useful for simulating from a nonlinear model before fitting):
+You can also generate a randomly initialized NCFA model (useful for simulating
+from a nonlinear model before fitting):
 
 .. code-block:: python
 
@@ -69,13 +79,36 @@ Given a known ground-truth structure (e.g. from a simulation), measure how close
 
    >>> from medil.evaluate import sfd
    >>>
-   >>> true_biadj = model.biadj        # e.g. from sample.mcm(...)
-   >>> learned_biadj = fitted.biadj
+   >>> true_biadj = true_model.biadj
+   >>> learned_biadj = model.biadj
    >>>
    >>> sfd(true_biadj, learned_biadj)                    # structural Frobenius distance (int)
    >>> sfd(true_biadj, learned_biadj, to_return="both")  # (raw, normalized)
 
 Lower is better. SFD compares the weighted undirected graphs induced by each biadjacency matrix.
+
+
+Tuning NeuroCausalFactorAnalysis
+---------------------------------
+
+Training hyperparameters are exposed via the ``hyperparams`` dict and can be
+changed before calling :meth:`fit`:
+
+.. code-block:: python
+
+   >>> model = NeuroCausalFactorAnalysis()
+   >>> model.hyperparams.update({
+   ...     "num_epochs": 500,
+   ...     "lr": 5e-4,
+   ...     "beta": 0.5,          # down-weight KL term
+   ...     "latent_width": 4,    # wider latent representations
+   ...     "early_stopping": True,
+   ...     "patience": 30,
+   ... })
+   >>> model.fit(dataset)
+
+See the :class:`~medil.models.NeuroCausalFactorAnalysis` API docs for the
+full list of keys and their defaults.
 
 
 Accessing model internals

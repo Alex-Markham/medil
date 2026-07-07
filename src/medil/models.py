@@ -77,7 +77,7 @@ class GaussianMCM(_MedilCausalModel):
 
     Learns a bipartite latent→measurement causal structure and estimates
     linear Gaussian parameters (edge weights, error means, error variances)
-    by constraint-based structure learning and least-squares optimisation
+    by constraint-based structure learning and least-squares optimization
     of the covariance matrix.
 
     Parameters
@@ -111,7 +111,7 @@ class GaussianMCM(_MedilCausalModel):
 
         Estimates the biadjacency matrix via constraint-based structure
         learning (if not pre-specified), then estimates edge weights and
-        error variances by least-squares optimisation of the covariance.
+        error variances by least-squares optimization of the covariance.
 
         Parameters
         ----------
@@ -214,7 +214,7 @@ class NeuroCausalFactorAnalysis(_MedilCausalModel):
 
     Requires PyTorch: ``pip install medil[ncfa]``.
 
-    Input data should be standardised (zero mean, unit variance per feature)
+    Input data should be standardized (zero mean, unit variance per feature)
     before calling :meth:`fit`.
 
     Parameters
@@ -222,8 +222,8 @@ class NeuroCausalFactorAnalysis(_MedilCausalModel):
     seed : int, optional
         Random seed for reproducibility. Default 0.
     log_path : str, optional
-        Directory for training artefacts (model weights, loss history).
-        Created if it does not exist. No artefacts written if empty (default).
+        Directory for training artifacts (model weights, loss history).
+        Created if it does not exist. No artifacts written if empty (default).
     verbose : bool, optional
         Print timestamped training log entries to stdout. Default False.
     biadj : ndarray of shape (num_latent, num_meas), optional
@@ -337,7 +337,7 @@ class NeuroCausalFactorAnalysis(_MedilCausalModel):
         Parameters
         ----------
         dataset : ndarray of shape (n_samples, n_features)
-            Observed data matrix. Should be standardised (zero mean, unit
+            Observed data matrix. Should be standardized (zero mean, unit
             variance per feature) for best results.
         split_idcs : tuple of index arrays, optional
             (train_indices, valid_indices). If None, a 70/30 train/valid split
