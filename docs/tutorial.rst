@@ -26,21 +26,6 @@ For a linear Gaussian causal factor model:
    >>> print(model.parameters)
 
 
-Structure learning only
------------------------
-
-If you only need the undirected dependence graph (UDG) over observed variables, use ``estimate_UDG`` directly:
-
-.. code-block:: python
-
-   >>> from medil.independence_testing import estimate_UDG
-   >>>
-   >>> udg, p_values = estimate_UDG(dataset, method="dcov_fast")
-
-Available methods are ``"dcov_fast"`` (default), ``"dcov"`` (slower but more accurate for small samples), and ``"xicor"``.
-The returned ``udg`` is a boolean adjacency matrix over the measurement variables; ``p_values`` is the corresponding matrix of test p-values.
-
-
 Sampling
 --------
 
@@ -82,18 +67,15 @@ Given a known ground-truth structure (e.g. from a simulation), measure how close
 
 .. code-block:: python
 
-   >>> from medil.evaluate import sfd, shd
+   >>> from medil.evaluate import sfd
    >>>
    >>> true_biadj = model.biadj        # e.g. from sample.mcm(...)
    >>> learned_biadj = fitted.biadj
    >>>
    >>> sfd(true_biadj, learned_biadj)                    # structural Frobenius distance (int)
    >>> sfd(true_biadj, learned_biadj, to_return="both")  # (raw, normalized)
-   >>>
-   >>> shd(true_biadj, predicted_biadj=learned_biadj)                    # structural Hamming distance
-   >>> shd(true_biadj, predicted_biadj=learned_biadj, to_return="both")  # (raw, normalized)
 
-Lower is better for both metrics. SFD compares the weighted undirected graphs induced by each biadj; SHD counts incorrect edges in the recovered undirected dependence graph.
+Lower is better. SFD compares the weighted undirected graphs induced by each biadjacency matrix.
 
 
 Accessing model internals
