@@ -18,4 +18,4 @@ See [CHANGELOG](https://gitlab.com/alex-markham/medil/blob/master/CHANGELOG.md) 
 ### References
 <a name="medil_paper"> 1.</a> Alex Markham & Moritz Grosse-Wentrup (2020). Measurement Dependence Inducing Latent Causal Models. In *Conference on Uncertainty in Artificial Intelligence (UAI)* PMLR 124:590&ndash;599. URL: [http://proceedings.mlr.press/v124/markham20a/markham20a.pdf](http://proceedings.mlr.press/v124/markham20a/markham20a.pdf).
 
-<a name="ncfa_paper"> 2.</a> Alex Markham, Mingyu Liu, Bryon Aragam, Liam Solus (2023). Neuro-Causal Factor Analysis. *prepint*. [arXiv:2305.19802](https://arxiv.org/abs/2305.19802) [stat.ML].
+<a name="ncfa_paper"> 2.</a> Alex Markham, Mingyu Liu, Bryon Aragam, Liam Solus (2023). Neuro-Causal Factor Analysis. *preprint*. [arXiv:2305.19802](https://arxiv.org/abs/2305.19802) [stat.ML].

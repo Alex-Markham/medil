@@ -263,6 +263,6 @@ def find_heuristic_1pc(graph):
 
     recon = the_cover.T @ the_cover
     if np.logical_not(graph <= recon).any():
-        raise Exception(f"Problem with `find_hueristic_1pc()` for input {graph}")
+        raise Exception(f"Problem with `find_heuristic_1pc()` for input {graph}")
 
     return the_cover

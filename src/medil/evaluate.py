@@ -23,7 +23,9 @@ def sfd(
 
     Returns
     -------
-    nsfd: normalized structural Frobenius distance
+    int or float or tuple
+        Raw sfd (int) if ``to_return='raw'``, normalized nsfd (float) if
+        ``to_return='normalized'``, or ``(sfd, nsfd)`` if ``to_return='both'``.
     """
     true_biadj = true_biadj.astype(int)
     true_wtd_ug = true_biadj.T @ true_biadj

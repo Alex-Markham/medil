@@ -14,10 +14,6 @@ class UndirectedDependenceGraph(object):
     :meth:`medil.ecc_algorithms.find_clique_min_cover` according to
     the algorithm in :cite:`Gramm_2009`.
 
-    Attributes
-    ----------
-
-
     Notes
     -----
     The algorithms for finding the minMCM via ECC contain many

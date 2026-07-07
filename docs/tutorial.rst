@@ -13,7 +13,7 @@ If you already have a dataset (with each row an observation and each column a fe
    >>> model = ncfa(verbose=True).fit(dataset)
 
 
-Once training is complete, the automatically created directory ``trained_ncfa/`` contains the learned model saved in the `PyTorch format <https://pytorch.org/tutorials/beginner/saving_loading_models.html>`_, along with a ``training.log`` showing losss and time for each epoch, and the `pickled <https://docs.python.org/3/library/pickle.html>`_ training and reconstruction errors.
+To save training artifacts, pass a ``log_path`` argument; MeDIL will create that directory and write the learned model (in `PyTorch format <https://pytorch.org/tutorials/beginner/saving_loading_models.html>`_), a ``training.log`` with loss per epoch, and `pickled <https://docs.python.org/3/library/pickle.html>`_ training and reconstruction errors to it.
 
 Or for a linear Gaussian causal factor model:
 

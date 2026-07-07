@@ -1,8 +1,8 @@
 """Independence testing on samples of random variables."""
 
+from multiprocessing import Pool, cpu_count
 from typing import NamedTuple, Optional
 
-from multiprocessing import Pool, cpu_count
 import numpy as np
 import numpy.typing as npt
 from scipy.spatial.distance import pdist, squareform
@@ -130,21 +130,9 @@ def xicorr(x: npt.ArrayLike, y: npt.ArrayLike, ties: bool = True) -> XiCorrResul
     Returns
     -------
     correlation : float
-       The tau statistic.
+       The xi correlation coefficient.
     pvalue : float
-       P-values computed by the asymptotic theory.
-
-    See Also
-    --------
-    spearmanr : Calculates a Spearman rank-order correlation coefficient.
-
-
-    Example:
-        >>> from xicorrelation import xicorr
-        >>> x = [1, 2, 3, 4, 5]
-        >>> y = [1, 4, 9, 16, 25]
-        >>> xi, pvalue = xicorr(x, y)
-        >>> print(xi, pvalue)
+       P-value computed by the asymptotic theory.
 
     References
     ----------
@@ -153,13 +141,12 @@ def xicorr(x: npt.ArrayLike, y: npt.ArrayLike, ties: bool = True) -> XiCorrResul
 
     Examples
     --------
-    >>> from scipy import stats
     >>> x1 = [12, 2, 1, 12, 2]
     >>> x2 = [1, 4, 7, 1, 0]
-    >>> xi, p_value, _ = xicorr(x1, x2)
-    >>> tau
+    >>> xi, pvalue = xicorr(x1, x2)
+    >>> xi
     -0.47140452079103173
-    >>> p_value
+    >>> pvalue
     0.2827454599327748
     """
     # https://git.io/JSIlN
