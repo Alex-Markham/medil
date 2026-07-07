@@ -12,26 +12,20 @@
 #
 import os
 import sys
+import tomllib
 
-sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, os.path.abspath("../src"))
 
 import sphinx_rtd_theme
 
 
 # -- Project information -----------------------------------------------------
 project = "MeDIL"
-copyright = "2019–2024, Alex Markham"
+copyright = "2019–2026, Alex Markham"
 author = "Alex Markham"
 
-# The version info for the project you're documenting, acts as replacement for
-# |version| and |release|, also used in various other places throughout the
-# built documents.
-#
-# The full version, including alpha/beta/rc tags.
-with open("../setup.py") as f:
-    lines = f.readlines()
-    v_line = lines[10]
-    version = v_line[13:-3]
+with open("../pyproject.toml", "rb") as f:
+    version = tomllib.load(f)["project"]["version"]
 
 # -- General configuration ---------------------------------------------------
 
@@ -67,7 +61,6 @@ autosummary_mock_imports = [
     "sklearn",
     "scipy",
     "torch",
-    "xicorrelation",
 ]
 autosummary_generate = True
 
