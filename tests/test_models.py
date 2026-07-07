@@ -165,3 +165,25 @@ class TestNeuroCausalFactorAnalysis:
 
         torch.Tensor(dataset[:5])  # d
         ncfa.parameters.vae(torch.Tensor(dataset[:5]))[0]  # recon_d
+
+    def test_sample_m_gaussian(self):
+        """sample() returns correct shape after fitting an M-graph."""
+        biadj = np.zeros((2, 3), bool)
+        biadj[[0, 0, 1, 1], [0, 1, 1, 2]] = True
+        mcm = GaussianMCM(biadj=biadj)
+        mcm.parameters.biadj_weights = biadj.astype(float)
+        mcm.parameters.error_means = np.zeros(3)
+        mcm.parameters.error_variances = np.ones(3)
+        dataset = mcm.sample(2000)
+        dataset = (dataset - dataset.mean(0)) / dataset.std(0)
+
+        ncfa = NeuroCausalFactorAnalysis(biadj=biadj, verbose=False)
+        ncfa.hyperparams["num_epochs"] = 5
+        ncfa.fit(dataset)
+
+        out = ncfa.sample(50)
+        assert out.shape == (50, 3)
+
+        out, latent = ncfa.sample(50, include_latent=True)
+        assert out.shape == (50, 3)
+        assert latent.shape[0] == 50
