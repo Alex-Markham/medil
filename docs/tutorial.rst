@@ -26,8 +26,7 @@ For the nonlinear setting, standardize first and use ``NeuroCausalFactorAnalysis
    >>> dataset = (dataset - dataset.mean(0)) / dataset.std(0)
    >>> model = NeuroCausalFactorAnalysis(verbose=True).fit(dataset)
 
-This jointly learns the causal factor structure (``model.biadj``) and the
-nonlinear generative mechanisms (a masked VAE stored in ``model.parameters.vae``).
+This first learns a minimal causal factor structure (``model.biadj``) and then a deep generative model from latents to measurements (a masked VAE stored in ``model.parameters.vae``).
 
 To save training artifacts, pass a ``log_path`` argument; MeDIL will create
 that directory and write the learned model (in

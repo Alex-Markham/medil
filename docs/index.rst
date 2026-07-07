@@ -1,5 +1,5 @@
-Welcome to ``MeDIL``'s documentation!
-=====================================
+MeDIL
+=====
 
 MeDIL is a Python package for causal factor analysis, using the measurement dependence inducing latent (MeDIL) causal model framework :cite:`Markham_2020_UAI`.
 The package is under active development---see the ``develop`` branch of the repository on `GitLab <https://gitlab.com/alex-markham/medil/-/tree/develop>`_ or its `Github mirror <https://github.com/Alex-Markham/medil>`_.
@@ -26,6 +26,8 @@ Features:
 * random generation of and sampling from linear Gaussian and deep generative causal factor models
 
 * exact search for minimum edge clique cover (ECC) :cite:`Gramm_2009` as well as polynomial time heuristic using the one-pure-child assumption :cite:`markham2023neuro`
+
+* reproducible experiments from :cite:`markham2023neuro` via a Snakemake workflow in ``src/expt/`` — see the `experiment README <https://gitlab.com/alex-markham/medil/-/blob/develop/src/expt/README.md>`_
 
 Design principles:
 ------------------
