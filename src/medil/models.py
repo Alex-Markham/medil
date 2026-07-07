@@ -213,6 +213,19 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         torch.use_deterministic_algorithms(True)
 
     def fit(self, dataset: npt.NDArray, split_idcs=None) -> "NeuroCausalFactorAnalysis":
+        """Fit a NeuroCausalFactorAnalysis model to a dataset using a masked VAE.
+
+        Parameters
+        ----------
+        dataset : ndarray of shape (n_samples, n_features)
+        split_idcs : tuple of index arrays, optional
+            (train_indices, valid_indices). If None, a 70/30 train/valid split
+            is created automatically using self.seed.
+
+        Returns
+        -------
+        self : NeuroCausalFactorAnalysis
+        """
         self._set_deterministic_seed()
         self.dataset = dataset
 
