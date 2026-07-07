@@ -10,17 +10,22 @@ from pathlib import Path
 
 import numpy as np
 import numpy.typing as npt
-import torch
-import torch.nn.functional as F
 from numpy.random import default_rng
 from scipy.optimize import minimize
 from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader, TensorDataset
-from tqdm import tqdm
 
 from .ecc_algorithms import find_heuristic_1pc
 from .independence_testing import estimate_UDG
-from .vae import VariationalAutoencoder
+
+try:
+    import torch
+    import torch.nn.functional as F
+    from torch.utils.data import DataLoader, TensorDataset
+    from tqdm import tqdm
+    from .vae import VariationalAutoencoder
+    _TORCH_AVAILABLE = True
+except ImportError:
+    _TORCH_AVAILABLE = False
 
 
 class MedilCausalModel(object):
@@ -155,6 +160,11 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
         verbose: bool = False,
         **kwargs,
     ):
+        if not _TORCH_AVAILABLE:
+            raise ImportError(
+                "NeuroCausalFactorAnalysis requires PyTorch. "
+                "Install it with: pip install medil[ncfa]"
+            )
         super().__init__(**kwargs)
 
         if log_path:

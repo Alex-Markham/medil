@@ -2,12 +2,10 @@
 
 import numpy as np
 import numpy.typing as npt
-import torch
 from numpy.random import default_rng
 
 from .ecc_algorithms import find_clique_min_cover
 from .models import GaussianMCM, NeuroCausalFactorAnalysis
-from .vae import VariationalAutoencoder
 
 
 def mcm(
@@ -35,6 +33,14 @@ def mcm(
         params.error_variances = (rng.random(num_meas) * 1.5) + 0.5
 
     elif parameterization == "VAE":
+        try:
+            import torch
+            from .vae import VariationalAutoencoder
+        except ImportError:
+            raise ImportError(
+                "parameterization='VAE' requires PyTorch. "
+                "Install it with: pip install medil[ncfa]"
+            )
         model = NeuroCausalFactorAnalysis(biadj=biadj, rng=rng)
         num_latent, num_meas = biadj.shape
         biadj_tensor = torch.tensor(biadj.T, dtype=torch.float32)

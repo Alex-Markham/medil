@@ -23,17 +23,16 @@ Features:
 
 * :math:`\ell_0`-penalized maximum likelihood estimation (BIC score-based search) for minimum MeDIL causal graphs in the linear Gaussian setting, as well as nonparametric constraint-based search using distance covariance or xi correlation
 
-* random generation of and sampling from linear Gaussian causal factor models
+* random generation of and sampling from linear Gaussian and deep generative causal factor models
 
 * exact search for minimum edge clique cover (ECC) :cite:`Gramm_2009` as well as polynomial time heuristic using the one-pure-child assumption :cite:`markham2023neuro`
 
-..
-   Design principles:
-   ------------------
+Design principles:
+------------------
 
-   * basic functionality with minimal dependencies (just `SciPy
-     <https://scipy.org>`_) and optional dependencies (`PyTorch
-     <https://pytorch.org>`_, `NetworkX <https://networkx.org/>`_, etc.) for more functionality
+* core functionality (linear Gaussian setting) with minimal dependencies: NumPy, SciPy, and scikit-learn
+
+* optional `PyTorch <https://pytorch.org>`_ dependency (``pip install medil[ncfa]``) for :class:`~medil.models.NeuroCausalFactorAnalysis` and deep generative causal mechanisms
 
 Further documentation:
 ----------------------
