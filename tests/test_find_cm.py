@@ -1,5 +1,5 @@
 import numpy as np
-from medil.ecc_algorithms import find_clique_min_cover as find_cm
+from medil.ecc_algorithms import _find_clique_min_cover as find_cm
 from medil.examples import examples
 
 

@@ -1,6 +1,6 @@
 import numpy as np
 
-from medil.graph import UndirectedDependenceGraph
+from medil._graph import UndirectedDependenceGraph
 import medil.examples as ex
 
 

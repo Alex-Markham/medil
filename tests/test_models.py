@@ -5,14 +5,14 @@ import pytest
 import torch
 from medil.models import (
     GaussianMCM,
-    MedilCausalModel,
+    _MedilCausalModel,
     NeuroCausalFactorAnalysis,
 )
 
 
 class TestMedilCausalModel:
     def test_base(self):
-        mcm = MedilCausalModel()
+        mcm = _MedilCausalModel()
         with pytest.raises(NotImplementedError):
             mcm.fit(np.array([]))
         with pytest.raises(NotImplementedError):

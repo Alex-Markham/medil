@@ -2,21 +2,21 @@ import numpy as np
 import pytest
 from numpy.random import default_rng
 
-from medil.independence_testing import dcov, estimate_UDG, xicorr
+from medil.independence_testing import _dcov, _estimate_UDG, _xicorr
 
 
 def test_xicorr_monotone():
     """Monotone relationship should produce positive xi and small p-value."""
     x = list(range(1, 21))
     y = [v**2 for v in x]
-    xi, pvalue = xicorr(x, y)
+    xi, pvalue = _xicorr(x, y)
     assert xi > 0
     assert pvalue < 0.05
 
 
 def test_xicorr_size_mismatch():
     with pytest.raises(ValueError):
-        xicorr([1, 2, 3], [1, 2])
+        _xicorr([1, 2, 3], [1, 2])
 
 
 def test_dcov_independent():
@@ -24,7 +24,7 @@ def test_dcov_independent():
     rng = default_rng(0)
     n = 500
     x = rng.standard_normal((n, 2))
-    cov, _ = dcov(x)
+    cov, _ = _dcov(x)
     assert abs(cov[0, 1]) < 0.05
 
 
@@ -34,7 +34,7 @@ def test_dcov_dependent():
     n = 500
     z = rng.standard_normal(n)
     x = np.column_stack([z, z + 0.1 * rng.standard_normal(n)])
-    cov, _ = dcov(x)
+    cov, _ = _dcov(x)
     assert cov[0, 1] > 0.1
 
 
@@ -48,7 +48,7 @@ def test_estimate_UDG_dcov_fast():
     errors = rng.multivariate_normal(np.zeros(3), np.eye(3), 1000)
     dataset = latent @ weights + errors
 
-    udg, _ = estimate_UDG(dataset, method="dcov_fast")
+    udg, _ = _estimate_UDG(dataset, method="dcov_fast")
     np.fill_diagonal(udg, False)
 
     expected_udg = biadj.T @ biadj
@@ -66,7 +66,7 @@ def test_estimate_UDG_xicor():
     errors = rng.multivariate_normal(np.zeros(3), np.eye(3), 1000)
     dataset = latent @ weights + errors
 
-    udg, _ = estimate_UDG(dataset, method="xicor")
+    udg, _ = _estimate_UDG(dataset, method="xicor")
     np.fill_diagonal(udg, False)
 
     expected_udg = biadj.T @ biadj
@@ -78,4 +78,4 @@ def test_estimate_UDG_gtest_not_implemented():
     rng = default_rng(0)
     data = rng.standard_normal((100, 3))
     with pytest.raises(NotImplementedError):
-        estimate_UDG(data, method="g-test")
+        _estimate_UDG(data, method="g-test")

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from medil.evaluate import sfd, shd
+from medil.evaluate import _shd, sfd
 
 
 def true_mcm():
@@ -25,16 +25,16 @@ def est_mcm2():
 
 def test_nshd():
     with pytest.raises(ValueError):
-        shd([1])
+        _shd([1])
     with pytest.raises(ValueError):
-        shd([1], predicted_biadj=[1], predicted_adj=[1])
+        _shd([1], predicted_biadj=[1], predicted_adj=[1])
     with pytest.raises(ValueError):
-        shd(true_mcm(), predicted_biadj=est_mcm1(), to_return="nope")
-    assert shd(true_mcm(), predicted_biadj=est_mcm1(), to_return="raw") == 2
-    assert shd(true_mcm(), predicted_biadj=est_mcm1(), to_return="normalized") == 2 / 12
-    assert shd(true_mcm(), predicted_biadj=est_mcm1(), to_return="both") == (2, 2 / 12)
-    assert shd(true_mcm(), predicted_biadj=est_mcm2()) == 2
-    assert shd(est_mcm1(), predicted_biadj=est_mcm2()) == 4
+        _shd(true_mcm(), predicted_biadj=est_mcm1(), to_return="nope")
+    assert _shd(true_mcm(), predicted_biadj=est_mcm1(), to_return="raw") == 2
+    assert _shd(true_mcm(), predicted_biadj=est_mcm1(), to_return="normalized") == 2 / 12
+    assert _shd(true_mcm(), predicted_biadj=est_mcm1(), to_return="both") == (2, 2 / 12)
+    assert _shd(true_mcm(), predicted_biadj=est_mcm2()) == 2
+    assert _shd(est_mcm1(), predicted_biadj=est_mcm2()) == 4
 
 
 def test_nsfd():
