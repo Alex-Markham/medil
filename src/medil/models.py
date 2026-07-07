@@ -307,7 +307,6 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
 
         for epoch in pbar:
             model.train()
-            train_lb, train_er, nbatch = 0.0, 0.0, 0
 
             for (x_batch,) in train_loader:
                 x_batch = x_batch.to(self.device)
@@ -316,15 +315,10 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
                 loss = self._vae_loss(
                     x_batch, x_recon, mu, logvar, beta=self.hyperparams["beta"]
                 )
-                error = self._recon_error(x_batch, x_recon)
 
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-
-                train_lb += loss.item() / x_batch.shape[0]
-                train_er += error.item() / x_batch.shape[0]
-                nbatch += 1
 
             train_lb, train_er = self._eval_loss(model, train_loader)
             train_elbo.append(train_lb)
