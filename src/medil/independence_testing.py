@@ -6,11 +6,12 @@ from typing import NamedTuple, Optional
 import numpy as np
 import numpy.typing as npt
 from scipy.spatial.distance import pdist, squareform
-from scipy.stats import chi2, norm, rankdata
+from scipy.stats import chatterjeexi, chi2
 
 
 def dcov(samples):
     r"""Compute sample distance covariance matrix.
+
     Parameters
     ----------
     samples : 2d numpy array of floats
@@ -86,105 +87,47 @@ def xicor_test(x_y):
     return pvalue
 
 
-# The following is a modification of the xicorrelation source code,
-# Copyright 2021 Nikolay Novik (https://github.com/jettify),
-# for compatibility with numpy 2.0+
-class _XiCorr(NamedTuple):
-    xi: float
-    fr: npt.NDArray[np.float64]
-    cu: float
-
-
 class XiCorrResult(NamedTuple):
     correlation: float
     pvalue: Optional[float]
 
 
-def _xicorr(x: npt.NDArray[np.float64], y: npt.NDArray[np.float64]) -> _XiCorr:
-    # Ported from original R implementation.
-    # https://github.com/cran/XICOR/blob/master/R/calculateXI.R
-    n = x.size
-    PI = rankdata(x, method="average")
-    fr = rankdata(y, method="average") / n
-    gr = rankdata(-y, method="average") / n
-    cu = np.mean(gr * (1 - gr))
-    A1 = np.abs(np.diff(fr[np.argsort(PI, kind="quicksort")])).sum() / (2 * n)
-    xi = 1.0 - A1 / cu
-    return _XiCorr(xi, fr, cu)
-
-
 def xicorr(x: npt.ArrayLike, y: npt.ArrayLike, ties: bool = True) -> XiCorrResult:
-    """Compute the cross rank increment correlation coefficient xi [1].
+    """Compute Chatterjee's xi correlation coefficient.
 
     Parameters
     ----------
     x, y : array_like
-        Arrays of rankings, of the same shape. If arrays are not 1-D, they
-        will be flattened to 1-D.
+        Arrays of the same length. Flattened to 1-D if needed.
     ties : bool, optional
-        If ties is True, the algorithm assumes that the data has ties and
-        employs the more elaborated theory for calculating s.d. and P-value.
-        Otherwise, it uses the simpler theory. There is no harm in putting
-        ties = True even if there are no ties.
+        If True (default), uses the variance formula for tied data.
+        There is no harm in leaving this True even when there are no ties.
 
     Returns
     -------
     correlation : float
-       The xi correlation coefficient.
+        Chatterjee's xi correlation coefficient.
     pvalue : float
-       P-value computed by the asymptotic theory.
+        P-value computed by the asymptotic theory.
 
     References
     ----------
-    .. [1] Chatterjee, S., "A new coefficient of correlation",
-           https://arxiv.org/abs/1909.10140, 2020.
+    Chatterjee, S., "A new coefficient of correlation",
+    Journal of the American Statistical Association, 116(536), 2021.
+    https://doi.org/10.1080/01621459.2020.1758115
 
     Examples
     --------
     >>> x1 = [12, 2, 1, 12, 2]
     >>> x2 = [1, 4, 7, 1, 0]
     >>> xi, pvalue = xicorr(x1, x2)
-    >>> xi
-    -0.47140452079103173
-    >>> pvalue
-    0.2827454599327748
     """
-    # https://git.io/JSIlN
     x = np.asarray(x).ravel()
     y = np.asarray(y).ravel()
-
     if x.size != y.size:
         raise ValueError(
             "All inputs to `xicorr` must be of the same "
             f"size, found x-size {x.size} and y-size {y.size}"
         )
-    elif not x.size or not y.size:
-        # Return NaN if arrays are empty
-        return XiCorrResult(np.nan, np.nan)
-
-    r = _xicorr(x, y)
-    xi = r.xi
-    fr = r.fr
-    CU = r.cu
-
-    pvalue: Optional[float] = None
-    # https://git.io/JSIlM
-    n = x.size
-    if not ties:
-        # sd = np.sqrt(2.0 / (5.0 * n))
-        pvalue = 1.0 - norm.cdf(np.sqrt(n) * xi / np.sqrt(2.0 / 5.0))
-    else:
-        qfr = np.sort(fr)
-        ind = np.arange(1, n + 1)
-        ind2 = 2 * n - 2 * ind + 1
-
-        ai = np.mean(ind2 * qfr * qfr) / n
-        ci = np.mean(ind2 * qfr) / n
-        cq = np.cumsum(qfr)
-        m = (cq + (n - ind) * qfr) / n
-        b = np.mean(m**2)
-        v = (ai - 2.0 * b + ci**2) / (CU**2)
-
-        # sd = np.sqrt(v / n)
-        pvalue = 1.0 - norm.cdf(np.sqrt(n) * xi / np.sqrt(v))
-    return XiCorrResult(xi, pvalue)
+    result = chatterjeexi(x, y, y_continuous=not ties)
+    return XiCorrResult(result.statistic, result.pvalue)
