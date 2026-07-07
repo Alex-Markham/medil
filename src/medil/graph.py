@@ -125,14 +125,6 @@ class UndirectedDependenceGraph(object):
     def reducible_copy(self):
         return ReducibleUndDepGraph(self)
 
-    def convert_to_nde(self, name="temp"):
-        with open(name + ".nde", "w") as f:
-            f.write(str(self.max_num_verts) + "\n")
-            for idx, node in enumerate(self.adj_matrix):
-                f.write(str(idx) + " " + str(node.sum()) + "\n")
-            for v1, v2 in np.argwhere(np.triu(self.adj_matrix)):
-                f.write(str(v1) + " " + str(v2) + "\n")
-
 
 class ReducibleUndDepGraph(UndirectedDependenceGraph):
     def __init__(self, udg):
@@ -216,22 +208,6 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
 
             # remove isolated_verts from common neighborhoods
             self.common_neighbors[:, isolated_verts] = 0
-
-        # max_num_edges = self.n_choose_2(self.unreduced.max_num_verts)
-        # mask = lambda edge_idx: np.array(self.common_neighbors[edge_idx], dtype=bool)
-
-        # # make subgraph-adjacency matrix, and then subtract diag and
-        # # divide by two to get num edges in subgraph---same as sum() of
-        # # triu(subgraph-adjacency matrix) but probably a bit faster
-        # nbrhood = lambda edge_idx: self.adj_matrix[mask(edge_idx)][:, mask(edge_idx)]
-        # max_num_edges_in_nbrhood = lambda edge_idx: (nbrhood(edge_idx).sum() - mask(edge_idx).sum()) // 2
-
-        # # from paper: set of c_{u, v} for all edges (u, v)
-        # self.nbrhood_edge_counts = np.array([max_num_edges_in_nbrhood(edge_idx) for edge_idx in np.arange(max_num_edges)], int)
-        # # assert (nbrhood_edge_counts==self.nbrhood_edge_counts).all()
-        # # print(nbrhood_edge_counts, self.nbrhood_edge_counts)
-        # # need to fix!!!!!!!! update isn't working; so just recomputing for now
-        # # # # # # # # but actually update produces correct result though recomputing doesn't?
 
     def rule_2(self):
         # rule_2: If an uncovered edge {u,v} is contained in exactly
@@ -391,7 +367,3 @@ class ReducibleUndDepGraph(UndirectedDependenceGraph):
             the_cover[cliques_to_update_mask, vert] = 1
 
         return the_cover
-
-
-# class MCM(object):
-# TODO: implement as large DAG adj matrix over L and M, or smaller bigraph for L-M connections and DAG adj matirx for L->L connections

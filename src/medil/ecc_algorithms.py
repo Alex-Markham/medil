@@ -95,19 +95,11 @@ def branch(graph, k_num_cliques, the_cover, iteration, iteration_max):
 
     iteration = iteration + 1
     branch_graph = graph.reducible_copy()
-    # if the_cover is not None:
-    #     print(the_cover)
-    #     for clique in the_cover:  # this might not be necessary, since the_cover_prime is only +1 clique
-    #         print('clique: {}'.format(clique))
-    #         branch_graph.the_cover = [clique]
-    #         branch_graph.cover_edges()  # only works one clique at a time, or on a list of edges
     branch_graph.the_cover = the_cover
     branch_graph.cover_edges()
 
     if branch_graph.num_edges == 0:
         return branch_graph.reconstruct_cover(the_cover)
-
-    # branch_graph.the_cover = the_cover
 
     branch_graph.reduzieren(k_num_cliques)
     k_num_cliques = branch_graph.k_num_cliques
