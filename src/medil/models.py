@@ -385,6 +385,33 @@ class NeuroCausalFactorAnalysis(MedilCausalModel):
     def _recon_error(x, x_recon):
         return torch.linalg.norm(x - x_recon, ord=2)
 
+    def sample(self, sample_size: int, include_latent: bool = False) -> npt.NDArray:
+        """Sample observations from a fitted NeuroCausalFactorAnalysis model.
+
+        Parameters
+        ----------
+        sample_size : int
+            Number of samples to generate.
+        include_latent : bool, optional
+            If True, also return the latent codes z drawn from the prior.
+            Note: z has shape (sample_size, num_latent * latent_width).
+
+        Returns
+        -------
+        sample : ndarray of shape (sample_size, num_meas)
+        latent_sample : ndarray of shape (sample_size, latent_dim), only if include_latent=True
+        """
+        if self.parameters.vae is None:
+            raise ValueError("Model must be fitted before sampling.")
+        vae = self.parameters.vae
+        latent_dim = vae.decoder.latent_dim
+        z = torch.randn(sample_size, latent_dim, device=self.device)
+        with torch.no_grad():
+            vae.eval()
+            x_recon = vae.decoder(z)
+        out = x_recon.cpu().numpy()
+        return (out, z.cpu().numpy()) if include_latent else out
+
     def set_full_decoder_mask(self, num_meas=None):
         if num_meas is None:
             if not hasattr(self, "dataset"):
