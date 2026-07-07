@@ -61,7 +61,7 @@ def estimate_UDG(sample, method="dcov_fast", significance_level=0.05):
         udg = test_val >= crit_val
         p_vals = None
     elif method == "g-test":
-        pass
+        raise NotImplementedError("g-test is not yet implemented")
     else:
         p_vals = np.zeros((num_feats, num_feats), float)
         idxs, jdxs = np.triu_indices(num_feats, 1)
