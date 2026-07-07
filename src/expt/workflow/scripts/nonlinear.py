@@ -44,17 +44,14 @@ start = time.perf_counter()
 model.fit(train)
 end = time.perf_counter()
 mp = model.parameters
-# print(mp.biadj)
 
 # reconstruct latent samples, E[z|x], for validation set
 _mu, _logvar = mp.vae.encoder(tensor(val.astype(np.float32)))
 latent_recon = _mu.detach().numpy()
-# print(latent_recon.shape)
 
 # reconstruct validation data from latents
 _x_recon = mp.vae.decoder(_mu)
 reconstructed = _x_recon.detach().numpy()
-# print(reconstructed.shape)
 
 # evaluate
 result = {

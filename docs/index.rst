@@ -21,7 +21,7 @@ Features:
 
 * estimation of sparse causal factor structure and loadings in the linear Gaussian setting or more generally using a deep generative model :cite:`markham2023neuro`
 
-* :math:`\ell_0`-penalized maximum likelihood estimation (BIC score-based search) for minimum MeDIL causal graphs in the linear Gaussian setting, as well as nonparametric constraint-based search using `distance covariance <https://dcor.readthedocs.io/en/stable/index.html>`_ or `xi correlation <https://pypi.org/project/xicorrelation/>`_
+* :math:`\ell_0`-penalized maximum likelihood estimation (BIC score-based search) for minimum MeDIL causal graphs in the linear Gaussian setting, as well as nonparametric constraint-based search using distance covariance or xi correlation
 
 * random generation of and sampling from linear Gaussian causal factor models
 
