@@ -40,6 +40,7 @@ Further documentation:
    :maxdepth: 1
 
    self
+   installation
    tutorial
    theory
    citing
