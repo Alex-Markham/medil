@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from numpy.random import default_rng
 
-from medil.independence_testing import _dcov, _estimate_UDG, _xicorr
+from medil._independence_testing import _dcov, _estimate_UDG, _xicorr
 
 
 def test_xicorr_monotone():

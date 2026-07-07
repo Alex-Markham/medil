@@ -15,7 +15,7 @@ from scipy.optimize import minimize
 from sklearn.model_selection import train_test_split
 
 from ._ecc_algorithms import _find_heuristic_1pc
-from .independence_testing import _estimate_UDG
+from ._independence_testing import _estimate_UDG
 
 try:
     import torch
