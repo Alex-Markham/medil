@@ -18,9 +18,9 @@ Features:
 ---------
 * `scikit-learn <https://scikit-learn.org/stable/developers/develop.html#apis-of-scikit-learn-objects>`_-style API
 
-* estimation of sparse causal factor structure and loadings in the linear Gaussian setting or more generally using a deep generative model :cite:`markham2023neuro`
+* estimation of sparse causal factor structure and loadings in the linear Gaussian setting or more generally using a deep generative model :cite:`markham2023neuro`, supporting both continuous and categorical measurements
 
-* :math:`\ell_0`-penalized maximum likelihood estimation (BIC score-based search) for minimum MeDIL causal graphs in the linear Gaussian setting, as well as nonparametric constraint-based search using distance covariance or xi correlation
+* :math:`\ell_0`-penalized maximum likelihood estimation (BIC score-based search) for minimum MeDIL causal graphs in the linear Gaussian setting, as well as nonparametric constraint-based search using distance covariance, xi correlation, or g-test (for discrete data)
 
 * random generation of and sampling from linear Gaussian and deep generative causal factor models
 
