@@ -4,11 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 202X-XX-XX ##
+## [2.0.0] - 2026-XX-XX ##
 
 ### Added ###
-- `NeuroCausalFactorAnalysis.sample()` — fulfils the base class contract; supports `include_latent=True` matching `GaussianMCM` interface
-- `sample.mcm(parameterization="VAE")` — randomly initialized NCFA with structured VAE weights, immediately sampleable
+- `NeuroCausalFactorAnalysis.sample()` fulfills the base class contract; supports `include_latent=True` matching `GaussianMCM` interface
+- `sample.mcm(parameterization="VAE")` randomly initialized NCFA with structured VAE weights, immediately sampleable
 - `sample` and `evaluate` submodules exported from top-level `medil` package for discoverability
 - tests for `independence_testing` module (`xicorr`, `dcov`, `estimate_UDG`)
 - g-test (likelihood-ratio chi-squared) independence test for discrete/integer data via `estimate_UDG(method="g-test")`
@@ -17,9 +17,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed ###
 - pyproject.toml based packaging, managed by uv and devenv
 - `find_clique_min_cover`: `verbose` parameter now actually controls output (was hardcoded `if True`)
-
-### Fixed ###
-- `estimate_UDG`: `g-test` branch previously raised `NotImplementedError`; now implemented
 
 ### Removed ###
 - `setup.py` (superseded by `pyproject.toml`)

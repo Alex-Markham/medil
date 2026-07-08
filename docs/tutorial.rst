@@ -4,7 +4,7 @@ Tutorial
 Quick start
 -----------
 
-The simplest way to get started is to generate a synthetic dataset and fit a model to it:
+A simple way to get started is to generate a synthetic dataset and fit a model to it:
 
 .. code-block:: python
 
@@ -19,7 +19,7 @@ The simplest way to get started is to generate a synthetic dataset and fit a mod
    >>> print(model.biadj)   # learned bipartite graph
    >>> print(model.parameters)
 
-For the nonlinear setting, standardize first and use ``NeuroCausalFactorAnalysis``:
+For the continuous nonlinear setting, standardize first and use ``NeuroCausalFactorAnalysis``:
 
 .. code-block:: python
 
@@ -28,10 +28,7 @@ For the nonlinear setting, standardize first and use ``NeuroCausalFactorAnalysis
 
 This first learns a minimal causal factor structure (``model.biadj``) and then a deep generative model from latents to measurements (a masked VAE stored in ``model.parameters.vae``).
 
-To save training artifacts, pass a ``log_path`` argument; MeDIL will create
-that directory and write the learned model (in
-`PyTorch format <https://pytorch.org/tutorials/beginner/saving_loading_models.html>`_)
-and pickled training/reconstruction losses to it.
+To save training artifacts, pass a ``log_path`` argument; MeDIL will create that directory and write the learned model (in `PyTorch format <https://pytorch.org/tutorials/beginner/saving_loading_models.html>`_) and pickled training/reconstruction losses to it.
 
 
 Sampling
@@ -52,8 +49,7 @@ Generate a random Gaussian MeDIL causal model and draw a synthetic dataset:
                               [-1.95188928  0.         -0.52205946  1.79546014  1.97179256]]
    >>> dataset = model.sample(1000)
 
-You can also generate a randomly initialized NCFA model (useful for simulating
-from a nonlinear model before fitting):
+You can also generate a randomly initialized NCFA model (useful for simulating from a nonlinear model before fitting):
 
 .. code-block:: python
 
@@ -65,14 +61,14 @@ Once an NCFA model is fitted, sampling works the same way:
 .. code-block:: python
 
    >>> fitted = NeuroCausalFactorAnalysis().fit(dataset)
-   >>> new_samples = fitted.sample(500)                          # shape (500, num_meas)
-   >>> new_samples, latents = fitted.sample(500, include_latent=True)  # also return latent codes
+   >>> new_data = fitted.sample(500)                          # shape (500, num_meas)
+   >>> new_data, latents = fitted.sample(500, include_latent=True)  # also return latent codes
 
 
 Evaluation
 ----------
 
-Given a known ground-truth structure (e.g. from a simulation), measure how close the learned graph is:
+Given a known ground-truth structure (e.g., from a simulation), measure how close the learned graph is:
 
 .. code-block:: python
 
@@ -123,8 +119,8 @@ For discrete measurements, use the g-test for structure learning and set
    >>> # dataset contains integer class indices (e.g. 0, 1, 2 for K=3)
    >>> model = NeuroCausalFactorAnalysis()
    >>> model.hyperparams.update({"method": "g-test", "num_classes": 3})
-   >>> model.fit(dataset)          # no standardization needed
-   >>> samples = model.sample(500) # integer class indices in {0, 1, 2}
+   >>> model.fit(dataset)
+   >>> dataset = model.sample(500) # integer class indices in {0, 1, 2}
 
 A single ``num_classes`` value applies uniformly to all measurements.
 If variables differ in cardinality, set ``num_classes`` to the maximum;
