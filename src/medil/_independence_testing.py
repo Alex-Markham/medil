@@ -6,7 +6,7 @@ from typing import NamedTuple, Optional
 import numpy as np
 import numpy.typing as npt
 from scipy.spatial.distance import pdist, squareform
-from scipy.stats import chatterjeexi, chi2
+from scipy.stats import chatterjeexi, chi2, chi2_contingency
 
 
 def _dcov(samples):
@@ -63,7 +63,18 @@ def _estimate_UDG(sample, method="dcov_fast", significance_level=0.05):
         udg = test_val >= crit_val
         p_vals = None
     elif method == "g-test":
-        raise NotImplementedError("g-test is not yet implemented")
+        if not np.issubdtype(sample.dtype, np.integer):
+            raise ValueError(
+                f"g-test requires integer-valued data; got dtype {sample.dtype!r}"
+            )
+        p_vals = np.zeros((num_feats, num_feats), float)
+        idxs, jdxs = np.triu_indices(num_feats, 1)
+        sample_iter = (sample[:, i_j].T for i_j in zip(idxs, jdxs))
+        with Pool(max(1, int(0.75 * cpu_count()))) as p:
+            p_vals[idxs, jdxs] = p_vals[jdxs, idxs] = np.fromiter(
+                p.imap(_g_test, sample_iter, 100), float
+            )
+        udg = p_vals < significance_level
     else:
         p_vals = np.zeros((num_feats, num_feats), float)
         idxs, jdxs = np.triu_indices(num_feats, 1)
@@ -80,6 +91,16 @@ def _estimate_UDG(sample, method="dcov_fast", significance_level=0.05):
             udg = p_vals < significance_level
     np.fill_diagonal(udg, False)
     return udg, p_vals
+
+
+def _g_test(x_y):
+    x, y = x_y
+    x_vals, xi = np.unique(x, return_inverse=True)
+    y_vals, yi = np.unique(y, return_inverse=True)
+    table = np.zeros((len(x_vals), len(y_vals)), dtype=int)
+    np.add.at(table, (xi, yi), 1)
+    _, p, _, _ = chi2_contingency(table, lambda_="log-likelihood")
+    return p
 
 
 def _xicor_test(x_y):

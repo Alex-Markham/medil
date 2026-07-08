@@ -74,8 +74,26 @@ def test_estimate_UDG_xicor():
     assert (udg == expected_udg).all()
 
 
-def test_estimate_UDG_gtest_not_implemented():
+def test_estimate_UDG_gtest():
+    """Same M-graph with discrete data, using g-test."""
+    rng = default_rng(0)
+    n = 1000
+    L1 = rng.integers(0, 3, n)
+    L2 = rng.integers(0, 3, n)
+    dataset = np.column_stack([L1, L1 * 3 + L2, L2])
+
+    udg, _ = _estimate_UDG(dataset, method="g-test")
+    np.fill_diagonal(udg, False)
+
+    biadj = np.zeros((2, 3), bool)
+    biadj[[0, 0, 1, 1], [0, 1, 1, 2]] = True
+    expected_udg = biadj.T @ biadj
+    np.fill_diagonal(expected_udg, False)
+    assert (udg == expected_udg).all()
+
+
+def test_estimate_UDG_gtest_requires_integer():
     rng = default_rng(0)
     data = rng.standard_normal((100, 3))
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ValueError):
         _estimate_UDG(data, method="g-test")
