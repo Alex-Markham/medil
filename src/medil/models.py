@@ -208,9 +208,10 @@ class GaussianMCM(_MedilCausalModel):
 class NeuroCausalFactorAnalysis(_MedilCausalModel):
     """Nonlinear MeDIL causal model represented by a masked variational autoencoder.
 
-    Jointly learns the causal factor structure (``biadj``) and nonlinear
-    generative mechanisms via a masked VAE whose decoder connectivity encodes
-    the latent→measurement graph :cite:`markham2023neuro`.
+    Learns a nonlinear MeDIL causal model in two phases: pairwise independence
+    tests identify the causal factor structure (``biadj``), then a masked VAE
+    whose decoder connectivity encodes that structure is trained to learn
+    nonlinear generative mechanisms :cite:`markham2023neuro`.
 
     Requires PyTorch: ``pip install medil[ncfa]``.
 

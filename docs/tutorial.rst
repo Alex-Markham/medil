@@ -110,6 +110,29 @@ See the :class:`~medil.models.NeuroCausalFactorAnalysis` API docs for the
 full list of keys and their defaults.
 
 
+Categorical data
+----------------
+
+For discrete measurements, use the g-test for structure learning and set
+``num_classes`` to the number of categories:
+
+.. code-block:: python
+
+   >>> from medil import NeuroCausalFactorAnalysis
+   >>>
+   >>> # dataset contains integer class indices (e.g. 0, 1, 2 for K=3)
+   >>> model = NeuroCausalFactorAnalysis()
+   >>> model.hyperparams.update({"method": "g-test", "num_classes": 3})
+   >>> model.fit(dataset)          # no standardization needed
+   >>> samples = model.sample(500) # integer class indices in {0, 1, 2}
+
+A single ``num_classes`` value applies uniformly to all measurements.
+If variables differ in cardinality, set ``num_classes`` to the maximum;
+variables with fewer categories will train correctly, though
+:meth:`~medil.models.NeuroCausalFactorAnalysis.sample` may occasionally
+return out-of-range indices for those variables.
+
+
 Accessing model internals
 -------------------------
 
