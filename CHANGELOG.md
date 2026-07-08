@@ -11,13 +11,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `sample.mcm(parameterization="VAE")` — randomly initialized NCFA with structured VAE weights, immediately sampleable
 - `sample` and `evaluate` submodules exported from top-level `medil` package for discoverability
 - tests for `independence_testing` module (`xicorr`, `dcov`, `estimate_UDG`)
+- g-test (likelihood-ratio chi-squared) independence test for discrete/integer data via `estimate_UDG(method="g-test")`
+- `NeuroCausalFactorAnalysis` hyperparameter `"num_classes"` (default 1 = continuous): setting K ≥ 2 enables categorical measurements with cross-entropy ELBO and multinomial sampling
 
 ### Changed ###
 - pyproject.toml based packaging, managed by uv and devenv
 - `find_clique_min_cover`: `verbose` parameter now actually controls output (was hardcoded `if True`)
 
 ### Fixed ###
-- `estimate_UDG`: unimplemented `g-test` branch now raises `NotImplementedError` instead of silently returning uninitialized variables
+- `estimate_UDG`: `g-test` branch previously raised `NotImplementedError`; now implemented
 
 ### Removed ###
 - `setup.py` (superseded by `pyproject.toml`)
