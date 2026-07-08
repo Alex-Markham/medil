@@ -214,8 +214,9 @@ class NeuroCausalFactorAnalysis(_MedilCausalModel):
 
     Requires PyTorch: ``pip install medil[ncfa]``.
 
-    Input data should be standardized (zero mean, unit variance per feature)
-    before calling :meth:`fit`.
+    For continuous data, input should be standardized (zero mean, unit variance
+    per feature) before calling :meth:`fit`. For categorical data, pass raw
+    class indices (integers 0 to K-1) and set ``hyperparams["num_classes"] = K``.
 
     Parameters
     ----------
@@ -247,7 +248,8 @@ class NeuroCausalFactorAnalysis(_MedilCausalModel):
         before calling :meth:`fit`. Keys:
 
         - ``"method"`` : independence test for structure learning
-          (``"xicor"`` or ``"dcov_fast"``; default ``"xicor"``)
+          (``"xicor"``, ``"dcov_fast"``, or ``"g-test"`` for integer data;
+          default ``"xicor"``)
         - ``"alpha"`` : significance level for independence tests (default 0.05)
         - ``"num_epochs"`` : maximum training epochs (default 200)
         - ``"lr"`` : AdamW learning rate (default 1e-3)
@@ -260,6 +262,11 @@ class NeuroCausalFactorAnalysis(_MedilCausalModel):
         - ``"early_stopping"`` : stop when validation ELBO stagnates (default True)
         - ``"patience"`` : early stopping patience in epochs (default 20)
         - ``"min_delta"`` : minimum ELBO improvement to reset patience (default 1e-4)
+        - ``"num_classes"`` : number of categories per measurement (1 = continuous
+          with MSE reconstruction, K ≥ 2 = categorical with cross-entropy loss;
+          a single K is applied uniformly to all measurements — if some variables
+          have fewer than K categories the model trains correctly but
+          :meth:`sample` may return out-of-range class indices; default 1)
     """
 
     def __init__(
@@ -298,6 +305,7 @@ class NeuroCausalFactorAnalysis(_MedilCausalModel):
             "early_stopping": True,
             "patience": 20,
             "min_delta": 1e-4,
+            "num_classes": 1,
         }
 
         self.parameters = _Parameters("VAE")
@@ -412,6 +420,7 @@ class NeuroCausalFactorAnalysis(_MedilCausalModel):
     def _train_vae(self, train_loader, valid_loader):
         num_meas = self.dataset.shape[1]
         biadj = torch.tensor(self.biadj.T, dtype=torch.float32)
+        num_classes = self.hyperparams["num_classes"]
 
         model = VariationalAutoencoder(
             num_latent=biadj.shape[1],
@@ -421,6 +430,7 @@ class NeuroCausalFactorAnalysis(_MedilCausalModel):
             meas_width=self.hyperparams["meas_width"],
             biadj=biadj,
             encoder_hidden_dim=self.hyperparams["encoder_hidden_dim"],
+            num_classes=num_classes,
         ).to(self.device)
 
         optimizer = torch.optim.AdamW(model.parameters(), lr=self.hyperparams["lr"])
@@ -447,18 +457,19 @@ class NeuroCausalFactorAnalysis(_MedilCausalModel):
 
                 x_recon, mu, logvar = model(x_batch)
                 loss = self._vae_loss(
-                    x_batch, x_recon, mu, logvar, beta=self.hyperparams["beta"]
+                    x_batch, x_recon, mu, logvar, beta=self.hyperparams["beta"],
+                    num_classes=num_classes,
                 )
 
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
-            train_lb, train_er = self._eval_loss(model, train_loader)
+            train_lb, train_er = self._eval_loss(model, train_loader, num_classes)
             train_elbo.append(train_lb)
             train_error.append(train_er)
 
-            valid_lb, valid_er = self._eval_loss(model, valid_loader)
+            valid_lb, valid_er = self._eval_loss(model, valid_loader, num_classes)
             valid_elbo.append(valid_lb)
             valid_error.append(valid_er)
 
@@ -487,7 +498,7 @@ class NeuroCausalFactorAnalysis(_MedilCausalModel):
             [np.array(train_error), np.array(valid_error)],
         )
 
-    def _eval_loss(self, model, loader):
+    def _eval_loss(self, model, loader, num_classes=1):
         model.eval()
         total_loss = 0.0
         total_recon = 0.0
@@ -498,9 +509,10 @@ class NeuroCausalFactorAnalysis(_MedilCausalModel):
                 x_batch = x_batch.to(self.device)
                 x_recon, mu, logvar = model(x_batch)
                 loss = self._vae_loss(
-                    x_batch, x_recon, mu, logvar, beta=self.hyperparams["beta"]
+                    x_batch, x_recon, mu, logvar, beta=self.hyperparams["beta"],
+                    num_classes=num_classes,
                 )
-                recon = self._recon_error(x_batch, x_recon)
+                recon = self._recon_error(x_batch, x_recon, num_classes=num_classes)
 
                 bs = x_batch.shape[0]
                 total_loss += loss.item()
@@ -510,13 +522,22 @@ class NeuroCausalFactorAnalysis(_MedilCausalModel):
         return total_loss / n, total_recon / n
 
     @staticmethod
-    def _vae_loss(x, x_recon, mu, logvar, beta=1.0):
-        recon_loss = F.mse_loss(x_recon, x, reduction="sum")
+    def _vae_loss(x, x_recon, mu, logvar, beta=1.0, num_classes=1):
+        if num_classes >= 2:
+            recon_loss = F.cross_entropy(
+                x_recon.view(-1, num_classes), x.long().view(-1), reduction="sum"
+            )
+        else:
+            recon_loss = F.mse_loss(x_recon, x, reduction="sum")
         kl_div = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
         return recon_loss + beta * kl_div
 
     @staticmethod
-    def _recon_error(x, x_recon):
+    def _recon_error(x, x_recon, num_classes=1):
+        if num_classes >= 2:
+            return F.cross_entropy(
+                x_recon.view(-1, num_classes), x.long().view(-1), reduction="sum"
+            )
         return torch.linalg.norm(x - x_recon, ord=2)
 
     def sample(self, sample_size: int, include_latent: bool = False) -> npt.NDArray:
@@ -539,10 +560,15 @@ class NeuroCausalFactorAnalysis(_MedilCausalModel):
             raise ValueError("Model must be fitted before sampling.")
         vae = self.parameters.vae
         latent_dim = vae.decoder.latent_dim
+        num_classes = self.hyperparams["num_classes"]
         z = torch.randn(sample_size, latent_dim, device=self.device)
         with torch.no_grad():
             vae.eval()
             x_recon = vae.decoder(z)
+            if num_classes >= 2:
+                num_meas = vae.decoder.num_meas
+                probs = torch.softmax(x_recon.view(sample_size, num_meas, num_classes), dim=-1)
+                x_recon = torch.multinomial(probs.view(-1, num_classes), 1).view(sample_size, num_meas).float()
         out = x_recon.cpu().numpy()
         return (out, z.cpu().numpy()) if include_latent else out
 

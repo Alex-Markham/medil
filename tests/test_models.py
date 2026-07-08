@@ -187,3 +187,23 @@ class TestNeuroCausalFactorAnalysis:
         out, latent = ncfa.sample(50, include_latent=True)
         assert out.shape == (50, 3)
         assert latent.shape[0] == 50
+
+    def test_fit_m_categorical(self):
+        """M-graph with discrete K=3 data; categorical ELBO and valid sample values."""
+        from numpy.random import default_rng
+        rng = default_rng(0)
+        n = 2000
+        L1 = rng.integers(0, 3, n)
+        L2 = rng.integers(0, 3, n)
+        dataset = np.column_stack([L1, (L1 + L2) % 3, L2]).astype(np.float32)
+
+        biadj = np.zeros((2, 3), bool)
+        biadj[[0, 0, 1, 1], [0, 1, 1, 2]] = True
+
+        ncfa = NeuroCausalFactorAnalysis(biadj=biadj, verbose=False)
+        ncfa.hyperparams.update({"num_classes": 3, "method": "g-test", "num_epochs": 5})
+        ncfa.fit(dataset)
+
+        out = ncfa.sample(50)
+        assert out.shape == (50, 3)
+        assert set(out.ravel().astype(int)).issubset({0, 1, 2})

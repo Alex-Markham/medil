@@ -17,6 +17,7 @@ class VariationalAutoencoder(nn.Module):
         meas_width,
         biadj=None,
         encoder_hidden_dim=None,
+        num_classes=1,
     ):
         super().__init__()
 
@@ -36,6 +37,7 @@ class VariationalAutoencoder(nn.Module):
             latent_width=latent_width,
             meas_width=meas_width,
             biadj=biadj,
+            num_classes=num_classes,
         )
 
     def forward(self, x):
@@ -80,11 +82,13 @@ class Decoder(nn.Module):
         latent_width,
         meas_width,
         biadj=None,
+        num_classes=1,
     ):
         super().__init__()
 
         self.num_latent = num_latent
         self.num_meas = num_meas
+        self.num_classes = num_classes
         self.latent_width = latent_width
         self.meas_width = meas_width
 
@@ -98,7 +102,7 @@ class Decoder(nn.Module):
 
         first_mask = self._expand_biadj(biadj, meas_width, latent_width)
         hidden_mask = self._make_hidden_block_mask(num_meas, meas_width)
-        output_mask = self._make_output_mask(num_meas, meas_width)
+        output_mask = self._make_output_mask(num_meas, meas_width, num_classes)
 
         self.linear_in = SparseLinear(
             in_features=self.latent_dim,
@@ -125,7 +129,7 @@ class Decoder(nn.Module):
 
         self.linear_out = SparseLinear(
             in_features=self.hidden_dim,
-            out_features=self.num_meas,
+            out_features=self.num_meas * num_classes,
             mask=output_mask,
         )
 
@@ -144,8 +148,8 @@ class Decoder(nn.Module):
         return torch.block_diag(*blocks)
 
     @staticmethod
-    def _make_output_mask(num_meas, width_per_meas):
-        block = torch.ones(1, width_per_meas)
+    def _make_output_mask(num_meas, width_per_meas, num_classes=1):
+        block = torch.ones(num_classes, width_per_meas)
         blocks = [block for _ in range(num_meas)]
         return torch.block_diag(*blocks)
 
