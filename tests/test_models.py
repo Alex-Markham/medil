@@ -1,14 +1,18 @@
 from itertools import permutations
 
-import pytest
 import numpy as np
-
-from medil.models import MedilCausalModel, GaussianMCM, NeuroCausalFactorAnalysis
+import pytest
+import torch
+from medil.models import (
+    GaussianMCM,
+    _MedilCausalModel,
+    NeuroCausalFactorAnalysis,
+)
 
 
 class TestMedilCausalModel:
     def test_base(self):
-        mcm = MedilCausalModel()
+        mcm = _MedilCausalModel()
         with pytest.raises(NotImplementedError):
             mcm.fit(np.array([]))
         with pytest.raises(NotImplementedError):
@@ -27,6 +31,7 @@ class TestGaussianMCM:
         params.error_variances = np.ones(3)
 
         s = mcm.sample(10000)
+        print(s)
         assert np.allclose(s.mean(0), mcm.parameters.error_means, atol=0.02)
 
     def test_sample_empty(self):
@@ -109,54 +114,6 @@ class TestGaussianMCM:
         assert np.allclose(params_est.error_means, params.error_means, atol=0.05)
         assert np.allclose(params_est.error_variances, params.error_variances, atol=0.7)
 
-    # def test_ncfa_assign_dof(self):
-    #     biadj_mat = np.array([[0, 0, 1, 1, 1], [0, 1, 0, 1, 0], [1, 0, 1, 0, 0]])
-    #     variances = np.array([2.5, 0.33, 2.5, 0.66, 0.88])
-
-    #     warnings.filterwarnings("error")
-    #     try:
-    #         test_insufficient = assign_DoF(biadj_mat, 2, "uniform")
-    #         assert False
-    #     except UserWarning:
-    #         warnings.resetwarnings()
-    #         warnings.simplefilter("ignore")
-    #         test_insufficient = assign_DoF(biadj_mat, 2, "uniform")
-    #         assert (test_insufficient == biadj_mat).all()
-
-    #     test_uniform = assign_DoF(biadj_mat, 8, "uniform")
-    #     unique_uniform, counts_uniform = np.unique(
-    #         test_uniform, axis=0, return_counts=True
-    #     )
-    #     assert (biadj_mat == unique_uniform).all()
-    #     assert min(counts_uniform) == 2
-    #     assert max(counts_uniform) == 3
-    #     assert counts_uniform.sum() == 8
-
-    #     test_clique = assign_DoF(biadj_mat, 11, "clique_size")
-    #     unique_clique, counts_clique = np.unique(
-    #         test_clique, axis=0, return_counts=True
-    #     )
-    #     assert (biadj_mat == unique_clique).all()
-    #     assert min(counts_clique) == 3
-    #     assert max(counts_clique) == 4
-    #     assert counts_clique.sum() == 11
-
-    #     test_tot = assign_DoF(biadj_mat, 13, "tot_var", variances)
-    #     unique_tot, counts_tot = np.unique(test_tot, axis=0, return_counts=True)
-    #     assert (biadj_mat == unique_tot).all()
-    #     assert ((5, 2, 6) == counts_tot).all()
-
-    #     test_avg = assign_DoF(biadj_mat, 29, "avg_var", variances)
-    #     unique_avg, counts_avg = np.unique(test_avg, axis=0, return_counts=True)
-    #     assert (biadj_mat == unique_avg).all()
-    #     assert ((9, 4, 16) == counts_avg).all()
-
-    #     for dof in range(3, 12):
-    #         for method in ("uniform", "clique_size", "tot_var", "avg_var"):
-    #             test_rounding = assign_DoF(biadj_mat, dof, method, variances)
-    #             assert (np.unique(test_rounding, axis=0) == biadj_mat).all()
-    #             assert dof == len(test_rounding)
-
 
 class TestNeuroCausalFactorAnalysis:
     def test_fit_m_gaussian(self):
@@ -169,6 +126,84 @@ class TestNeuroCausalFactorAnalysis:
         params.error_means = np.zeros(3)
         params.error_variances = np.ones(3)
 
-        dataset = mcm.sample(10000)
+        dataset = mcm.sample(2000)
 
-        NeuroCausalFactorAnalysis(verbose=True).fit(dataset)
+        # standardize
+        dataset -= dataset.mean(0)
+        dataset /= dataset.std(0)
+
+        ncfa = NeuroCausalFactorAnalysis(verbose=False)
+        ncfa.hyperparams.update(
+            {
+                "mu": 0.01,
+                "lambda": 0.01,
+                "deg_of_free": 5,
+                "width_per_meas": 5,
+                "num_hidden_layers": 1,
+                "num_epochs": 200,
+                "lr": 0.01,
+            }
+        )
+        ncfa.fit(dataset)
+
+        d = torch.Tensor(dataset[:5])
+        recon_d = ncfa.parameters.vae(d)[0]
+
+        ncfa = NeuroCausalFactorAnalysis(verbose=False)
+        ncfa.hyperparams.update(
+            {
+                "mu": 0.0,
+                "lambda": 0,  # 0.015,
+                "deg_of_free": 5,
+                "width_per_meas": 5,
+                "num_hidden_layers": 1,
+                "num_epochs": 200,
+                "lr": 0.01,
+            }
+        )
+        ncfa.fit(dataset)
+
+        torch.Tensor(dataset[:5])  # d
+        ncfa.parameters.vae(torch.Tensor(dataset[:5]))[0]  # recon_d
+
+    def test_sample_m_gaussian(self):
+        """sample() returns correct shape after fitting an M-graph."""
+        biadj = np.zeros((2, 3), bool)
+        biadj[[0, 0, 1, 1], [0, 1, 1, 2]] = True
+        mcm = GaussianMCM(biadj=biadj)
+        mcm.parameters.biadj_weights = biadj.astype(float)
+        mcm.parameters.error_means = np.zeros(3)
+        mcm.parameters.error_variances = np.ones(3)
+        dataset = mcm.sample(2000)
+        dataset = (dataset - dataset.mean(0)) / dataset.std(0)
+
+        ncfa = NeuroCausalFactorAnalysis(biadj=biadj, verbose=False)
+        ncfa.hyperparams["num_epochs"] = 5
+        ncfa.fit(dataset)
+
+        out = ncfa.sample(50)
+        assert out.shape == (50, 3)
+
+        out, latent = ncfa.sample(50, include_latent=True)
+        assert out.shape == (50, 3)
+        assert latent.shape[0] == 50
+
+    def test_fit_m_categorical(self):
+        """M-graph with discrete K=3 data; categorical ELBO and valid sample values."""
+        from numpy.random import default_rng
+        rng = default_rng(0)
+        n = 2000
+        L1 = rng.integers(0, 3, n)
+        L2 = rng.integers(0, 3, n)
+        dataset = np.column_stack([L1, (L1 + L2) % 3, L2]).astype(np.float32)
+
+        biadj = np.zeros((2, 3), bool)
+        biadj[[0, 0, 1, 1], [0, 1, 1, 2]] = True
+
+        ncfa = NeuroCausalFactorAnalysis(biadj=biadj, verbose=False)
+        ncfa.hyperparams.update({"num_classes": 3, "method": "g-test", "num_epochs": 5})
+        ncfa.fit(dataset)
+
+        out = ncfa.sample(50)
+        assert out.shape == (50, 3)
+        assert set(out.ravel().astype(int)).issubset({0, 1, 2})

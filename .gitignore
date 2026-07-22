@@ -21,3 +21,21 @@ docs/medil*rst
 # dev environ
 Pipfile
 Pipfile.lock
+# Devenv
+.devenv*
+devenv.local.nix
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
+*.~undo-tree~
+*_checkpoints
+mnist_dev/
+new_arch/
+/src/expt/.snakemake/
+/src/expt/data/
+/src/expt/results/causalchamber/
+/src/expt/results/simulated/
+/src/expt/results/auto/

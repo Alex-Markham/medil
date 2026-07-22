@@ -1,7 +1,7 @@
 import numpy as np
 
-from medil.graph import UndirectedDependenceGraph
-import medil.examples as ex
+from medil._graph import UndirectedDependenceGraph
+import medil._examples as ex
 
 
 def test_make_aux_on_triangle():

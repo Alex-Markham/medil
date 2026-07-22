@@ -4,10 +4,29 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.1] - 2025-0-19 ##
+## [2.0.0] - 2026-07-22 ##
 
-### Fixed ###
-- bugs in pipeline and `find_heuristic_1pc`
+### Added ###
+- `NeuroCausalFactorAnalysis.sample()` fulfills the base class contract; supports `include_latent=True` matching `GaussianMCM` interface
+- `sample.mcm(parameterization="VAE")` randomly initialized NCFA with structured VAE weights, immediately sampleable
+- `sample` and `evaluate` submodules exported from top-level `medil` package for discoverability
+- tests for `independence_testing` module (`xicorr`, `dcov`, `estimate_UDG`)
+- g-test (likelihood-ratio chi-squared) independence test for discrete/integer data via `estimate_UDG(method="g-test")`
+- `NeuroCausalFactorAnalysis` hyperparameter `"num_classes"` (default 1 = continuous): setting K ≥ 2 enables categorical measurements with cross-entropy ELBO and multinomial sampling
+
+### Changed ###
+- pyproject.toml based packaging, managed by uv and devenv
+- `find_clique_min_cover`: `verbose` parameter now actually controls output (was hardcoded `if True`)
+- references to NCFA paper, now that it's accepted to PGM'26
+
+### Removed ###
+- `setup.py` (superseded by `pyproject.toml`)
+- `dcor` dependency
+- `visualize` submodule and dependencies
+- Dead `convert_to_nde()` method from `graph.py`
+- Broken `scripts/pgm_demo.py` (imported removed modules)
+- Stale `tests/test_simulate.py` (referenced removed modules)
+- `docs/gues.rst` (documented removed `gues` module)
 
 ## [1.1.0] - 2024-08-19 ##
 

@@ -1,12 +1,11 @@
-Welcome to ``MeDIL``'s documentation!
-=====================================
+MeDIL
+=====
 
 MeDIL is a Python package for causal factor analysis, using the measurement dependence inducing latent (MeDIL) causal model framework :cite:`Markham_2020_UAI`.
 The package is under active development---see the ``develop`` branch of the repository on `GitLab <https://gitlab.com/alex-markham/medil/-/tree/develop>`_ or its `Github mirror <https://github.com/Alex-Markham/medil>`_.
 
-..
-   .. image:: https://gitlab.com/alex-markham/medil/badges/develop/coverage.svg
-       :target: https://medil.causal.dev/htmlcov/
+.. image:: https://gitlab.com/alex-markham/medil/badges/develop/coverage.svg
+   :target: https://medil.causal.dev/htmlcov/
 
 :Version: |version|
 :Date: |today|
@@ -19,21 +18,22 @@ Features:
 ---------
 * `scikit-learn <https://scikit-learn.org/stable/developers/develop.html#apis-of-scikit-learn-objects>`_-style API
 
-* estimation of sparse causal factor structure and loadings in the linear Gaussian setting or more generally using a deep generative model :cite:`markham2023neuro`
+* estimation of sparse causal factor structure and loadings in the linear Gaussian setting or more generally using a deep generative model :cite:`markham2023neuro`, supporting both continuous and categorical measurements
 
-* :math:`\ell_0`-penalized maximum likelihood estimation (BIC score-based search) for minimum MeDIL causal graphs in the linear Gaussian setting, as well as nonparametric constraint-based search using `distance covariance <https://dcor.readthedocs.io/en/stable/index.html>`_ or `xi correlation <https://pypi.org/project/xicorrelation/>`_
+* :math:`\ell_0`-penalized maximum likelihood estimation (BIC score-based search) for minimum MeDIL causal graphs in the linear Gaussian setting, as well as nonparametric constraint-based search using distance covariance, xi correlation, or g-test (for discrete data)
 
-* random generation of and sampling from linear Gaussian causal factor models
+* random generation of and sampling from linear Gaussian and deep generative causal factor models
 
 * exact search for minimum edge clique cover (ECC) :cite:`Gramm_2009` as well as polynomial time heuristic using the one-pure-child assumption :cite:`markham2023neuro`
 
-..
-   Design principles:
-   ------------------
+* reproducible experiments from :cite:`markham2023neuro` via a Snakemake workflow in ``src/expt/`` — see the `experiment README <https://gitlab.com/alex-markham/medil/-/blob/develop/src/expt/README.md>`_
 
-   * basic functionality with minimal dependencies (just `SciPy
-     <https://scipy.org>`_) and optional dependencies (`PyTorch
-     <https://pytorch.org>`_, `NetworkX <https://networkx.org/>`_, etc.) for more functionality
+Design principles:
+------------------
+
+* core functionality (linear Gaussian setting) with minimal dependencies: NumPy, SciPy, and scikit-learn
+
+* optional `PyTorch <https://pytorch.org>`_ dependency (``pip install medil[ncfa]``) for :class:`~medil.models.NeuroCausalFactorAnalysis` and deep generative causal mechanisms
 
 Further documentation:
 ----------------------
@@ -41,6 +41,7 @@ Further documentation:
    :maxdepth: 1
 
    self
+   installation
    tutorial
    theory
    citing
@@ -48,6 +49,7 @@ Further documentation:
    apilist
    license
    changelog
+
 
 Indices and tables
 ------------------
