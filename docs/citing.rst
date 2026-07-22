@@ -36,14 +36,16 @@ The PGM software demonstration :cite:`Markham_2020_PGM` is specifically associat
    }
 
 
-The NCFA preprint :cite:`markham2023neuro` further develops the framework, connects it to factor analysis, introduces identifiability results, and extends MeDIL to deep generative causal mechanisms.
+The NCFA paper :cite:`markham2023neuro` further develops the framework, connects it to factor analysis, introduces identifiability results, and extends MeDIL to deep generative causal mechanisms.
 
 .. code-block:: bibtex
 
-   @misc{markham2023neuro,
-     author = {Alex Markham and Mingyu Liu and Bryon Aragam and Liam Solus},
-     title  = {Neuro-Causal Factor Analysis},
-     year   = 2023,
-     note   = {preprint, arXiv:2305.19802 [stat.ML]},
-     url    = {https://arxiv.org/abs/2305.19802}
+   @InProceedings{markham2023neuro,
+     title     = {Neuro-Causal Factor Analysis},
+     author    = {Markham, Alex and Liu, Mingyu and Aragam, Bryon and Solus, Liam},
+     booktitle = {Proceedings of the 13th International Conference on Probabilistic Graphical Models (PGM)},
+     year      = 2026,
+     series    = {Proceedings of Machine Learning Research},
+     publisher = {PMLR}
    }
+   % TODO: fill in volume, pages, and url once available

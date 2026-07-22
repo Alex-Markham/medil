@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed ###
 - pyproject.toml based packaging, managed by uv and devenv
 - `find_clique_min_cover`: `verbose` parameter now actually controls output (was hardcoded `if True`)
+- references to NCFA paper, now that it's accepted to PGM'26
 
 ### Removed ###
 - `setup.py` (superseded by `pyproject.toml`)

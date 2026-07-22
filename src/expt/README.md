@@ -1,6 +1,6 @@
 # NCFA #
 
-This repo provides an implementation of the experiments from the preprint *Neuro-Causal Factor Analysis* ([arXiv:2305.19802](https://arxiv.org/abs/2305.19802) [stat.ML]).
+This repo provides an implementation of the experiments from *Neuro-Causal Factor Analysis*, accepted to the 13th International Conference on Probabilistic Graphical Models (PGM 2026).
 
 Experiments are organized into a Snakemake workflow: [`workflow/Snakefile`](workflow/Snakefile).
 
