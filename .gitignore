@@ -1,39 +1,17 @@
-# Compiled python modules.
 *.pyc
 
-# Setuptools distribution folder.
 /dist/
 
-# Python egg metadata, regenerated from source files by setuptools.
-/*.egg-info
-
-# notes to myself
-notes.md
-medil/cluster.py
-medil/simulate_data.py
-medil/display.py
-test/ecc_test
-
-# docs rendered files
 docs/_build
 docs/medil*rst
 
-# dev environ
-Pipfile
-Pipfile.lock
-# Devenv
 .devenv*
 devenv.local.nix
 
-# direnv
 .direnv
 
-# pre-commit
-.pre-commit-config.yaml
-*.~undo-tree~
-*_checkpoints
-mnist_dev/
-new_arch/
+.uv_cache
+
 /src/expt/.snakemake/
 /src/expt/data/
 /src/expt/results/causalchamber/
