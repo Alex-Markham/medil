@@ -26,7 +26,7 @@ Features:
 
 * exact search for minimum edge clique cover (ECC) :cite:`Gramm_2009` as well as polynomial time heuristic using the one-pure-child assumption :cite:`markham2023neuro`
 
-* reproducible experiments from :cite:`markham2023neuro` via a Snakemake workflow in ``src/expt/`` — see the `experiment README <https://gitlab.com/alex-markham/medil/-/blob/develop/src/expt/README.md>`_
+* reproducible experiments from :cite:`markham2023neuro` via a Snakemake workflow in ``src/expt/`` — see the `experiment README <https://gitlab.com/alex-markham/medil/-/blob/v2.0.0/src/expt/README.md>`_
 
 Design principles:
 ------------------
