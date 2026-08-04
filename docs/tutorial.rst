@@ -77,7 +77,7 @@ Given a known ground-truth structure (e.g., from a simulation), measure how clos
    >>> true_biadj = true_model.biadj
    >>> learned_biadj = model.biadj
    >>>
-   >>> sfd(true_biadj, learned_biadj)                    # structural Frobenius distance (int)
+   >>> sfd(true_biadj, learned_biadj)                    # shared factor distance (int)
    >>> sfd(true_biadj, learned_biadj, to_return="both")  # (raw, normalized)
 
 Lower is better. SFD compares the weighted undirected graphs induced by each biadjacency matrix.

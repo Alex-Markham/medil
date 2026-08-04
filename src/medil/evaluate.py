@@ -9,7 +9,7 @@ def sfd(
     predicted_biadj: npt.NDArray,
     to_return: str = "raw",
 ) -> int | float | tuple[int, float]:
-    """Structural Frobenius distance sums difference of latent parents.
+    """Shared factor distance sums difference of latent parents.
 
     For a binary biadjacency matrix B, consider U = B'B, where U_ij
     counts the number of parents nodes i and j have in common (so U_ii
